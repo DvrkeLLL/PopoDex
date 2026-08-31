@@ -182,6 +182,11 @@ select:focus,input:focus{border-color:var(--accent);}
 .si label{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:44px;flex-shrink:0;text-transform:uppercase;}
 .si input{padding:7px 8px;font-size:11.5px;}
 .chips{display:flex;flex-wrap:wrap;gap:5px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.grid3 .pill,.grid3 .chip{
+  width:100%;display:flex;align-items:center;justify-content:center;text-align:center;
+  min-height:36px;padding:6px 4px;line-height:1.2;
+}
 .chip{
   font-family:var(--mono);font-size:9px;text-transform:uppercase;padding:5px 8px;border-radius:var(--r);
   border:1.5px solid transparent;cursor:pointer;color:#fff;opacity:.42;font-weight:700;
@@ -196,6 +201,9 @@ select:focus,input:focus{border-color:var(--accent);}
   font-family:var(--mono);font-size:9.5px;color:var(--alert);background:#fdeef3;
   border:1px solid #f7cddc;border-radius:var(--r);padding:7px 9px;margin-top:7px;line-height:1.4;
 }
+.mv-state{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:6px;line-height:1.4;}
+.mv-state.ok{color:var(--accent);}
+.mv-state.err{color:var(--alert);}
 .f-actions{display:flex;gap:8px;position:sticky;bottom:0;background:var(--bg-panel);padding-top:12px;border-top:1px solid var(--border);}
 .btn{
   flex:1;font-family:var(--body);font-size:13px;font-weight:600;padding:11px;border-radius:var(--r);cursor:pointer;border:1px solid var(--border);
@@ -313,7 +321,7 @@ select:focus,input:focus{border-color:var(--accent);}
       <div class="sheet-bd">
         <div class="f-group">
           <label class="f-lab">Generación <span id="gen-hint" style="text-transform:none;letter-spacing:0;">(todas)</span></label>
-          <div class="chips" id="f-gens">
+          <div class="grid3" id="f-gens">
             <button class="pill" data-gen="1">1 · Kanto</button>
             <button class="pill" data-gen="2">2 · Johto</button>
             <button class="pill" data-gen="3">3 · Hoenn</button>
@@ -364,7 +372,7 @@ select:focus,input:focus{border-color:var(--accent);}
 
         <div class="f-group">
           <label class="f-lab">Tipo/s</label>
-          <div class="chips" id="f-types"></div>
+          <div class="grid3" id="f-types"></div>
         </div>
 
         <div class="f-group">
@@ -378,10 +386,15 @@ select:focus,input:focus{border-color:var(--accent);}
 
         <div class="f-group">
           <label class="f-lab">Movimiento</label>
+          <input type="text" id="f-move" list="move-list" placeholder="Buscar movimiento..." autocomplete="off">
+          <datalist id="move-list"></datalist>
+          <div id="move-state" class="mv-state">Cargando lista de movimientos...</div>
+          <label class="f-lab" style="margin-top:11px;">Que lo aprenda por</label>
           <div class="chips">
             <button class="pill" data-mv="level-up">Nivel</button>
             <button class="pill" data-mv="egg">Huevo</button>
             <button class="pill" data-mv="machine">MT / MO</button>
+            <button class="pill" data-mv="tutor">Tutor</button>
           </div>
         </div>
 
@@ -505,7 +518,10 @@ function closeOverlay(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(ov=>{
   ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('open'); });
 });
-document.getElementById('btn-filters').addEventListener('click',()=>openOverlay('ov-filters'));
+document.getElementById('btn-filters').addEventListener('click',()=>{
+  openOverlay('ov-filters');
+  loadMoveList();
+});
 
 /* ================= CARGA DE DATOS ================= */
 async function fetchJSON(url){
@@ -627,7 +643,9 @@ function passesFilters(m){
     const monCats = [...new Set(m.types.map(t=>TCAT[t]))];
     if(!filters.cats.some(c=>monCats.includes(c))) return false;
   }
-  if(filters.moves.length){
+  if(filters.moveIds){
+    if(!filters.moveIds.has(m.id)) return false;
+  } else if(filters.moves.length){
     if(!filters.moves.every(mv=>m.methods.includes(mv))) return false;
   }
   return true;
@@ -657,6 +675,83 @@ function render(){
   `).join('');
 }
 
+/* ================= MOVIMIENTOS (filtro) ================= */
+let MOVES = [];          // {slug, es, en}
+let movesLoaded = false;
+
+async function loadMoveList(){
+  if(movesLoaded) return;
+  const state = document.getElementById('move-state');
+  const q = `{ move(order_by:{id:asc}) { name movenames(where:{language_id:{_eq:7}}) { name } } }`;
+  try{
+    const r = await fetch('https://graphql.pokeapi.co/v1beta2',{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})
+    });
+    const j = await r.json();
+    if(!j.data) throw new Error();
+    MOVES = j.data.move.map(m=>({
+      slug:m.name,
+      es:(m.movenames[0]?.name) || m.name.replace(/-/g,' '),
+      en:m.name.replace(/-/g,' ')
+    }));
+  }catch(e){
+    try{
+      const list = await fetchJSON(`${API}/move?limit=1000`);
+      MOVES = list.results.map(m=>({slug:m.name, es:m.name.replace(/-/g,' '), en:m.name.replace(/-/g,' ')}));
+    }catch(err){
+      state.textContent='No se pudo cargar la lista de movimientos.'; state.className='mv-state err'; return;
+    }
+  }
+  movesLoaded = true;
+  document.getElementById('move-list').innerHTML =
+    MOVES.map(m=>`<option value="${m.es}">${m.en}</option>`).join('');
+  state.textContent = `${MOVES.length} movimientos disponibles`;
+  state.className = 'mv-state';
+}
+
+function findMove(text){
+  const t = text.trim().toLowerCase();
+  if(!t) return null;
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return MOVES.find(m=>norm(m.es)===norm(t) || norm(m.en)===norm(t) || m.slug===norm(t).replace(/ /g,'-'))
+      || MOVES.find(m=>norm(m.es).startsWith(norm(t)) || norm(m.en).startsWith(norm(t)))
+      || null;
+}
+
+/* Devuelve un Map id -> [métodos] de quiénes aprenden ese movimiento */
+async function whoLearns(slug){
+  const q = `{
+    pokemonmove(where:{move:{name:{_eq:"${slug}"}}, pokemon_id:{_lte:${MAX_ID}}},
+                distinct_on:[pokemon_id, move_learn_method_id],
+                order_by:[{pokemon_id:asc},{move_learn_method_id:asc}]) {
+      pokemon_id movelearnmethod { name }
+    }
+  }`;
+  try{
+    const r = await fetch('https://graphql.pokeapi.co/v1beta2',{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})
+    });
+    const j = await r.json();
+    if(!j.data) throw new Error();
+    const map = new Map();
+    j.data.pokemonmove.forEach(row=>{
+      const arr = map.get(row.pokemon_id) || [];
+      arr.push(row.movelearnmethod.name);
+      map.set(row.pokemon_id, arr);
+    });
+    return map;
+  }catch(e){
+    /* Respaldo REST: sin distinguir el método */
+    const data = await fetchJSON(`${API}/move/${slug}`);
+    const map = new Map();
+    data.learned_by_pokemon.forEach(p=>{
+      const id = Number(p.url.split('/').filter(Boolean).pop());
+      if(id<=MAX_ID) map.set(id, ['*']);
+    });
+    return map;
+  }
+}
+
 /* ================= FILTROS ================= */
 function buildTypeChips(){
   document.getElementById('f-types').innerHTML = TYPES.map(t=>
@@ -678,7 +773,7 @@ document.querySelectorAll('[data-gen]').forEach(p=>{
   p.addEventListener('click',()=>{ p.classList.toggle('on'); updateGenHint(); });
 });
 
-function applyFilters(){
+async function applyFilters(){
   filters.gens = [...document.querySelectorAll('[data-gen].on')].map(c=>c.dataset.gen);
   filters.ranks = [...document.querySelectorAll('[data-rank].on')].map(c=>c.dataset.rank);
   filters.sort = document.getElementById('f-sort').value;
@@ -691,9 +786,38 @@ function applyFilters(){
   filters.cats  = [...document.querySelectorAll('[data-cat].on')].map(c=>c.dataset.cat);
   filters.moves = [...document.querySelectorAll('[data-mv].on')].map(c=>c.dataset.mv);
 
+  /* Movimiento buscado */
+  filters.moveIds = null;
+  const state = document.getElementById('move-state');
+  const txt = document.getElementById('f-move').value.trim();
+  let moveOn = 0;
+  if(txt){
+    const mv = findMove(txt);
+    if(!mv){
+      state.textContent = `No se encontró "${txt}"`; state.className='mv-state err';
+    }else{
+      state.textContent = `Buscando quién aprende ${mv.es}...`; state.className='mv-state';
+      try{
+        const map = await whoLearns(mv.slug);
+        const ids = new Set();
+        map.forEach((methods,id)=>{
+          if(!filters.moves.length || methods.includes('*') || filters.moves.some(f=>methods.includes(f)))
+            ids.add(id);
+        });
+        filters.moveIds = ids;
+        moveOn = 1 + filters.moves.length;
+        const nota = methodsNote(map);
+        state.textContent = `${mv.es}: ${ids.size} pokémon${nota}`;
+        state.className='mv-state ok';
+      }catch(e){
+        state.textContent='No se pudo consultar ese movimiento.'; state.className='mv-state err';
+      }
+    }
+  }
+
   const n = filters.gens.length+filters.ranks.length+(filters.sort?1:0)+
             Object.keys(filters.mins).length+filters.types.length+
-            filters.cats.length+filters.moves.length;
+            filters.cats.length+(moveOn||filters.moves.length);
   const badge = document.getElementById('f-count');
   badge.style.display = n? 'flex':'none';
   badge.textContent = n;
@@ -704,11 +828,22 @@ function applyFilters(){
   document.getElementById('s-pokedex').scrollTop = 0;
 }
 
+function methodsNote(map){
+  const all = new Set();
+  map.forEach(ms=>ms.forEach(m=>all.add(m)));
+  if(all.has('*')) return ' (sin datos de método)';
+  return '';
+}
+
 function clearFilters(){
   document.getElementById('f-sort').value='';
+  document.getElementById('f-move').value='';
   document.querySelectorAll('.stat-inputs input').forEach(i=>i.value='');
   document.querySelectorAll('#f-types .chip.on,[data-cat].on,[data-mv].on,[data-gen].on,[data-rank].on')
     .forEach(c=>c.classList.remove('on'));
+  const st=document.getElementById('move-state');
+  st.textContent = movesLoaded? `${MOVES.length} movimientos disponibles` : '';
+  st.className='mv-state';
   updateGenHint();
   applyFilters();
 }
