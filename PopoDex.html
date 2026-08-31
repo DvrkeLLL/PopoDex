@@ -391,6 +391,33 @@ select:focus,input:focus{border-color:var(--accent);}
 .eqp-nom{font-size:14px;font-weight:600;}
 .eqp-meta{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:2px;}
 
+/* Botón para elegir equipo en Mejor ataque */
+.eq-elegir{
+  width:100%;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;
+  font-family:var(--body);text-align:left;margin-bottom:12px;
+}
+.eq-elegir:active{border-color:var(--accent);}
+.ee-sprites{display:flex;gap:1px;flex-shrink:0;}
+.ee-sprites img{width:27px;height:27px;image-rendering:pixelated;}
+.ee-sprites .hueco{width:27px;height:27px;border:1px dashed var(--border);border-radius:2px;}
+.ee-txt{flex:1;min-width:0;}
+.ee-nom{font-size:12.5px;font-weight:600;display:block;}
+.ee-meta{font-family:var(--mono);font-size:8.5px;color:var(--muted);display:block;margin-top:1px;}
+
+/* Puntos de posición para el deslizamiento */
+.gan-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:11px;}
+.gan-nav{display:flex;gap:3px;align-items:center;}
+.gan-nav i{width:5px;height:5px;border-radius:50%;background:var(--border);display:block;}
+.gan-nav i.on{background:var(--accent);width:14px;border-radius:3px;}
+.gan-nav.peq{margin-left:auto;}
+.gan-nav.peq i{width:4px;height:4px;}
+.gan-nav.peq i.on{width:10px;}
+.campo.mini{padding:7px 9px;}
+.campo.mini .campo-val{font-size:11.5px;}
+.campo.mini .campo-sub{font-size:8.5px;}
+.rank.swipeable{cursor:grab;}
+
 /* ---------- EQUIPO ---------- */
 .eq-card{
   background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
@@ -947,7 +974,7 @@ select:focus,input:focus{border-color:var(--accent);}
           <span class="b">Prec</span><span class="b">PP</span></div>
         <div class="pick-lista" id="pick-lista"></div>
       </div>
-      <div class="sheet-ft">
+      <div class="sheet-ft" id="pick-pie">
         <button class="btn btn-s" onclick="quitarMovimiento()">Dejar vacío</button>
       </div>
     </div>
@@ -1015,16 +1042,16 @@ select:focus,input:focus{border-color:var(--accent);}
 
         <div class="f-group">
           <label class="f-lab">Ordenar por</label>
-          <select id="f-sort">
-            <option value="">Estándar (n.º de Pokédex)</option>
-            <option value="hp">PS</option>
-            <option value="attack">Ataque</option>
-            <option value="defense">Defensa</option>
-            <option value="special-attack">Ataque Esp.</option>
-            <option value="special-defense">Defensa Esp.</option>
-            <option value="speed">Velocidad</option>
-            <option value="total">Total</option>
-          </select>
+          <div class="grid3" id="f-sort-btns">
+            <button class="pill on" data-sort="">Estándar</button>
+            <button class="pill" data-sort="hp">PS</button>
+            <button class="pill" data-sort="attack">Ataque</button>
+            <button class="pill" data-sort="defense">Defensa</button>
+            <button class="pill" data-sort="special-attack">At. Esp.</button>
+            <button class="pill" data-sort="special-defense">Df. Esp.</button>
+            <button class="pill" data-sort="speed">Velocidad</button>
+            <button class="pill" data-sort="total">Total</button>
+          </div>
         </div>
 
         <div class="f-group">
@@ -1747,6 +1774,12 @@ function buildTypeChips(){
 document.querySelectorAll('[data-cat],[data-mv],[data-rank]').forEach(p=>{
   p.addEventListener('click',()=>p.classList.toggle('on'));
 });
+document.querySelectorAll('[data-sort]').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('[data-sort]').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+  });
+});
 document.querySelectorAll('[data-gen]').forEach(p=>{
   p.addEventListener('click',()=>{ p.classList.toggle('on'); updateGenHint(); });
 });
@@ -1754,7 +1787,7 @@ document.querySelectorAll('[data-gen]').forEach(p=>{
 async function applyFilters(){
   filters.gens = [...document.querySelectorAll('[data-gen].on')].map(c=>c.dataset.gen);
   filters.ranks = [...document.querySelectorAll('[data-rank].on')].map(c=>c.dataset.rank);
-  filters.sort = document.getElementById('f-sort').value;
+  filters.sort = (document.querySelector('[data-sort].on')||{dataset:{sort:''}}).dataset.sort;
   filters.mins = {};
   ['hp','attack','defense','special-attack','special-defense','speed','total'].forEach(k=>{
     const v = document.getElementById('min-'+k).value;
@@ -1814,7 +1847,7 @@ function methodsNote(map){
 }
 
 function clearFilters(){
-  document.getElementById('f-sort').value='';
+  document.querySelectorAll('[data-sort]').forEach((b,i)=>b.classList.toggle('on', i===0));
   document.getElementById('f-move').value='';
   document.querySelectorAll('.stat-inputs input').forEach(i=>i.value='');
   document.querySelectorAll('#f-types .chip.on,[data-cat].on,[data-mv].on,[data-gen].on,[data-rank].on')
@@ -2514,11 +2547,11 @@ function renderEquipo(){
   const slots = Array.from({length:6},(_,i)=>eq.miembros[i]||null);
 
   document.getElementById('eq-body').innerHTML = `
-    <div class="eq-barra">
-      <select id="eq-juego" onchange="cambiarJuego(this.value)">
-        ${JUEGOS.map(j=>`<option value="${j.slug}" ${j.slug===eq.juego?'selected':''}>${j.es} (${j.gen}.ª gen)</option>`).join('')}
-      </select>
-    </div>
+    <button class="campo" style="width:100%;margin-bottom:12px;" onclick="elegirJuegoEquipo()">
+      <span class="pt" style="background:${GEN_COLOR[gen]};width:10px;height:10px;"></span>
+      <span class="campo-main"><span class="campo-val">${nombreDeJuego(eq.juego)}</span>
+      <span class="campo-sub">${gen}.ª generación</span></span>
+      <span class="campo-x">›</span></button>
     <div class="aviso">${gen<=2
       ? 'Esta generación usa DVs (0-15) y Puntos de Esfuerzo (0-65535). No hay naturalezas ni habilidades.'
       : 'Esta generación usa IVs (0-31) y EVs (0-252, con tope de 510 en total).'}</div>
@@ -2538,10 +2571,8 @@ function renderEquipo(){
     <div class="cob-bloque">
       <div class="cob-hd">
         <h3 class="cob-tit">Cobertura de ataque</h3>
-        <select id="cob-dex" onchange="cambiarDexCobertura(this.value)">
-          ${dexDisponibles(eq.juego).map(d=>
-            `<option value="${d}" ${d===coberturaDex?'selected':''}>${DEX_ES[d]||d}</option>`).join('')}
-        </select>
+        <button class="pill" id="cob-dex" onclick="elegirDexCobertura()"
+          style="--gc:var(--accent);flex:0 1 auto;">${DEX_ES[coberturaDex]||'—'}</button>
       </div>
       <div id="cob-caja"><div class="hint">Calculando...</div></div>
     </div>
@@ -2549,8 +2580,17 @@ function renderEquipo(){
 
   const opciones = dexDisponibles(eq.juego);
   if(!coberturaDex || !opciones.includes(coberturaDex)) coberturaDex = opciones[0];
-  document.getElementById('cob-dex').value = coberturaDex;
+  document.getElementById('cob-dex').textContent = DEX_ES[coberturaDex]||coberturaDex;
   calcularCobertura();
+}
+
+function elegirJuegoEquipo(){
+  abrirSelector({
+    titulo:'Juego del equipo', sub:'Define IVs/EVs, movimientos y efectividades', buscar:true,
+    actual: equipos[equipoAbierto].juego,
+    opciones: JUEGOS.map(j=>({valor:j.slug, nombre:j.es, detalle:`${j.gen}.ª generación`})),
+    alElegir: v=>cambiarJuego(v)
+  });
 }
 
 function cambiarJuego(slug){
@@ -2569,6 +2609,7 @@ function cambiarJuego(slug){
   }
   guardarEquipos();
   document.getElementById('eq-sub').textContent = nombreDeJuego(slug);
+  dnMovsCache = {};
   renderEquipo();
 }
 
@@ -2763,40 +2804,44 @@ async function cargarOpcionesEditor(m, mon, gen){
     const d = await movsDe(m.pid, GRUPO_VERSION[eqJuego] || '');
     const genEq = genDeJuego(eqJuego);
     await cargarCambiosMov();
-    const vistos = {};
-    d.pokemonmove.forEach(r=>{
-      const s = r.move.name, met = r.movelearnmethod.name;
-      if(!vistos[s]){
-        const base = {pot:r.move.power, prec:r.move.accuracy, pp:r.move.pp,
-                      tipo:r.move.type?.name||'normal'};
-        const v = valoresMov(s, genEq, base);
-        vistos[s] = {
-          slug:s,
-          es: r.move.movenames[0]?.name || s.replace(/-/g,' '),
-          tipo: v.tipo,
-          clase: genEq<=3 ? (TCAT[v.tipo]||'status') : (r.move.movedamageclass?.name || 'status'),
-          pot: v.pot, prec: v.prec, pp: v.pp, cambiado: v.cambiado,
-          metodos: {}, nivel: null
-        };
-      }
-      vistos[s].metodos[met] = true;
-      if(met==='level-up' && r.level) {
-        vistos[s].nivel = vistos[s].nivel===null ? r.level : Math.min(vistos[s].nivel, r.level);
-      }
-    });
-    movsDelMon = Object.values(vistos);
+    movsDelMon = armarMovs(d, genEq);
     pintarHuecosMov();
   }catch(e){
     document.getElementById('ed-movs').innerHTML='<div class="hint">No se pudieron cargar los movimientos.</div>';
   }
 }
 
-/* ---------- Selector de movimientos ---------- */
+/* ---------- Selector de movimientos (genérico) ---------- */
 let movsDelMon = [];
-let pickSlot = null;
+let pickCfg = null;
 let pickMetodo = 'level-up';
 
 const MET_ES = {'level-up':'Nivel','machine':'MT / MO','egg':'Huevo','tutor':'Tutor'};
+
+/* Convierte la respuesta de PokeAPI en una lista con método, nivel y valores del juego */
+function armarMovs(info, gen){
+  const vistos = {};
+  info.pokemonmove.forEach(r=>{
+    const mv = r.move, met = r.movelearnmethod.name;
+    if(!vistos[mv.name]){
+      const base = {pot:mv.power, prec:mv.accuracy, pp:mv.pp, tipo:mv.type?.name||'normal'};
+      const v = valoresMov(mv.name, gen, base);
+      vistos[mv.name] = {
+        slug:mv.name,
+        es: mv.movenames[0]?.name || mv.name.replace(/-/g,' '),
+        tipo:v.tipo,
+        clase: gen<=3 ? (TCAT[v.tipo]||'status') : (mv.movedamageclass?.name || 'status'),
+        pot:v.pot, prec:v.prec, pp:v.pp, cambiado:v.cambiado,
+        metodos:{}, nivel:null
+      };
+    }
+    vistos[mv.name].metodos[met] = true;
+    if(met==='level-up' && r.level)
+      vistos[mv.name].nivel = vistos[mv.name].nivel===null
+        ? r.level : Math.min(vistos[mv.name].nivel, r.level);
+  });
+  return Object.values(vistos);
+}
 
 function pintarHuecosMov(){
   const m = _m();
@@ -2827,18 +2872,38 @@ function pintarHuecosMov(){
   }).join('');
 }
 
+/* Desde el editor de equipo */
 function abrirPick(i){
-  pickSlot = i;
   const m = _m();
   const mon = allMons.find(x=>x.id===m.pid);
-  document.getElementById('pick-sub').textContent = `${mon.es||mon.name} · espacio ${i+1}`;
-  document.getElementById('pick-busca').value = '';
+  abrirPickMovs({
+    sub: `${mon.es||mon.name} · espacio ${i+1}`,
+    movs: movsDelMon,
+    actual: m.movimientos[i],
+    permitirVacio: true,
+    alElegir: slug=>{
+      if(slug){
+        const rep = m.movimientos.findIndex((x,j)=>x===slug && j!==i);
+        if(rep!==-1) m.movimientos[rep] = '';
+      }
+      m.movimientos[i] = slug;
+      guardarEquipos();
+      pintarHuecosMov();
+    }
+  });
+}
 
-  /* Solo se muestran las pestañas de métodos que este pokémon realmente tiene */
-  const disponibles = Object.keys(MET_ES).filter(k=>movsDelMon.some(mv=>mv.metodos[k]));
+/* Selector genérico con pestañas por método */
+function abrirPickMovs(cfg){
+  pickCfg = cfg;
+  document.getElementById('pick-sub').textContent = cfg.sub || '';
+  document.getElementById('pick-busca').value = '';
+  document.getElementById('pick-pie').style.display = cfg.permitirVacio ? 'flex' : 'none';
+
+  const disponibles = Object.keys(MET_ES).filter(k=>cfg.movs.some(mv=>mv.metodos[k]));
   if(!disponibles.includes(pickMetodo)) pickMetodo = disponibles[0] || 'level-up';
   document.getElementById('pick-tabs').innerHTML = disponibles.map(k=>{
-    const n = movsDelMon.filter(mv=>mv.metodos[k]).length;
+    const n = cfg.movs.filter(mv=>mv.metodos[k]).length;
     return `<button class="pick-tab ${k===pickMetodo?'on':''}" onclick="setPickMetodo('${k}')">${MET_ES[k]} (${n})</button>`;
   }).join('');
 
@@ -2855,13 +2920,12 @@ function setPickMetodo(k){
 
 function pintarPick(){
   const cont = document.getElementById('pick-lista');
-  if(!cont || pickSlot===null) return;
-  const m = _m();
+  if(!cont || !pickCfg) return;
   const txt = document.getElementById('pick-busca').value.trim().toLowerCase();
   const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
-  let lista = movsDelMon.filter(mv=>mv.metodos[pickMetodo]);
-  if(txt) lista = movsDelMon.filter(mv=>norm(mv.es).includes(norm(txt)));
+  let lista = pickCfg.movs.filter(mv=>mv.metodos[pickMetodo]);
+  if(txt) lista = pickCfg.movs.filter(mv=>norm(mv.es).includes(norm(txt)));
 
   lista.sort((a,b)=>{
     if(pickMetodo==='level-up' && !txt) return (a.nivel??999)-(b.nivel??999) || a.es.localeCompare(b.es);
@@ -2871,7 +2935,7 @@ function pintarPick(){
   if(!lista.length){ cont.innerHTML='<div class="hint" style="padding:14px;">Sin resultados.</div>'; return; }
 
   cont.innerHTML = lista.map(mv=>`
-    <div class="pick-item ${m.movimientos[pickSlot]===mv.slug?'on':''}" onclick="elegirMovimiento('${mv.slug}')">
+    <div class="pick-item ${pickCfg.actual===mv.slug?'on':''}" onclick="elegirMovimiento('${mv.slug}')">
       <div class="pick-main">
         <div class="pick-nom">${mv.es}</div>
         <div class="pick-sub">
@@ -2887,37 +2951,14 @@ function pintarPick(){
 }
 
 function elegirMovimiento(slug){
-  const m = _m();
-  /* No repetir el mismo movimiento en dos espacios */
-  const yaEsta = m.movimientos.findIndex((s,i)=>s===slug && i!==pickSlot);
-  if(yaEsta!==-1) m.movimientos[yaEsta] = '';
-  m.movimientos[pickSlot] = slug;
-  guardarEquipos();
+  const cb = pickCfg.alElegir;
   closeOverlay('ov-movimiento');
-  pintarHuecosMov();
+  cb(slug);
 }
-
 function quitarMovimiento(){
-  _m().movimientos[pickSlot] = '';
-  guardarEquipos();
+  const cb = pickCfg.alElegir;
   closeOverlay('ov-movimiento');
-  pintarHuecosMov();
-}
-
-let objetos = [];
-async function cargarObjetos(){
-  if(objetos.length) return objetos;
-  const guardado = Cache.get('objetos2');
-  if(guardado){ objetos = guardado; return objetos; }
-  try{
-    const d = await gql(`{ item(order_by:{id:asc}) { name itemnames(where:{language_id:{_eq:${ES}}}) { name } } }`);
-    objetos = d.item.map(i=>({
-      slug:i.name,
-      es: i.itemnames[0]?.name || i.name.replace(/-/g,' ')
-    }));
-    Cache.set('objetos2', objetos);
-  }catch(e){ objetos = []; }
-  return objetos;
+  cb('');
 }
 
 /* ---------- Selector genérico (naturaleza, habilidad, objeto) ---------- */
@@ -3490,8 +3531,20 @@ function pintarDetalleCobertura(){
     </div>`).join('');
 }
 
+function elegirDexCobertura(){
+  const eq = equipos[equipoAbierto];
+  abrirSelector({
+    titulo:'Pokédex', sub:'Contra qué lista se mide', buscar:false, actual:coberturaDex,
+    opciones: dexDisponibles(eq.juego).map(d=>({valor:d, nombre:DEX_ES[d]||d,
+      detalle: d==='national' ? 'Todas las especies' : 'Solo las de esta región'})),
+    alElegir: v=>cambiarDexCobertura(v)
+  });
+}
+
 function cambiarDexCobertura(slug){
   coberturaDex = slug;
+  const b = document.getElementById('cob-dex');
+  if(b) b.textContent = DEX_ES[slug]||slug;
   calcularCobertura();
 }
 
@@ -3587,7 +3640,7 @@ let dnMovsCache = {};
 let dnVerTodos = false;
 
 /* Atacante del daño teórico: libre o tomado de un equipo */
-let dnAtk = {pid:null, nivel:50, iv:31, ev:252, nat:'hardy', hab:'', mov:0, deEquipo:null};
+let dnAtk = {pid:null, nivel:50, iv:31, ev:252, nat:'hardy', hab:'', movSlug:'', deEquipo:null, bajo:false};
 let dnHabsAtk = [];
 let dnMovsAtk = [];
 
@@ -3676,6 +3729,8 @@ async function renderDanio(){
       <span class="rv-sub">A quién quieres atacar</span>
     </button>`;
   }else{
+    const natRival = NATURALEZAS.find(n=>n.slug===dnRivalCfg.nat) || {es:'—'};
+    const habRival = dnHabsRival.find(h=>h.slug===dnRivalCfg.hab);
     html += `<button class="rival-card" onclick="elegirRival()">
       <img src="${SPRITE(dnRival)}" alt="">
       <span class="rc-main">
@@ -3699,20 +3754,18 @@ async function renderDanio(){
                onchange="setRival('ev',this.value)">
       </div>
       ${gen>=3?`<div class="cfg-fila2">
-        <select onchange="setRival('nat',this.value)">
-          ${NATURALEZAS.map(n=>`<option value="${n.slug}" ${n.slug===dnRivalCfg.nat?'selected':''}>${n.es}</option>`).join('')}
-        </select>
-        <select onchange="setRival('hab',this.value)">
-          ${dnHabsRival.length?dnHabsRival.map(h=>
-            `<option value="${h.slug}" ${h.slug===dnRivalCfg.hab?'selected':''}>${h.es}</option>`).join('')
-            :'<option>Cargando...</option>'}
-        </select>
+        <button class="campo mini" onclick="elegirNatRival()">
+          <span class="campo-main"><span class="campo-val">${natRival.es}</span>
+          <span class="campo-sub">${natRival.sube?`▲ ${STAT_ES[natRival.sube]} ▼ ${STAT_ES[natRival.baja]}`:'Neutra'}</span>
+          </span><span class="campo-x">›</span></button>
+        <button class="campo mini" onclick="elegirHabRival()">
+          <span class="campo-main"><span class="campo-val">${habRival?habRival.es:'—'}</span>
+          <span class="campo-sub">Habilidad</span></span><span class="campo-x">›</span></button>
       </div>`:''}
-      <div class="cfg-fila2" style="margin-top:7px;">
-        <select onchange="dnJuego=this.value;dnMovsCache={};renderDanio()">
-          ${JUEGOS.map(j=>`<option value="${j.slug}" ${j.slug===juegoDanio()?'selected':''}>${j.es}</option>`).join('')}
-        </select>
-      </div>
+      <button class="campo" style="width:100%;margin-top:7px;" onclick="elegirJuegoDanio()">
+        <span class="campo-main"><span class="campo-val">${nombreDeJuego(juegoDanio())}</span>
+        <span class="campo-sub">${gen}.ª generación · rige el cálculo</span>
+        </span><span class="campo-x">›</span></button>
     </div>`;
   }
 
@@ -3752,6 +3805,33 @@ function setRival(campo, v){
   renderDanio();
 }
 
+function elegirNatRival(){
+  abrirSelector({
+    titulo:'Naturaleza', sub:'Del rival', buscar:true, actual:dnRivalCfg.nat,
+    opciones: NATURALEZAS.map(n=>({valor:n.slug, nombre:n.es,
+      detalle: n.sube
+        ? `<span class="nat-sube">▲ ${STAT_ES[n.sube]}</span> · <span class="nat-baja">▼ ${STAT_ES[n.baja]}</span>`
+        : '<span class="nat-neutra">Sin efecto</span>'})),
+    alElegir: v=>{ dnRivalCfg.nat=v; renderDanio(); }
+  });
+}
+function elegirHabRival(){
+  abrirSelector({
+    titulo:'Habilidad', sub:'Del rival', buscar:false, actual:dnRivalCfg.hab,
+    opciones: dnHabsRival.map(h=>({valor:h.slug, nombre:h.es,
+      detalle: HAB_EFECTO[h.slug] ? 'Afecta al cálculo de daño' : ''})),
+    alElegir: v=>{ dnRivalCfg.hab=v; renderDanio(); }
+  });
+}
+function elegirJuegoDanio(){
+  abrirSelector({
+    titulo:'Juego', sub:'Rige tipos, categorías y efectividades', buscar:true,
+    actual:juegoDanio(),
+    opciones: JUEGOS.map(j=>({valor:j.slug, nombre:j.es, detalle:`${j.gen}.ª generación`})),
+    alElegir: v=>{ dnJuego=v; dnMovsCache={}; dnMovsAtk=[]; dnTop=0; dnIdxMov={}; renderDanio(); }
+  });
+}
+
 function elegirRival(){
   abrirSelector({
     titulo:'Seleccionar rival', sub:'A quién quieres atacar', buscar:true,
@@ -3765,52 +3845,86 @@ function elegirRival(){
 }
 
 /* ---------- Mejor ataque ---------- */
+let dnEqMejor = 0;          // equipo elegido para comparar
+let dnTop = 0;              // posición en el ranking general
+let dnIdxMov = {};          // por pokémon, qué movimiento suyo se muestra
+let dnFilas = [];
+
 async function panelMejor(){
   const juego = juegoDanio(), gen = genDeJuego(juego);
   const defMon = allMons.find(x=>x.id===dnRival);
   const cont = document.getElementById('dn-panel');
 
   if(!equipos.length){
-    cont.innerHTML = `<div class="eq-vacio" style="padding:30px 14px;">
+    cont.innerHTML = `<div class="eq-vacio" style="padding:26px 14px;">
       <p>Necesitas un equipo para comparar.</p></div>
       <button class="btn btn-p" style="width:100%;" onclick="goTo('equipo')">Ir a Equipo</button>`;
     return;
   }
+  if(dnEqMejor>=equipos.length) dnEqMejor = 0;
+  const eq = equipos[dnEqMejor];
 
-  const filas=[];
-  for(const eq of equipos){
-    for(const miembro of eq.miembros){
-      const atkMon = allMons.find(x=>x.id===miembro.pid);
-      if(!atkMon) continue;
-      const movs = await movsAsignados(miembro, juego);
-      movs.forEach(mv=>{
-        const cat = gen<=3 ? (TCAT[mv.tipo]||'physical') : mv.clase;
-        const cl = cat==='physical' ? 'attack' : 'special-attack';
-        const r = calcularDanio({
-          gen, atkMon, defMon, mov:mv,
-          atk:{nivel:miembro.nivel, iv:miembro.ivs[cl], ev:miembro.evs[cl],
-               nat:miembro.naturaleza, hab:miembro.habilidad, bajo:false},
-          def:{nivel:dnRivalCfg.nivel, iv:dnRivalCfg.iv, ev:dnRivalCfg.ev,
-               nat:dnRivalCfg.nat, hab:dnRivalCfg.hab}
-        });
-        if(r.nulo) return;
-        filas.push({...r, nombre:miembro.apodo||atkMon.es, pid:miembro.pid, mv, equipo:eq.nombre});
-      });
-    }
-  }
-  filas.sort((a,b)=>b.max-a.max);
+  const cabecera = `
+    <button class="eq-elegir" onclick="abrirEquipos(i=>{dnEqMejor=i;dnTop=0;dnIdxMov={};renderDanio();})">
+      <span class="ee-sprites">
+        ${eq.miembros.map(m=>`<img src="${SPRITE(m.pid)}" alt="">`).join('')}
+        ${Array.from({length:6-eq.miembros.length},()=>'<span class="hueco"></span>').join('')}
+      </span>
+      <span class="ee-txt">
+        <span class="ee-nom">${eq.nombre}</span>
+        <span class="ee-meta">${nombreDeJuego(eq.juego)} · toca para cambiar</span>
+      </span>
+      <span class="campo-x">›</span>
+    </button>`;
 
-  if(!filas.length){
-    cont.innerHTML = '<div class="hint" style="text-align:center;padding:24px 12px;">Ningún movimiento de tus equipos hace daño a este rival.</div>';
+  if(!eq.miembros.length){
+    cont.innerHTML = cabecera + '<div class="hint" style="text-align:center;padding:22px;">Este equipo está vacío.</div>';
     return;
   }
 
-  const g = filas[0];
-  const resto = filas.slice(1, dnVerTodos ? 12 : 1);
+  /* Daño de cada combinación pokémon + movimiento */
+  const porMon = {};
+  for(const miembro of eq.miembros){
+    const atkMon = allMons.find(x=>x.id===miembro.pid);
+    if(!atkMon) continue;
+    const movs = await movsAsignados(miembro, juego);
+    const suyos = [];
+    movs.forEach(mv=>{
+      const cat = gen<=3 ? (TCAT[mv.tipo]||'physical') : mv.clase;
+      const cl = cat==='physical' ? 'attack' : 'special-attack';
+      const r = calcularDanio({
+        gen, atkMon, defMon, mov:mv,
+        atk:{nivel:miembro.nivel, iv:miembro.ivs[cl], ev:miembro.evs[cl],
+             nat:miembro.naturaleza, hab:miembro.habilidad, bajo:false},
+        def:{nivel:dnRivalCfg.nivel, iv:dnRivalCfg.iv, ev:dnRivalCfg.ev,
+             nat:dnRivalCfg.nat, hab:dnRivalCfg.hab}
+      });
+      if(r.nulo) return;
+      suyos.push({...r, nombre:miembro.apodo||atkMon.es, pid:miembro.pid, mv});
+    });
+    suyos.sort((a,b)=>b.max-a.max);
+    if(suyos.length) porMon[miembro.pid] = suyos;
+  }
 
-  cont.innerHTML = `
-    <div class="ganador">
-      <div class="gan-etq">Mejor opción</div>
+  dnFilas = Object.values(porMon).flat().sort((a,b)=>b.max-a.max);
+  if(!dnFilas.length){
+    cont.innerHTML = cabecera +
+      '<div class="hint" style="text-align:center;padding:24px 12px;">Ningún movimiento de este equipo hace daño al rival.</div>';
+    return;
+  }
+  if(dnTop>=dnFilas.length) dnTop = 0;
+  const g = dnFilas[dnTop];
+
+  /* Resumen: cada pokémon una vez, ordenados por su mejor golpe */
+  const resumen = Object.values(porMon).sort((a,b)=>b[0].max-a[0].max);
+
+  cont.innerHTML = cabecera + `
+    <div class="ganador" id="gan-card">
+      <div class="gan-hd">
+        <span class="gan-etq">${dnTop===0?'Mejor opción':(dnTop+1)+'.ª opción'}</span>
+        <span class="gan-nav">${dnFilas.map((_,i)=>
+          `<i class="${i===dnTop?'on':''}"></i>`).slice(0,12).join('')}</span>
+      </div>
       <div class="gan-top">
         <img src="${SPRITE(g.pid)}" alt="">
         <div class="gan-main">
@@ -3818,7 +3932,7 @@ async function panelMejor(){
           <div class="gan-mov">${g.mv.es} · ${g.cat==='physical'?'Físico':'Especial'}</div>
           <div class="rank-etq" style="margin-top:6px;">
             <span class="tchip" style="background:${TCOLOR[g.mv.tipo]}">${TES[g.mv.tipo]}</span>
-            ${g.ef>1?`<span class="etq sup">x${g.ef}</span>`:''}
+            ${g.ef>1?`<span class="etq sup">x${g.ef}</span>`:g.ef<1?`<span class="etq mal">x${g.ef}</span>`:''}
             ${g.stab>1?'<span class="etq stab">STAB</span>':''}
           </div>
         </div>
@@ -3831,11 +3945,16 @@ async function panelMejor(){
           :`Derriba en ${g.golpes}–${g.golpesMax} golpes`}</div>
     </div>
 
-    ${resto.map((f,i)=>`
-      <div class="rank">
+    <p class="section-label" style="margin:18px 0 9px;">Resumen del equipo</p>
+    ${resumen.map((lista,pos)=>{
+      const pid = lista[0].pid;
+      if(dnIdxMov[pid]===undefined || dnIdxMov[pid]>=lista.length) dnIdxMov[pid]=0;
+      const f = lista[dnIdxMov[pid]];
+      return `
+      <div class="rank swipeable" data-pid="${pid}">
         <div class="rank-top">
-          <span class="rank-pos">${i+2}</span>
-          <img class="rank-img" src="${SPRITE(f.pid)}" alt="">
+          <span class="rank-pos">${pos+1}</span>
+          <img class="rank-img" src="${SPRITE(pid)}" alt="">
           <span class="rank-main">
             <span class="rank-mon">${f.nombre}</span>
             <span class="rank-mov">${f.mv.es} · ${f.cat==='physical'?'Físico':'Especial'}</span>
@@ -3847,13 +3966,27 @@ async function panelMejor(){
           <span class="tchip" style="background:${TCOLOR[f.mv.tipo]}">${TES[f.mv.tipo]}</span>
           ${f.ef>1?`<span class="etq sup">x${f.ef}</span>`:f.ef<1?`<span class="etq mal">x${f.ef}</span>`:''}
           ${f.stab>1?'<span class="etq stab">STAB</span>':''}
+          <span class="etq">${f.min}–${f.max}</span>
           <span class="etq">${f.golpes} golpe${f.golpes>1?'s':''}</span>
+          ${lista.length>1?`<span class="gan-nav peq">${lista.map((_,i)=>
+            `<i class="${i===dnIdxMov[pid]?'on':''}"></i>`).join('')}</span>`:''}
         </div>
-      </div>`).join('')}
+      </div>`;
+    }).join('')}`;
 
-    ${filas.length>1 ? `<button class="btn btn-s" style="width:100%;margin-top:6px;"
-      onclick="dnVerTodos=!dnVerTodos;panelMejor()">${
-        dnVerTodos ? 'Ocultar el resto' : `Ver las otras ${Math.min(filas.length-1,11)} opciones`}</button>` : ''}`;
+  /* Gestos: en la tarjeta grande recorre el ranking; en cada fila, sus movimientos */
+  const gan = document.getElementById('gan-card');
+  if(gan) detectarArrastre(gan,
+    ()=>{ if(dnTop<dnFilas.length-1){dnTop++;panelMejor();} },
+    ()=>{ if(dnTop>0){dnTop--;panelMejor();} });
+
+  cont.querySelectorAll('.swipeable').forEach(el=>{
+    const pid = Number(el.dataset.pid);
+    const n = porMon[pid].length;
+    detectarArrastre(el,
+      ()=>{ dnIdxMov[pid]=(dnIdxMov[pid]+1)%n; panelMejor(); },
+      ()=>{ dnIdxMov[pid]=(dnIdxMov[pid]-1+n)%n; panelMejor(); });
+  });
 }
 
 /* ---------- Daño teórico ---------- */
@@ -3873,21 +4006,25 @@ async function panelCalculo(){
   }
 
   const atkMon = allMons.find(x=>x.id===dnAtk.pid);
-  if(!dnMovsAtk.length || dnMovsAtk.pid!==dnAtk.pid+':'+juego){
-    dnMovsAtk = await movsDanio(dnAtk.pid, juego);
-    dnMovsAtk.pid = dnAtk.pid+':'+juego;
-    if(dnAtk.mov>=dnMovsAtk.length) dnAtk.mov = 0;
+  const clave = dnAtk.pid+':'+juego;
+  if(dnMovsAtk.clave !== clave){
+    let info;
+    try{ info = await movsDe(dnAtk.pid, GRUPO_VERSION[juego]||''); }catch(e){ info={pokemonmove:[]}; }
+    await cargarCambiosMov();
+    dnMovsAtk = armarMovs(info, gen).filter(m=>m.pot>0);
+    dnMovsAtk.clave = clave;
+    if(!dnMovsAtk.some(m=>m.slug===dnAtk.movSlug))
+      dnAtk.movSlug = dnMovsAtk.length ? dnMovsAtk.slice().sort((a,b)=>b.pot-a.pot)[0].slug : '';
   }
-  if(!dnHabsAtk.length || dnHabsAtk.pid!==dnAtk.pid){
-    try{ dnHabsAtk = await habilidadesDe(dnAtk.pid); dnHabsAtk.pid = dnAtk.pid; }
-    catch(e){ dnHabsAtk = []; }
+  if(dnHabsAtk.pid !== dnAtk.pid){
+    try{ dnHabsAtk = await habilidadesDe(dnAtk.pid); }catch(e){ dnHabsAtk = []; }
+    dnHabsAtk.pid = dnAtk.pid;
     if(dnHabsAtk.length && !dnHabsAtk.some(h=>h.slug===dnAtk.hab)) dnAtk.hab = dnHabsAtk[0].slug;
   }
 
+  const mv = dnMovsAtk.find(m=>m.slug===dnAtk.movSlug);
   let resHTML = '<div class="hint">Este pokémon no tiene movimientos de daño en este juego.</div>';
-  if(dnMovsAtk.length){
-    const mv = dnMovsAtk[dnAtk.mov];
-    const cat = gen<=3 ? (TCAT[mv.tipo]||'physical') : mv.clase;
+  if(mv){
     const r = calcularDanio({
       gen, atkMon, defMon, mov:mv,
       atk:{nivel:dnAtk.nivel, iv:dnAtk.iv, ev:dnAtk.ev, nat:dnAtk.nat, hab:dnAtk.hab, bajo:dnAtk.bajo},
@@ -3901,6 +4038,9 @@ async function panelCalculo(){
   }
 
   const t = topesDe(gen);
+  const nat = NATURALEZAS.find(n=>n.slug===dnAtk.nat) || {es:'—'};
+  const hab = dnHabsAtk.find(h=>h.slug===dnAtk.hab);
+
   cont.innerHTML = `
     <button class="rival-card" onclick="elegirAtacante()">
       <img src="${SPRITE(dnAtk.pid)}" alt="">
@@ -3922,17 +4062,19 @@ async function panelCalculo(){
         <input type="number" min="0" max="${t.ev}" value="${dnAtk.ev}" onchange="setAtk('ev',this.value)">
       </div>
       ${gen>=3?`<div class="cfg-fila2">
-        <select onchange="setAtk('nat',this.value)">
-          ${NATURALEZAS.map(n=>`<option value="${n.slug}" ${n.slug===dnAtk.nat?'selected':''}>${n.es}</option>`).join('')}
-        </select>
-        <select onchange="setAtk('hab',this.value)">
-          ${dnHabsAtk.map(h=>`<option value="${h.slug}" ${h.slug===dnAtk.hab?'selected':''}>${h.es}</option>`).join('')}
-        </select>
+        <button class="campo mini" onclick="elegirNatAtk()">
+          <span class="campo-main"><span class="campo-val">${nat.es}</span>
+          <span class="campo-sub">${nat.sube?`▲ ${STAT_ES[nat.sube]} ▼ ${STAT_ES[nat.baja]}`:'Neutra'}</span>
+          </span><span class="campo-x">›</span></button>
+        <button class="campo mini" onclick="elegirHabAtk()">
+          <span class="campo-main"><span class="campo-val">${hab?hab.es:'—'}</span>
+          <span class="campo-sub">Habilidad</span></span><span class="campo-x">›</span></button>
       </div>`:''}
-      ${dnMovsAtk.length?`<div class="cfg-fila2" style="margin-top:7px;">
-        <select onchange="setAtk('mov',this.value)">
-          ${dnMovsAtk.map((m,i)=>`<option value="${i}" ${i===dnAtk.mov?'selected':''}>${m.es} · ${m.pot}</option>`).join('')}
-        </select></div>`:''}
+      <button class="campo" style="width:100%;margin-top:7px;" onclick="elegirMovAtk()">
+        <span class="campo-main">
+          <span class="campo-val ${mv?'':'sin'}">${mv?mv.es:'Sin movimiento'}</span>
+          <span class="campo-sub">${mv?`${TES[mv.tipo]} · ${CLASE_ES[mv.clase]} · Pot ${mv.pot} · Prec ${mv.prec??'—'}`:'Elegir movimiento'}</span>
+        </span><span class="campo-x">›</span></button>
       <label class="chk"><input type="checkbox" ${dnAtk.bajo?'checked':''}
         onchange="setAtk('bajo',this.checked)"> PS bajos (Mar Llamas, Espesura, Torrente…)</label>
     </div>
@@ -3944,17 +4086,41 @@ function setAtk(campo, v){
   if(campo==='nivel') v=Math.max(1,Math.min(100,Number(v)||1));
   if(campo==='iv')    v=Math.max(0,Math.min(t.iv,Number(v)||0));
   if(campo==='ev')    v=Math.max(0,Math.min(t.ev,Number(v)||0));
-  if(campo==='mov')   v=Number(v);
   dnAtk[campo]=v;
   renderDanio();
 }
 
+function elegirMovAtk(){
+  if(!dnMovsAtk.length) return;
+  const mon = allMons.find(x=>x.id===dnAtk.pid);
+  abrirPickMovs({
+    sub: mon.es, movs: dnMovsAtk, actual: dnAtk.movSlug, permitirVacio: false,
+    alElegir: slug=>{ dnAtk.movSlug = slug; renderDanio(); }
+  });
+}
+function elegirNatAtk(){
+  abrirSelector({
+    titulo:'Naturaleza', sub:'Modifica dos estadísticas un 10 %', buscar:true, actual:dnAtk.nat,
+    opciones: NATURALEZAS.map(n=>({valor:n.slug, nombre:n.es,
+      detalle: n.sube
+        ? `<span class="nat-sube">▲ ${STAT_ES[n.sube]}</span> · <span class="nat-baja">▼ ${STAT_ES[n.baja]}</span>`
+        : '<span class="nat-neutra">Sin efecto</span>'})),
+    alElegir: v=>{ dnAtk.nat=v; renderDanio(); }
+  });
+}
+function elegirHabAtk(){
+  abrirSelector({
+    titulo:'Habilidad', sub:'Del atacante', buscar:false, actual:dnAtk.hab,
+    opciones: dnHabsAtk.map(h=>({valor:h.slug, nombre:h.es,
+      detalle: HAB_EFECTO[h.slug] ? 'Afecta al cálculo de daño' : ''})),
+    alElegir: v=>{ dnAtk.hab=v; renderDanio(); }
+  });
+}
+
 /* Elegir atacante: libre o desde un equipo */
 function elegirAtacante(){
-  const ops = [
-    {valor:'libre', nombre:'Pokémon libre', detalle:'Elige cualquiera y ajusta sus valores'}
-  ];
-  if(equipos.length) ops.push({valor:'equipo', nombre:'Desde un equipo', detalle:'Usa uno ya configurado'});
+  const ops = [{valor:'libre', nombre:'Pokémon libre', detalle:'Cualquiera, ajustas sus valores'}];
+  if(equipos.length) ops.push({valor:'equipo', nombre:'Desde un equipo', detalle:'Uno ya configurado'});
   if(ops.length===1) return elegirAtacanteLibre();
   abrirSelector({
     titulo:'Elegir atacante', sub:'¿De dónde lo tomamos?', buscar:false, actual:'',
@@ -3972,7 +4138,7 @@ function elegirAtacanteLibre(){
       detalle: tiposDe(m).map(x=>TES[x]).join(' / ')
     })),
     alElegir: v=>{
-      dnAtk = {pid:Number(v), nivel:50, iv:31, ev:252, nat:'hardy', hab:'', mov:0,
+      dnAtk = {pid:Number(v), nivel:50, iv:31, ev:252, nat:'hardy', hab:'', movSlug:'',
                deEquipo:null, bajo:false};
       dnHabsAtk=[]; dnMovsAtk=[];
       renderDanio();
@@ -3992,9 +4158,9 @@ function elegirMiembroAtacante(iEq){
     }),
     alElegir: v=>{
       const m = eq.miembros[Number(v)];
-      const cl = 'attack';
-      dnAtk = {pid:m.pid, nivel:m.nivel, iv:m.ivs[cl], ev:m.evs[cl], nat:m.naturaleza,
-               hab:m.habilidad, mov:0, deEquipo:eq.nombre, bajo:false};
+      dnAtk = {pid:m.pid, nivel:m.nivel, iv:m.ivs.attack, ev:m.evs.attack, nat:m.naturaleza,
+               hab:m.habilidad, movSlug:m.movimientos.find(Boolean)||'',
+               deEquipo:eq.nombre, bajo:false};
       dnHabsAtk=[]; dnMovsAtk=[];
       renderDanio();
     }
