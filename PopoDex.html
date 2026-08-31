@@ -252,6 +252,94 @@ select:focus,input:focus{border-color:var(--accent);}
 .nav-dot{width:4px;height:4px;border-radius:50%;background:transparent;}
 .nav-i.active .nav-dot{background:var(--accent);}
 .soon{padding:70px 24px;text-align:center;}
+
+/* ---------- EQUIPO ---------- */
+.eq-card{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:13px 14px;margin-bottom:10px;cursor:pointer;
+}
+.eq-card:active{border-color:var(--accent);}
+.eq-top{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.eq-nom{font-size:14px;font-weight:600;}
+.eq-meta{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:2px;}
+.eq-mini{display:flex;gap:2px;margin-top:9px;}
+.eq-mini img{width:34px;height:34px;image-rendering:pixelated;}
+.eq-mini .hueco{
+  width:34px;height:34px;border:1px dashed var(--border);border-radius:3px;
+}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px;}
+.slot{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px;cursor:pointer;min-height:104px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;text-align:center;
+}
+.slot:active{border-color:var(--accent);}
+.slot.vacio{border-style:dashed;color:var(--dim);}
+.slot img{width:56px;height:56px;image-rendering:pixelated;}
+.slot .s-nom{font-size:12px;font-weight:600;text-transform:capitalize;line-height:1.2;}
+.slot .s-nv{font-family:var(--mono);font-size:9.5px;color:var(--muted);}
+.slot .s-mas{font-size:22px;font-weight:300;}
+.slot-tipos{display:flex;gap:3px;}
+
+.eq-barra{display:flex;gap:8px;margin-bottom:16px;}
+.eq-barra select{flex:1;}
+.res-lista{max-height:230px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);margin-top:8px;}
+.res-item{
+  display:flex;align-items:center;gap:9px;padding:8px 10px;cursor:pointer;
+  border-bottom:1px solid var(--border);
+}
+.res-item:last-child{border-bottom:none;}
+.res-item:active{background:var(--bg-screen);}
+.res-item img{width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;}
+.res-nom{font-size:12.5px;font-weight:500;text-transform:capitalize;flex:1;}
+.res-num{font-family:var(--mono);font-size:9.5px;color:var(--dim);}
+
+.ed-top{display:flex;gap:12px;align-items:center;margin-bottom:14px;}
+.ed-img{
+  width:78px;height:78px;background:var(--bg-screen);border-radius:var(--r);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.ed-img img{width:70px;height:70px;image-rendering:pixelated;}
+.ed-info{flex:1;min-width:0;}
+.ed-sec{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;color:var(--muted);
+  text-transform:uppercase;margin:16px 0 8px;border-top:1px solid var(--border);padding-top:12px;
+}
+.ed-sec:first-of-type{border-top:none;padding-top:0;margin-top:10px;}
+.ed-fila{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+.ed-fila label{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:56px;flex-shrink:0;text-transform:uppercase;}
+.ed-fila input,.ed-fila select{flex:1;padding:8px 10px;font-size:12px;}
+.ed-num{width:58px !important;flex:0 0 58px !important;text-align:center;}
+
+.iv-fila{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
+.iv-lab{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:46px;flex-shrink:0;text-transform:uppercase;}
+.iv-in{width:52px;flex-shrink:0;padding:6px 4px !important;font-size:11px !important;text-align:center;}
+.iv-res{
+  margin-left:auto;font-family:var(--mono);font-size:12px;font-weight:700;
+  width:44px;text-align:right;flex-shrink:0;
+}
+.iv-cab{
+  display:flex;gap:7px;font-family:var(--mono);font-size:8.5px;color:var(--dim);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;
+}
+.iv-cab span:nth-child(1){width:46px;}
+.iv-cab span:nth-child(2),.iv-cab span:nth-child(3){width:52px;text-align:center;}
+.iv-cab span:nth-child(4){margin-left:auto;width:44px;text-align:right;}
+.ev-total{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:7px;text-align:right;}
+.ev-total.exceso{color:var(--alert);font-weight:700;}
+.mv-slot{margin-bottom:7px;}
+.aviso{
+  font-family:var(--mono);font-size:9.5px;color:var(--muted);background:var(--bg-screen);
+  border-radius:var(--r);padding:8px 10px;line-height:1.45;margin-bottom:10px;
+}
+.eq-vacio{text-align:center;padding:44px 20px;color:var(--muted);}
+.eq-vacio p{font-size:12.5px;line-height:1.55;margin:8px 0 0;}
+.eq-vacio svg{width:34px;height:34px;stroke:var(--dim);fill:none;stroke-width:1.5;}
+.btn-borrar{
+  width:100%;margin-top:14px;background:transparent;color:var(--alert);
+  border:1px solid #f0c4d0;border-radius:var(--r);padding:10px;font-size:12.5px;
+  font-weight:600;cursor:pointer;font-family:var(--body);
+}
 .soon svg{width:38px;height:38px;stroke:var(--dim);fill:none;stroke-width:1.5;margin-bottom:14px;}
 .soon h3{font-size:15px;margin:0 0 6px;}
 .soon p{font-size:12px;color:var(--muted);margin:0;line-height:1.5;}
@@ -282,7 +370,7 @@ select:focus,input:focus{border-color:var(--accent);}
         </div>
         <div class="sc" data-go="equipo">
           <svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.6"/><path d="M2.5 20c.5-4 2.7-6 5.5-6s5 2 5.5 6"/><path d="M14 20c.3-3 1.7-4.6 3.5-4.6s3.1 1.6 3.5 4.6"/></svg>
-          <div class="sc-t">Equipo</div><div class="sc-s">Armá tu grupo atacante</div>
+          <div class="sc-t">Equipo</div><div class="sc-s">Arma tu grupo atacante</div>
         </div>
         <div class="sc" data-go="dano">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>
@@ -341,9 +429,23 @@ select:focus,input:focus{border-color:var(--accent);}
   </div>
 
   <!-- ============ PLACEHOLDERS ============ -->
-  <div class="screen" id="s-equipo"><div class="hdr"><h1 class="hdr-title">Equipo</h1></div>
-    <div class="soon"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.6"/><path d="M2.5 20c.5-4 2.7-6 5.5-6s5 2 5.5 6"/><path d="M14 20c.3-3 1.7-4.6 3.5-4.6s3.1 1.6 3.5 4.6"/></svg>
-    <h3>Próximo apartado</h3><p>Acá vas a armar tu equipo y vincular el archivo .sav de VBA.</p></div></div>
+  <div class="screen" id="s-equipo">
+    <div class="hdr">
+      <div class="hdr-row">
+        <div id="eq-titulo">
+          <p class="hdr-sub" id="eq-sub">Tus equipos</p>
+          <h1 class="hdr-title">Equipo</h1>
+        </div>
+        <div class="hd-actions">
+          <button class="icon-btn" id="eq-volver" style="display:none;" onclick="verListaEquipos()">
+            <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button class="icon-btn" id="eq-nuevo" onclick="nuevoEquipo()">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="pad" id="eq-body"></div>
+  </div>
 
   <div class="screen" id="s-dano"><div class="hdr"><h1 class="hdr-title">Daño</h1></div>
     <div class="soon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></svg>
@@ -358,6 +460,9 @@ select:focus,input:focus{border-color:var(--accent);}
 
   <!-- ============ OVERLAY INFO ============ -->
   <div class="overlay" id="ov-info"><div class="sheet" id="info-sheet"></div></div>
+
+  <!-- ============ OVERLAY MIEMBRO ============ -->
+  <div class="overlay" id="ov-miembro"><div class="sheet" id="miembro-sheet"></div></div>
 
   <!-- ============ OVERLAY FILTROS ============ -->
   <div class="overlay" id="ov-filters">
@@ -1122,7 +1227,7 @@ async function openDetail(id){
         <h2 class="sheet-title">${m.es || m.name.replace(/-/g,' ')}</h2>
       </div>
       <div class="hd-actions">
-        <button class="mini-btn" title="Agregar al equipo" onclick="alert('Se conectará con el apartado Equipo')">
+        <button class="mini-btn" title="Agregar al equipo" onclick="agregarAEquipo(${m.id})">
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
         <button class="mini-btn" title="Más información" onclick="openInfo(${m.id})">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none"/></svg></button>
@@ -1520,6 +1625,530 @@ detectarArrastre(document.getElementById('ov-detail'),
   ()=>moverPokemon(1), ()=>moverPokemon(-1),
   ()=>document.getElementById('ov-detail').classList.contains('open'));
 
+/* ================= EQUIPO ================= */
+
+/* Juegos individuales con su generación */
+const JUEGOS = [
+  {slug:'red',es:'Rojo',gen:1},{slug:'blue',es:'Azul',gen:1},{slug:'yellow',es:'Amarillo',gen:1},
+  {slug:'gold',es:'Oro',gen:2},{slug:'silver',es:'Plata',gen:2},{slug:'crystal',es:'Cristal',gen:2},
+  {slug:'ruby',es:'Rubí',gen:3},{slug:'sapphire',es:'Zafiro',gen:3},{slug:'emerald',es:'Esmeralda',gen:3},
+  {slug:'firered',es:'Rojo Fuego',gen:3},{slug:'leafgreen',es:'Verde Hoja',gen:3},
+  {slug:'diamond',es:'Diamante',gen:4},{slug:'pearl',es:'Perla',gen:4},{slug:'platinum',es:'Platino',gen:4},
+  {slug:'heartgold',es:'Oro HeartGold',gen:4},{slug:'soulsilver',es:'Plata SoulSilver',gen:4},
+  {slug:'black',es:'Negro',gen:5},{slug:'white',es:'Blanco',gen:5},
+  {slug:'black-2',es:'Negro 2',gen:5},{slug:'white-2',es:'Blanco 2',gen:5},
+  {slug:'x',es:'X',gen:6},{slug:'y',es:'Y',gen:6},
+  {slug:'omega-ruby',es:'Rubí Omega',gen:6},{slug:'alpha-sapphire',es:'Zafiro Alfa',gen:6},
+  {slug:'sun',es:'Sol',gen:7},{slug:'moon',es:'Luna',gen:7},
+  {slug:'ultra-sun',es:'Ultrasol',gen:7},{slug:'ultra-moon',es:'Ultraluna',gen:7},
+  {slug:'lets-go-pikachu',es:"Let's Go Pikachu",gen:7},{slug:'lets-go-eevee',es:"Let's Go Eevee",gen:7},
+  {slug:'sword',es:'Espada',gen:8},{slug:'shield',es:'Escudo',gen:8},
+  {slug:'brilliant-diamond',es:'Diamante Brillante',gen:8},{slug:'shining-pearl',es:'Perla Reluciente',gen:8},
+  {slug:'legends-arceus',es:'Leyendas Arceus',gen:8},
+  {slug:'scarlet',es:'Escarlata',gen:9},{slug:'violet',es:'Púrpura',gen:9}
+];
+const genDeJuego = slug => (JUEGOS.find(j=>j.slug===slug)||{gen:3}).gen;
+const nombreDeJuego = slug => (JUEGOS.find(j=>j.slug===slug)||{es:slug}).es;
+
+/* Naturalezas (desde 3.ª gen): sube una estadística 10% y baja otra 10% */
+const NATURALEZAS = [
+  {slug:'hardy',es:'Fuerte',sube:null,baja:null},
+  {slug:'lonely',es:'Huraña',sube:'attack',baja:'defense'},
+  {slug:'brave',es:'Audaz',sube:'attack',baja:'speed'},
+  {slug:'adamant',es:'Firme',sube:'attack',baja:'special-attack'},
+  {slug:'naughty',es:'Pícara',sube:'attack',baja:'special-defense'},
+  {slug:'bold',es:'Osada',sube:'defense',baja:'attack'},
+  {slug:'docile',es:'Dócil',sube:null,baja:null},
+  {slug:'relaxed',es:'Plácida',sube:'defense',baja:'speed'},
+  {slug:'impish',es:'Agitada',sube:'defense',baja:'special-attack'},
+  {slug:'lax',es:'Floja',sube:'defense',baja:'special-defense'},
+  {slug:'timid',es:'Miedosa',sube:'speed',baja:'attack'},
+  {slug:'hasty',es:'Activa',sube:'speed',baja:'defense'},
+  {slug:'serious',es:'Seria',sube:null,baja:null},
+  {slug:'jolly',es:'Alegre',sube:'speed',baja:'special-attack'},
+  {slug:'naive',es:'Ingenua',sube:'speed',baja:'special-defense'},
+  {slug:'modest',es:'Modesta',sube:'special-attack',baja:'attack'},
+  {slug:'mild',es:'Afable',sube:'special-attack',baja:'defense'},
+  {slug:'quiet',es:'Mansa',sube:'special-attack',baja:'speed'},
+  {slug:'bashful',es:'Tímida',sube:null,baja:null},
+  {slug:'rash',es:'Alocada',sube:'special-attack',baja:'special-defense'},
+  {slug:'calm',es:'Serena',sube:'special-defense',baja:'attack'},
+  {slug:'gentle',es:'Amable',sube:'special-defense',baja:'defense'},
+  {slug:'sassy',es:'Grosera',sube:'special-defense',baja:'speed'},
+  {slug:'careful',es:'Cauta',sube:'special-defense',baja:'special-attack'},
+  {slug:'quirky',es:'Rara',sube:null,baja:null}
+];
+
+const STATS6 = ['hp','attack','defense','special-attack','special-defense','speed'];
+
+/* Fórmulas reales de estadísticas.
+   1.ª y 2.ª gen usan DVs (0-15) y Puntos de Esfuerzo (0-65535).
+   De 3.ª en adelante, IVs (0-31) y EVs (0-252, tope 510). */
+function calcularStat(clave, base, iv, ev, nivel, gen, naturaleza){
+  if(gen<=2){
+    const raiz = Math.floor(Math.floor(Math.sqrt(ev))/4);
+    if(clave==='hp')
+      return Math.floor(((base+iv)*2 + raiz) * nivel/100) + nivel + 10;
+    return Math.floor(((base+iv)*2 + raiz) * nivel/100) + 5;
+  }
+  if(clave==='hp')
+    return Math.floor((2*base + iv + Math.floor(ev/4)) * nivel/100) + nivel + 10;
+  let v = Math.floor((2*base + iv + Math.floor(ev/4)) * nivel/100) + 5;
+  const nat = NATURALEZAS.find(n=>n.slug===naturaleza);
+  if(nat){
+    if(nat.sube===clave) v = Math.floor(v*1.1);
+    else if(nat.baja===clave) v = Math.floor(v*0.9);
+  }
+  return v;
+}
+
+function topesDe(gen){
+  return gen<=2
+    ? {iv:15, ev:65535, evTotal:null, ivLabel:'DV', evLabel:'P.Esf.'}
+    : {iv:31, ev:252, evTotal:510, ivLabel:'IV', evLabel:'EV'};
+}
+
+/* ---------- Estado y persistencia ---------- */
+let equipos = [];
+let equipoAbierto = null;   // índice del equipo que se está viendo
+let slotAbierto = null;     // índice del miembro que se está editando
+
+function guardarEquipos(){
+  try{ localStorage.setItem('popodex:equipos', JSON.stringify(equipos)); }catch(e){}
+}
+function cargarEquipos(){
+  try{
+    const raw = localStorage.getItem('popodex:equipos');
+    equipos = raw ? JSON.parse(raw) : [];
+  }catch(e){ equipos = []; }
+}
+
+function miembroNuevo(pid, gen){
+  const t = topesDe(gen);
+  const ivs={}, evs={};
+  STATS6.forEach(s=>{ ivs[s] = t.iv; evs[s] = 0; });
+  return {pid, apodo:'', nivel:50, naturaleza:'hardy', habilidad:'', objeto:'',
+          ivs, evs, movimientos:['','','','']};
+}
+
+/* ---------- Lista de equipos ---------- */
+function verListaEquipos(){
+  equipoAbierto = null;
+  document.getElementById('eq-volver').style.display='none';
+  document.getElementById('eq-sub').textContent = 'Tus equipos';
+  document.querySelector('#s-equipo .hdr-title').textContent = 'Equipo';
+  renderEquipos();
+}
+
+function renderEquipos(){
+  const body = document.getElementById('eq-body');
+  if(!equipos.length){
+    body.innerHTML = `
+      <div class="eq-vacio">
+        <svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.6"/>
+        <path d="M2.5 20c.5-4 2.7-6 5.5-6s5 2 5.5 6"/><path d="M14 20c.3-3 1.7-4.6 3.5-4.6s3.1 1.6 3.5 4.6"/></svg>
+        <p>Todavía no tienes equipos.<br>Toca + para crear el primero.</p>
+      </div>`;
+    return;
+  }
+  body.innerHTML = equipos.map((eq,i)=>{
+    const huecos = 6 - eq.miembros.length;
+    return `
+    <div class="eq-card" onclick="abrirEquipo(${i})">
+      <div class="eq-top">
+        <div>
+          <div class="eq-nom">${eq.nombre}</div>
+          <div class="eq-meta">${nombreDeJuego(eq.juego)} · ${eq.miembros.length}/6</div>
+        </div>
+      </div>
+      <div class="eq-mini">
+        ${eq.miembros.map(m=>`<img src="${SPRITE(m.pid)}" alt="">`).join('')}
+        ${Array.from({length:huecos},()=>'<span class="hueco"></span>').join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function nuevoEquipo(){
+  if(equipoAbierto!==null){ verListaEquipos(); return; }
+  const nombre = prompt('Nombre del equipo:', 'Equipo '+(equipos.length+1));
+  if(!nombre) return;
+  equipos.push({nombre:nombre.trim(), juego:'firered', miembros:[]});
+  guardarEquipos();
+  abrirEquipo(equipos.length-1);
+}
+
+/* ---------- Vista de un equipo ---------- */
+function abrirEquipo(i){
+  equipoAbierto = i;
+  const eq = equipos[i];
+  document.getElementById('eq-volver').style.display='flex';
+  document.getElementById('eq-sub').textContent = nombreDeJuego(eq.juego);
+  document.querySelector('#s-equipo .hdr-title').textContent = eq.nombre;
+  renderEquipo();
+}
+
+function renderEquipo(){
+  const eq = equipos[equipoAbierto];
+  if(!eq) return verListaEquipos();
+  const gen = genDeJuego(eq.juego);
+  const slots = Array.from({length:6},(_,i)=>eq.miembros[i]||null);
+
+  document.getElementById('eq-body').innerHTML = `
+    <div class="eq-barra">
+      <select id="eq-juego" onchange="cambiarJuego(this.value)">
+        ${JUEGOS.map(j=>`<option value="${j.slug}" ${j.slug===eq.juego?'selected':''}>${j.es} (${j.gen}.ª gen)</option>`).join('')}
+      </select>
+    </div>
+    <div class="aviso">${gen<=2
+      ? 'Esta generación usa DVs (0-15) y Puntos de Esfuerzo (0-65535). No hay naturalezas ni habilidades.'
+      : 'Esta generación usa IVs (0-31) y EVs (0-252, con tope de 510 en total).'}</div>
+    <div class="slots">
+      ${slots.map((m,i)=>{
+        if(!m) return `<div class="slot vacio" onclick="editarSlot(${i})">
+          <span class="s-mas">+</span><span class="s-nv">Vacío</span></div>`;
+        const mon = allMons.find(x=>x.id===m.pid) || {es:'?',types:[]};
+        return `<div class="slot" onclick="editarSlot(${i})">
+          <img src="${SPRITE(m.pid)}" alt="">
+          <span class="s-nom">${m.apodo || mon.es}</span>
+          <span class="s-nv">Nv. ${m.nivel}</span>
+          <span class="slot-tipos">${mon.types.map(t=>`<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="btn-borrar" onclick="borrarEquipo()">Eliminar este equipo</button>`;
+}
+
+function cambiarJuego(slug){
+  const eq = equipos[equipoAbierto];
+  const genViejo = genDeJuego(eq.juego), genNuevo = genDeJuego(slug);
+  eq.juego = slug;
+  /* Si se cruza la frontera de 2.ª a 3.ª gen, los topes cambian: se ajustan */
+  if((genViejo<=2) !== (genNuevo<=2)){
+    const t = topesDe(genNuevo);
+    eq.miembros.forEach(m=>{
+      STATS6.forEach(s=>{
+        m.ivs[s] = Math.min(m.ivs[s], t.iv);
+        m.evs[s] = Math.min(m.evs[s], t.ev);
+      });
+    });
+  }
+  guardarEquipos();
+  document.getElementById('eq-sub').textContent = nombreDeJuego(slug);
+  renderEquipo();
+}
+
+function borrarEquipo(){
+  if(!confirm('¿Eliminar "'+equipos[equipoAbierto].nombre+'"?')) return;
+  equipos.splice(equipoAbierto,1);
+  guardarEquipos();
+  verListaEquipos();
+}
+
+/* ---------- Editor de un miembro ---------- */
+function editarSlot(i){
+  slotAbierto = i;
+  const eq = equipos[equipoAbierto];
+  openOverlay('ov-miembro');
+  if(!eq.miembros[i]) pantallaBuscador();
+  else pantallaEditor();
+}
+
+function pantallaBuscador(){
+  document.getElementById('miembro-sheet').innerHTML = `
+    <div class="sheet-hd">
+      <div><h2 class="sheet-title" style="font-size:17px;">Elegir pokémon</h2></div>
+      <div class="hd-actions">
+        <button class="mini-btn close" onclick="closeOverlay('ov-miembro')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+    </div>
+    <div class="sheet-bd">
+      <input type="text" id="busca-mon" placeholder="Buscar por nombre o número..." autocomplete="off">
+      <div class="res-lista" id="res-mon"></div>
+    </div>`;
+  const input = document.getElementById('busca-mon');
+  input.addEventListener('input', ()=>pintarResultados(input.value));
+  pintarResultados('');
+  setTimeout(()=>input.focus(),80);
+}
+
+function pintarResultados(txt){
+  const t = txt.trim().toLowerCase();
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  let lista = allMons;
+  if(t){
+    lista = allMons.filter(m=>
+      norm(m.es||'').includes(norm(t)) || m.name.includes(t) || String(m.id)===t);
+  }
+  document.getElementById('res-mon').innerHTML = lista.slice(0,60).map(m=>`
+    <div class="res-item" onclick="elegirMon(${m.id})">
+      <img src="${SPRITE(m.id)}" alt="" loading="lazy">
+      <span class="res-nom">${m.es||m.name}</span>
+      <span class="res-num">#${String(m.id).padStart(3,'0')}</span>
+    </div>`).join('') || '<div class="hint" style="padding:14px;">Sin resultados.</div>';
+}
+
+function elegirMon(pid){
+  const eq = equipos[equipoAbierto];
+  const gen = genDeJuego(eq.juego);
+  eq.miembros[slotAbierto] = miembroNuevo(pid, gen);
+  eq.miembros = eq.miembros.filter(Boolean);
+  slotAbierto = eq.miembros.findIndex(m=>m.pid===pid);
+  guardarEquipos();
+  pantallaEditor();
+}
+
+async function pantallaEditor(){
+  const eq = equipos[equipoAbierto];
+  const m = eq.miembros[slotAbierto];
+  const gen = genDeJuego(eq.juego);
+  const mon = allMons.find(x=>x.id===m.pid);
+  const t = topesDe(gen);
+  const sheet = document.getElementById('miembro-sheet');
+
+  const filaStat = clave=>{
+    const base = mon.stats[clave]||0;
+    const val = calcularStat(clave, base, m.ivs[clave], m.evs[clave], m.nivel, gen, m.naturaleza);
+    return `<div class="iv-fila">
+      <span class="iv-lab">${STAT_ES[clave]}</span>
+      <input class="iv-in" type="number" min="0" max="${t.iv}" value="${m.ivs[clave]}"
+             onchange="setIV('${clave}',this.value)">
+      <input class="iv-in" type="number" min="0" max="${t.ev}" value="${m.evs[clave]}"
+             onchange="setEV('${clave}',this.value)">
+      <span class="iv-res" id="res-${clave}">${val}</span>
+    </div>`;
+  };
+
+  const sumaEV = STATS6.reduce((a,s)=>a+m.evs[s],0);
+
+  sheet.innerHTML = `
+    <div class="sheet-hd">
+      <div>
+        <div class="sheet-num">N.º ${String(m.pid).padStart(4,'0')}</div>
+        <h2 class="sheet-title" style="font-size:17px;">${mon.es||mon.name}</h2>
+      </div>
+      <div class="hd-actions">
+        <button class="mini-btn close" onclick="closeOverlay('ov-miembro');renderEquipo();">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+    </div>
+    <div class="sheet-bd">
+      <div class="ed-top">
+        <div class="ed-img"><img src="${SPRITE(m.pid)}" alt=""></div>
+        <div class="ed-info">
+          <div class="ed-fila">
+            <label>Apodo</label>
+            <input type="text" value="${m.apodo}" maxlength="12" placeholder="${mon.es}"
+                   onchange="setCampo('apodo',this.value)">
+          </div>
+          <div class="ed-fila">
+            <label>Nivel</label>
+            <input class="ed-num" type="number" min="1" max="100" value="${m.nivel}"
+                   onchange="setCampo('nivel',this.value)">
+            <span class="slot-tipos">${mon.types.map(x=>`<span class="tchip" style="background:${TCOLOR[x]}">${TES[x]}</span>`).join('')}</span>
+          </div>
+        </div>
+      </div>
+
+      ${gen>=3 ? `
+      <div class="ed-sec">Naturaleza y habilidad</div>
+      <div class="ed-fila">
+        <label>Natur.</label>
+        <select onchange="setCampo('naturaleza',this.value)">
+          ${NATURALEZAS.map(n=>{
+            const efecto = n.sube ? ` (+${STAT_ES[n.sube]} −${STAT_ES[n.baja]})` : ' (neutra)';
+            return `<option value="${n.slug}" ${n.slug===m.naturaleza?'selected':''}>${n.es}${efecto}</option>`;
+          }).join('')}
+        </select>
+      </div>
+      <div class="ed-fila">
+        <label>Habil.</label>
+        <select id="ed-habilidad" onchange="setCampo('habilidad',this.value)">
+          <option value="">Cargando...</option>
+        </select>
+      </div>` : ''}
+
+      ${gen>=2 ? `
+      <div class="ed-sec">Objeto equipado</div>
+      <div class="ed-fila">
+        <label>Objeto</label>
+        <input type="text" list="lista-objetos" value="${m.objeto}" placeholder="Ninguno"
+               onchange="setCampo('objeto',this.value)">
+      </div>
+      <datalist id="lista-objetos"></datalist>` : ''}
+
+      <div class="ed-sec">Estadísticas</div>
+      <div class="iv-cab">
+        <span>Stat</span><span>${t.ivLabel}</span><span>${t.evLabel}</span><span>Total</span>
+      </div>
+      ${STATS6.map(filaStat).join('')}
+      ${t.evTotal ? `<div class="ev-total ${sumaEV>t.evTotal?'exceso':''}" id="ev-total">
+        ${sumaEV} / ${t.evTotal} EVs</div>` : ''}
+
+      <div class="ed-sec">Movimientos</div>
+      <div id="ed-movs"><div class="hint">Cargando movimientos...</div></div>
+
+      <button class="btn-borrar" onclick="quitarMiembro()">Quitar del equipo</button>
+    </div>`;
+
+  cargarOpcionesEditor(m, mon, gen);
+}
+
+async function cargarOpcionesEditor(m, mon, gen){
+  /* Habilidades del pokémon */
+  if(gen>=3){
+    try{
+      const ck='hab:'+m.pid;
+      let d = Cache.get(ck);
+      if(!d){
+        d = await gql(`{ pokemon(where:{id:{_eq:${m.pid}}}) {
+          pokemonabilities(order_by:{slot:asc}) { is_hidden
+            ability { name abilitynames(where:{language_id:{_eq:${ES}}}) { name } } } } }`);
+        Cache.set(ck,d);
+      }
+      const sel = document.getElementById('ed-habilidad');
+      if(sel){
+        const habs = d.pokemon[0].pokemonabilities.map(a=>({
+          slug:a.ability.name,
+          es:(a.ability.abilitynames[0]?.name || a.ability.name.replace(/-/g,' ')) + (a.is_hidden?' (oculta)':'')
+        }));
+        sel.innerHTML = habs.map(h=>
+          `<option value="${h.slug}" ${h.slug===m.habilidad?'selected':''}>${h.es}</option>`).join('');
+        if(!m.habilidad && habs.length){ m.habilidad = habs[0].slug; guardarEquipos(); }
+      }
+    }catch(e){
+      const sel=document.getElementById('ed-habilidad');
+      if(sel) sel.innerHTML='<option value="">No disponible</option>';
+    }
+  }
+
+  /* Objetos */
+  if(gen>=2) cargarObjetos();
+
+  /* Movimientos que puede aprender */
+  try{
+    const ck='mv:'+m.pid;
+    let d = Cache.get(ck);
+    if(!d){
+      d = await gql(`{
+        pokemonmove(where:{pokemon_id:{_eq:${m.pid}}},
+                    distinct_on:[move_id, move_learn_method_id],
+                    order_by:[{move_id:asc},{move_learn_method_id:asc}]) {
+          level movelearnmethod { name }
+          move { name power accuracy pp type { name } movedamageclass { name }
+                 movenames(where:{language_id:{_eq:${ES}}}) { name } }
+        }
+      }`);
+      Cache.set(ck,d);
+    }
+    const vistos = new Set();
+    const opciones = [];
+    d.pokemonmove.forEach(r=>{
+      const s = r.move.name;
+      if(vistos.has(s)) return;
+      vistos.add(s);
+      opciones.push({slug:s, es:r.move.movenames[0]?.name || s.replace(/-/g,' '),
+                     tipo:r.move.type?.name, pot:r.move.power});
+    });
+    opciones.sort((a,b)=>a.es.localeCompare(b.es));
+    document.getElementById('ed-movs').innerHTML = [0,1,2,3].map(i=>`
+      <div class="mv-slot">
+        <select onchange="setMov(${i},this.value)">
+          <option value="">— vacío —</option>
+          ${opciones.map(o=>`<option value="${o.slug}" ${o.slug===m.movimientos[i]?'selected':''}>
+            ${o.es}${o.pot?' · '+o.pot:''}</option>`).join('')}
+        </select>
+      </div>`).join('');
+  }catch(e){
+    document.getElementById('ed-movs').innerHTML='<div class="hint">No se pudieron cargar los movimientos.</div>';
+  }
+}
+
+let objetosCargados = false;
+async function cargarObjetos(){
+  const dl = document.getElementById('lista-objetos');
+  if(!dl || objetosCargados) return;
+  const guardado = Cache.get('objetos');
+  const pintar = arr => { dl.innerHTML = arr.map(o=>`<option value="${o}">`).join(''); objetosCargados=true; };
+  if(guardado) return pintar(guardado);
+  try{
+    const d = await gql(`{ item(order_by:{id:asc}) { itemnames(where:{language_id:{_eq:${ES}}}) { name } } }`);
+    const arr = d.item.map(i=>i.itemnames[0]?.name).filter(Boolean);
+    Cache.set('objetos', arr);
+    pintar(arr);
+  }catch(e){}
+}
+
+/* ---------- Cambios en el editor ---------- */
+function _m(){ return equipos[equipoAbierto].miembros[slotAbierto]; }
+
+function setCampo(campo, valor){
+  const m = _m();
+  if(campo==='nivel') valor = Math.max(1, Math.min(100, Number(valor)||1));
+  m[campo] = valor;
+  guardarEquipos();
+  if(campo==='nivel' || campo==='naturaleza') refrescarStats();
+}
+
+function setIV(clave, v){
+  const eq = equipos[equipoAbierto], t = topesDe(genDeJuego(eq.juego));
+  _m().ivs[clave] = Math.max(0, Math.min(t.iv, Number(v)||0));
+  guardarEquipos(); refrescarStats();
+}
+
+function setEV(clave, v){
+  const eq = equipos[equipoAbierto], t = topesDe(genDeJuego(eq.juego));
+  _m().evs[clave] = Math.max(0, Math.min(t.ev, Number(v)||0));
+  guardarEquipos(); refrescarStats();
+}
+
+function setMov(i, slug){
+  _m().movimientos[i] = slug;
+  guardarEquipos();
+}
+
+function refrescarStats(){
+  const eq = equipos[equipoAbierto], m = _m();
+  const gen = genDeJuego(eq.juego);
+  const mon = allMons.find(x=>x.id===m.pid);
+  const t = topesDe(gen);
+  STATS6.forEach(s=>{
+    const el = document.getElementById('res-'+s);
+    if(el) el.textContent = calcularStat(s, mon.stats[s]||0, m.ivs[s], m.evs[s], m.nivel, gen, m.naturaleza);
+  });
+  const tot = document.getElementById('ev-total');
+  if(tot && t.evTotal){
+    const suma = STATS6.reduce((a,s)=>a+m.evs[s],0);
+    tot.textContent = `${suma} / ${t.evTotal} EVs`;
+    tot.classList.toggle('exceso', suma>t.evTotal);
+  }
+}
+
+function quitarMiembro(){
+  const eq = equipos[equipoAbierto];
+  eq.miembros.splice(slotAbierto,1);
+  guardarEquipos();
+  closeOverlay('ov-miembro');
+  renderEquipo();
+}
+
+/* ---------- Enlace con el botón + de la Pokédex ---------- */
+function agregarAEquipo(pid){
+  if(!equipos.length){
+    alert('Primero crea un equipo en el apartado Equipo.');
+    return;
+  }
+  const opciones = equipos.map((e,i)=>`${i+1}. ${e.nombre} (${e.miembros.length}/6)`).join('\n');
+  const r = prompt('¿A qué equipo?\n\n'+opciones, '1');
+  const i = Number(r)-1;
+  if(isNaN(i) || !equipos[i]) return;
+  if(equipos[i].miembros.length>=6){ alert('Ese equipo ya tiene 6 pokémon.'); return; }
+  equipos[i].miembros.push(miembroNuevo(pid, genDeJuego(equipos[i].juego)));
+  guardarEquipos();
+  alert('Agregado a '+equipos[i].nombre);
+}
+
 /* ================= CONTROL DE CACHÉ ================= */
 function actualizarInfoCache(){
   const el = document.getElementById('cache-info');
@@ -1567,6 +2196,8 @@ async function loadHome(){
 
 /* ================= INIT ================= */
 buildTypeChips();
+cargarEquipos();
+renderEquipos();
 loadHome();
 loadAll().then(actualizarInfoCache);
 actualizarInfoCache();
