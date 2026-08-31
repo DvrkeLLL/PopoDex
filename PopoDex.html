@@ -531,7 +531,9 @@ function statColor(v){
 const MAX_ID = 1025;
 
 /* ================= ESTADO ================= */
-let allMons = [];          // {id,name,types,stats,total,moveMethods}
+let allMons = [];          // {id,name,es,types,stats,total,rank,methods}
+let currentList = [];      // lo que se muestra en la grilla (ya filtrado y ordenado)
+let openMonId = null;      // pokémon abierto en el panel de detalle
 let detailCache = {};      // id -> datos completos (moves, abilities...)
 let filters = {gens:[],sort:"",mins:{},types:[],cats:[],moves:[],ranks:[]};
 let dataReady = false;
@@ -832,6 +834,7 @@ function render(){
       return bv-av || a.id-b.id;
     });
   }
+  currentList = list;
   document.getElementById('dex-count').textContent = `${list.length} pokémon`;
   const grid = document.getElementById('dex-grid');
   if(!list.length){ grid.innerHTML='<div class="empty" style="grid-column:1/-1;">Ningún pokémon cumple esos filtros.</div>'; return; }
@@ -1048,6 +1051,8 @@ const EFF_ORDER=[
 
 async function openDetail(id){
   const m = allMons.find(x=>x.id===id);
+  if(!m) return;
+  openMonId = id;
   const sheet = document.getElementById('detail-sheet');
   openOverlay('ov-detail');
   sheet.innerHTML = `<div class="sheet-bd"><div class="hint">Cargando...</div></div>`;
@@ -1380,6 +1385,75 @@ async function openInfo(id){
       <button class="btn btn-s" onclick="closeOverlay('ov-info')" style="margin-top:10px;">Cerrar</button></div>`;
   }
 }
+
+/* ================= GESTOS ================= */
+const ORDEN_PANTALLAS = ['inicio','pokedex','equipo','dano','info'];
+
+function detectarArrastre(el, alIzquierda, alDerecha, permitido){
+  let x0=0, y0=0, t0=0, activo=false;
+
+  const inicio = (x,y)=>{ x0=x; y0=y; t0=Date.now(); activo=true; };
+  const fin = (x,y)=>{
+    if(!activo) return;
+    activo=false;
+    const dx = x-x0, dy = y-y0, dt = Date.now()-t0;
+    if(dt>700) return;                          // demasiado lento
+    if(Math.abs(dx) < 55) return;               // recorrido corto
+    if(Math.abs(dx) < Math.abs(dy)*1.4) return; // fue scroll vertical
+    if(permitido && !permitido()) return;
+    (dx<0 ? alIzquierda : alDerecha)();
+  };
+
+  el.addEventListener('touchstart', e=>{
+    if(e.touches.length!==1) { activo=false; return; }
+    inicio(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:true});
+  el.addEventListener('touchend', e=>{
+    const t = e.changedTouches[0];
+    if(t) fin(t.clientX, t.clientY);
+  }, {passive:true});
+  el.addEventListener('touchcancel', ()=>{ activo=false; }, {passive:true});
+
+  /* Equivalente con mouse, para escritorio */
+  el.addEventListener('mousedown', e=>{
+    if(e.button!==0) return;
+    inicio(e.clientX, e.clientY);
+  });
+  el.addEventListener('mouseup', e=>fin(e.clientX, e.clientY));
+  el.addEventListener('mouseleave', ()=>{ activo=false; });
+}
+
+function hayPanelAbierto(){
+  return !!document.querySelector('.overlay.open');
+}
+
+/* Entre apartados */
+function moverPantalla(paso){
+  const actual = document.querySelector('.screen.active');
+  if(!actual) return;
+  const id = actual.id.replace('s-','');
+  const i = ORDEN_PANTALLAS.indexOf(id);
+  const j = i + paso;
+  if(i===-1 || j<0 || j>=ORDEN_PANTALLAS.length) return;
+  goTo(ORDEN_PANTALLAS[j]);
+}
+
+/* Entre pokémon dentro del detalle, siguiendo el orden de la grilla */
+function moverPokemon(paso){
+  if(!openMonId || !currentList.length) return;
+  const i = currentList.findIndex(m=>m.id===openMonId);
+  if(i===-1) return;
+  const j = i + paso;
+  if(j<0 || j>=currentList.length) return;
+  openDetail(currentList[j].id);
+}
+
+detectarArrastre(document.getElementById('app'),
+  ()=>moverPantalla(1), ()=>moverPantalla(-1), ()=>!hayPanelAbierto());
+
+detectarArrastre(document.getElementById('ov-detail'),
+  ()=>moverPokemon(1), ()=>moverPokemon(-1),
+  ()=>document.getElementById('ov-detail').classList.contains('open'));
 
 /* ================= CONTROL DE CACHÉ ================= */
 function actualizarInfoCache(){
