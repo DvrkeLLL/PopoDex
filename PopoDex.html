@@ -1438,11 +1438,24 @@ const Cache = {
 };
 
 /* ================= HELPERS ================= */
+const ESPERA_MAX = 15000;   // 15 s antes de dar una consulta por perdida
+
 async function gql(query){
-  const r = await fetch(GQL,{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({query})
-  });
+  const ctrl = typeof AbortController!=='undefined' ? new AbortController() : null;
+  const reloj = setTimeout(()=>{ if(ctrl) ctrl.abort(); }, ESPERA_MAX);
+  let r;
+  try{
+    r = await fetch(GQL,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query}),
+      signal: ctrl ? ctrl.signal : undefined
+    });
+  }catch(e){
+    clearTimeout(reloj);
+    throw new Error(e.name==='AbortError' ? 'El servidor tardó demasiado' : 'Sin conexión');
+  }
+  clearTimeout(reloj);
+  if(!r.ok) throw new Error('El servidor respondió '+r.status);
   const j = await r.json();
   if(!j.data){
     const msg = j.errors && j.errors[0] ? j.errors[0].message : 'sin datos';
@@ -1538,8 +1551,17 @@ document.getElementById('btn-filters').addEventListener('click',()=>{
 
 /* ================= CARGA DE DATOS ================= */
 async function fetchJSON(url){
-  const r = await fetch(url);
-  if(!r.ok) throw new Error(url);
+  const ctrl = typeof AbortController!=='undefined' ? new AbortController() : null;
+  const reloj = setTimeout(()=>{ if(ctrl) ctrl.abort(); }, ESPERA_MAX);
+  let r;
+  try{
+    r = await fetch(url, {signal: ctrl ? ctrl.signal : undefined});
+  }catch(e){
+    clearTimeout(reloj);
+    throw new Error(e.name==='AbortError' ? 'El servidor tardó demasiado' : 'Sin conexión');
+  }
+  clearTimeout(reloj);
+  if(!r.ok) throw new Error('El servidor respondió '+r.status);
   return r.json();
 }
 
@@ -2818,53 +2840,63 @@ async function pantallaEditor(){
 }
 
 async function cargarOpcionesEditor(m, mon, gen){
-  /* Habilidades del pokémon */
-  if(gen>=3){
-    try{
-      const ck='hab:'+m.pid;
-      let d = Cache.get(ck);
-      if(!d){
-        d = await gql(`{ pokemon(where:{id:{_eq:${m.pid}}}) {
-          pokemonabilities(order_by:{slot:asc}) { is_hidden
-            ability { name abilitynames(where:{language_id:{_eq:${ES}}}) { name } } } } }`);
-        Cache.set(ck,d);
-      }
-      habsDelMon = d.pokemon[0].pokemonabilities.map(a=>({
-        slug:a.ability.name,
-        es: a.ability.abilitynames[0]?.name || a.ability.name.replace(/-/g,' '),
-        nota: a.is_hidden ? 'Habilidad oculta' : ''
-      }));
-      if(!m.habilidad && habsDelMon.length){ m.habilidad = habsDelMon[0].slug; guardarEquipos(); }
-      pintarCampos();
-    }catch(e){ habsDelMon = []; pintarCampos(); }
-  }
+  const eqJuego = equipos[equipoAbierto].juego;
+  const genEq = genDeJuego(eqJuego);
 
-  /* Objetos */
-  if(gen>=2) cargarObjetos().then(pintarCampos);
+  /* Cada carga va por su cuenta: si una falla, no arrastra a las demás */
+  if(gen>=3) cargarHabilidadesEditor(m).catch(()=>{});
+  if(gen>=2) Promise.resolve().then(cargarObjetos).then(pintarCampos).catch(()=>{});
+  cargarMovimientosEditor(m, eqJuego, genEq).catch(()=>{});
+}
 
-  /* Movimientos que puede aprender */
+async function cargarHabilidadesEditor(m){
+  try{
+    const lista = await habilidadesDe(m.pid);
+    habsDelMon = lista.map(h=>({
+      slug:h.slug,
+      es:h.es.replace(' (oculta)',''),
+      nota:h.es.includes('(oculta)') ? 'Habilidad oculta' : ''
+    }));
+    if(habsDelMon.length && !habsDelMon.some(h=>h.slug===m.habilidad)){
+      m.habilidad = habsDelMon[0].slug;
+      guardarEquipos();
+    }
+  }catch(e){ habsDelMon = []; }
+  pintarCampos();
+}
+
+async function cargarMovimientosEditor(m, eqJuego, genEq){
   const cont = document.getElementById('ed-movs');
   try{
-    const eqJuego = equipos[equipoAbierto].juego;
-    const genEq = genDeJuego(eqJuego);
     let d = await movsDe(m.pid, GRUPO_VERSION[eqJuego] || '');
+    let completa = d.filtrado === false;
 
-    /* Si ese juego no devuelve nada, se recurre a la lista completa
+    /* Si ese juego no devuelve nada, se usa la lista completa
        para que siempre se puedan asignar movimientos */
-    let completa = false;
     if(!d.pokemonmove.length){
       d = await movsDe(m.pid, '');
       completa = true;
     }
-    await cargarCambiosMov();
+    try{ await cargarCambiosMov(); }catch(e){}
     movsDelMon = armarMovs(d, genEq);
-    movsDelMon.completa = completa || d.filtrado===false;
+    movsDelMon.completa = completa;
     pintarHuecosMov();
   }catch(e){
     movsDelMon = [];
     if(cont) cont.innerHTML =
-      `<div class="hint">No se pudieron cargar los movimientos.<br>${e.message||''}</div>`;
+      `<div class="hint">No se pudieron cargar los movimientos.<br>${e.message||''}</div>
+       <button class="btn btn-s" style="width:100%;margin-top:8px;"
+         onclick="reintentarMovimientos()">Reintentar</button>`;
   }
+}
+
+function reintentarMovimientos(){
+  const m = _m();
+  if(!m) return;
+  const eq = equipos[equipoAbierto];
+  const cont = document.getElementById('ed-movs');
+  if(cont) cont.innerHTML = '<div class="hint">Cargando movimientos...</div>';
+  cargarMovimientosEditor(m, eq.juego, genDeJuego(eq.juego)).catch(()=>{});
 }
 
 /* ---------- Selector de movimientos (genérico) ---------- */
@@ -3100,6 +3132,22 @@ function abrirHabilidad(){
     opciones: habsDelMon.map(h=>({valor:h.slug, nombre:h.es, detalle:h.nota||''})),
     alElegir: v=>{ setCampo('habilidad', v); pintarCampos(); }
   });
+}
+
+let objetos = [];
+async function cargarObjetos(){
+  if(objetos.length) return objetos;
+  const guardado = Cache.get('objetos2');
+  if(guardado){ objetos = guardado; return objetos; }
+  try{
+    const d = await gql(`{ item(order_by:{id:asc}) { name itemnames(where:{language_id:{_eq:${ES}}}) { name } } }`);
+    objetos = d.item.map(i=>({
+      slug:i.name,
+      es: i.itemnames[0]?.name || i.name.replace(/-/g,' ')
+    }));
+    Cache.set('objetos2', objetos);
+  }catch(e){ objetos = []; }
+  return objetos;
 }
 
 async function abrirObjeto(){
