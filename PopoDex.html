@@ -1444,7 +1444,10 @@ async function gql(query){
     body:JSON.stringify({query})
   });
   const j = await r.json();
-  if(!j.data) throw new Error('graphql');
+  if(!j.data){
+    const msg = j.errors && j.errors[0] ? j.errors[0].message : 'sin datos';
+    throw new Error(msg);
+  }
   return j.data;
 }
 
@@ -2092,53 +2095,24 @@ const CLASE_COL = {physical:'#C0392B', special:'#2E6FA3', status:'#7C7593'};
 async function loadMoves(id){
   const bd = document.querySelector('#acc-mov .acc-bd');
   try{
-    const gv = grupoActual();
-    const filtro = gv ? `pokemon_id:{_eq:${id}}, versiongroup:{name:{_eq:"${gv}"}}`
-                      : `pokemon_id:{_eq:${id}}`;
-    const ck = 'mv:'+id+(gv?':'+gv:'');
-    let d = Cache.get(ck);
-    if(!d) d = await gql(`{
-      pokemonmove(where:{${filtro}},
-                  distinct_on:[move_id, move_learn_method_id],
-                  order_by:[{move_id:asc},{move_learn_method_id:asc}]) {
-        level
-        movelearnmethod { name }
-        move {
-          name power accuracy pp
-          type { name }
-          movedamageclass { name }
-          movenames(where:{language_id:{_eq:${ES}}}) { name }
-        }
-      }
-    }`);
-    Cache.set(ck, d);
-
+    const d = await movsDe(id, grupoActual());
     if(!d.pokemonmove.length){
-      bd.innerHTML = `<div class="hint">No aprende movimientos en ${nombreDeJuego(juegoActual)}.</div>`;
+      bd.innerHTML = `<div class="hint">Sin datos de movimientos${
+        juegoActual && d.filtrado ? ' en '+nombreDeJuego(juegoActual) : ''}.</div>`;
       return;
     }
     if(juegoActual) await cargarCambiosMov();
     const genJ = genActual();
-    const groups = {'level-up':[], 'egg':[], 'machine':[], 'tutor':[]};
-    d.pokemonmove.forEach(r=>{
-      const m = r.move, met = r.movelearnmethod.name;
-      if(!groups[met]) return;
-      const base = {pot:m.power, prec:m.accuracy, pp:m.pp, tipo:m.type?.name||'normal'};
-      const v = juegoActual ? valoresMov(m.name, genJ, base) : {...base, cambiado:false};
-      groups[met].push({
-        nombre: m.movenames[0]?.name || m.name.replace(/-/g,' '),
-        tipo: v.tipo,
-        clase: genJ<=3 ? (TCAT[v.tipo]||'status') : (m.movedamageclass?.name || 'status'),
-        pot: v.pot, prec: v.prec, pp: v.pp, cambiado: v.cambiado,
-        lvl: r.level || 0
-      });
-    });
-    Object.keys(groups).forEach(k=>{
-      groups[k].sort((a,b)=> k==='level-up' ? (a.lvl-b.lvl)||a.nombre.localeCompare(b.nombre)
-                                            : a.nombre.localeCompare(b.nombre));
-    });
+    const lista = armarMovs(d, juegoActual ? genJ : 9);
 
     const LABELS={'level-up':'Nivel','egg':'Huevo','machine':'MT/MO','tutor':'Tutor'};
+    const groups = {};
+    Object.keys(LABELS).forEach(k=>{
+      groups[k] = lista.filter(m=>m.metodos[k]);
+      groups[k].sort((a,b)=> k==='level-up'
+        ? (a.nivel??999)-(b.nivel??999) || a.es.localeCompare(b.es)
+        : a.es.localeCompare(b.es));
+    });
     const avail = Object.keys(groups).filter(k=>groups[k].length);
     if(!avail.length){ bd.innerHTML='<div class="hint">Sin datos de movimientos.</div>'; return; }
 
@@ -2151,18 +2125,20 @@ async function loadMoves(id){
         <span class="mv-h-n">Pot</span><span class="mv-h-n">Prec</span><span class="mv-h-n">PP</span>
       </div>
       <div id="mv-list"></div>
-      ${juegoActual ? `<div class="hint" style="padding-top:9px;font-size:9.5px;">
-        En morado, los valores propios de ${nombreDeJuego(juegoActual)}.</div>` : ''}`;
+      ${juegoActual && d.filtrado ? `<div class="hint" style="padding-top:9px;font-size:9.5px;">
+        Movimientos de ${nombreDeJuego(juegoActual)}. En morado, los valores propios de ese juego.</div>`
+        : juegoActual ? `<div class="hint" style="padding-top:9px;font-size:9.5px;">
+        No se pudo filtrar por juego: se muestran todos los movimientos.</div>` : ''}`;
 
     const paint = k=>{
       document.getElementById('mv-list').innerHTML = groups[k].map(m=>`
         <div class="mv-row2">
           <div class="mv-main">
-            <div class="mv-nm">${m.nombre}</div>
+            <div class="mv-nm">${m.es}</div>
             <div class="mv-meta">
               <span class="tchip" style="background:${TCOLOR[m.tipo]}">${TES[m.tipo]||m.tipo}</span>
               <span class="mv-cls" style="color:${CLASE_COL[m.clase]}">${CLASE_ES[m.clase]}</span>
-              ${k==='level-up' ? `<span class="mv-lvl">${m.lvl>0?'Nv. '+m.lvl:'—'}</span>` : ''}
+              ${k==='level-up' ? `<span class="mv-lvl">${m.nivel>0?'Nv. '+m.nivel:'—'}</span>` : ''}
             </div>
           </div>
           <span class="mv-n ${m.cambiado?'hist':''}">${m.pot ?? '—'}</span>
@@ -2175,7 +2151,9 @@ async function loadMoves(id){
       bd.querySelectorAll('.mv-tab').forEach(x=>x.classList.remove('on'));
       t.classList.add('on'); paint(t.dataset.g);
     }));
-  }catch(e){ bd.innerHTML='<div class="hint">No se pudieron cargar los movimientos.</div>'; }
+  }catch(e){
+    bd.innerHTML=`<div class="hint">No se pudieron cargar los movimientos.<br>${e.message||''}</div>`;
+  }
 }
 
 /* --- Evoluciones --- */
@@ -2894,7 +2872,7 @@ function armarMovs(info, gen){
       const v = valoresMov(mv.name, gen, base);
       vistos[mv.name] = {
         slug:mv.name,
-        es: mv.movenames[0]?.name || mv.name.replace(/-/g,' '),
+        es: (mv.movenames && mv.movenames[0]?.name) || mv.name.replace(/-/g,' '),
         tipo:v.tipo,
         clase: gen<=3 ? (TCAT[v.tipo]||'status') : (mv.movedamageclass?.name || 'status'),
         pot:v.pot, prec:v.prec, pp:v.pp, cambiado:v.cambiado,
@@ -3423,25 +3401,45 @@ async function especiesDeDex(slug){
 }
 
 /* Datos completos de los movimientos de un pokémon */
+let movsFiltroOK = true;   // se apaga si el servidor rechaza el filtro por juego
+
+const CUERPO_MOV = `
+  level
+  movelearnmethod { name }
+  move { name power accuracy pp
+         type { name }
+         movedamageclass { name }
+         movenames(where:{language_id:{_eq:7}}) { name } }`;
+
+async function consultaMovs(pid, gv){
+  const conFiltro = `{
+    pokemonmove(where:{pokemon_id:{_eq:${pid}}, versiongroup:{name:{_eq:"${gv}"}}},
+                distinct_on:[move_id, move_learn_method_id],
+                order_by:[{move_id:asc},{move_learn_method_id:asc}]) {${CUERPO_MOV}}
+  }`;
+  const sinFiltro = `{
+    pokemonmove(where:{pokemon_id:{_eq:${pid}}},
+                distinct_on:[move_id, move_learn_method_id],
+                order_by:[{move_id:asc},{move_learn_method_id:asc}]) {${CUERPO_MOV}}
+  }`;
+
+  if(gv && movsFiltroOK){
+    try{ return {datos: await gql(conFiltro), filtrado:true}; }
+    catch(e){ movsFiltroOK = false; }   // el servidor no acepta ese filtro: no reintentar
+  }
+  return {datos: await gql(sinFiltro), filtrado:false};
+}
+
+/* Movimientos de un pokémon, según el juego indicado */
 async function movsDe(pid, grupo){
   const gv = grupo !== undefined ? grupo : grupoActual();
-  const filtro = gv ? `pokemon_id:{_eq:${pid}}, versiongroup:{name:{_eq:"${gv}"}}`
-                    : `pokemon_id:{_eq:${pid}}`;
-  const ck = 'mv:'+pid+(gv?':'+gv:'');
+  const ck = 'mv:'+pid+(gv&&movsFiltroOK?':'+gv:'');
   let d = Cache.get(ck);
-  if(!d){
-    d = await gql(`{
-      pokemonmove(where:{${filtro}},
-                  distinct_on:[move_id, move_learn_method_id],
-                  order_by:[{move_id:asc},{move_learn_method_id:asc}]) {
-        level movelearnmethod { name }
-        move { name power accuracy pp type { name } movedamageclass { name }
-               movenames(where:{language_id:{_eq:${ES}}}) { name } }
-      }
-    }`);
-    Cache.set(ck, d);
-  }
-  return d;
+  if(d) return d;
+  const {datos, filtrado} = await consultaMovs(pid, gv);
+  datos.filtrado = filtrado;
+  Cache.set(ck, datos);
+  return datos;
 }
 
 let coberturaDex = null;
@@ -3742,26 +3740,6 @@ async function movsAsignados(miembro, juego){
   }).filter(Boolean);
   dnMovsCache[ck] = lista;
   return lista;
-}
-
-/* Todos los movimientos de daño de un pokémon, para el atacante libre */
-async function movsDanio(pid, juego){
-  const gen = genDeJuego(juego);
-  await cargarCambiosMov();
-  let info;
-  try{ info = await movsDe(pid, GRUPO_VERSION[juego]||''); }catch(e){ return []; }
-  const vistos = {};
-  info.pokemonmove.forEach(r=>{
-    const mv = r.move;
-    if(vistos[mv.name]) return;
-    const v = valoresMov(mv.name, gen, {pot:mv.power, prec:mv.accuracy, pp:mv.pp,
-                                        tipo:mv.type?.name||'normal'});
-    if(!v.pot || v.pot<=0) return;
-    vistos[mv.name] = {slug:mv.name, es:mv.movenames[0]?.name || mv.name.replace(/-/g,' '),
-                       tipo:v.tipo, pot:v.pot, prec:v.prec,
-                       clase:mv.movedamageclass?.name || 'status'};
-  });
-  return Object.values(vistos).sort((a,b)=>b.pot-a.pot);
 }
 
 async function habilidadesDe(pid){
