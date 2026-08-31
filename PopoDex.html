@@ -313,7 +313,17 @@ select:focus,input:focus{border-color:var(--accent);}
 
 .iv-fila{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
 .iv-lab{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:46px;flex-shrink:0;text-transform:uppercase;}
-.iv-in{width:52px;flex-shrink:0;padding:6px 4px !important;font-size:11px !important;text-align:center;}
+.iv-in{
+  width:56px !important;flex:0 0 56px;padding:7px 4px !important;font-size:11.5px !important;
+  text-align:center;-moz-appearance:textfield;
+}
+.iv-in::-webkit-outer-spin-button,.iv-in::-webkit-inner-spin-button{
+  -webkit-appearance:none;margin:0;
+}
+.ed-num::-webkit-outer-spin-button,.ed-num::-webkit-inner-spin-button{
+  -webkit-appearance:none;margin:0;
+}
+.ed-num{-moz-appearance:textfield;}
 .iv-res{
   margin-left:auto;font-family:var(--mono);font-size:12px;font-weight:700;
   width:44px;text-align:right;flex-shrink:0;
@@ -323,10 +333,18 @@ select:focus,input:focus{border-color:var(--accent);}
   text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;
 }
 .iv-cab span:nth-child(1){width:46px;}
-.iv-cab span:nth-child(2),.iv-cab span:nth-child(3){width:52px;text-align:center;}
+.iv-cab span:nth-child(2),.iv-cab span:nth-child(3){width:56px;text-align:center;flex:0 0 56px;}
 .iv-cab span:nth-child(4){margin-left:auto;width:44px;text-align:right;}
-.ev-total{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:7px;text-align:right;}
-.ev-total.exceso{color:var(--alert);font-weight:700;}
+.totales{display:flex;gap:7px;margin-top:9px;}
+.tot-caja{
+  flex:1;font-family:var(--mono);font-size:9.5px;color:var(--muted);
+  background:var(--bg-screen);border:1px solid var(--border);border-radius:var(--r);
+  padding:7px 9px;text-align:center;
+}
+.tot-caja b{color:var(--text);font-weight:700;}
+.tot-caja.exceso{color:var(--alert);border-color:#f0c4d0;background:#fdeef3;}
+.tot-caja.exceso b{color:var(--alert);}
+.tot-caja.pleno b{color:var(--accent);}
 .mv-slot{margin-bottom:7px;}
 .aviso{
   font-family:var(--mono);font-size:9.5px;color:var(--muted);background:var(--bg-screen);
@@ -340,6 +358,94 @@ select:focus,input:focus{border-color:var(--accent);}
   border:1px solid #f0c4d0;border-radius:var(--r);padding:10px;font-size:12.5px;
   font-weight:600;cursor:pointer;font-family:var(--body);
 }
+
+/* ---------- DIÁLOGOS PROPIOS ---------- */
+.sheet-ft{
+  display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);
+  background:var(--bg-panel);flex-shrink:0;
+}
+.eq-cont{
+  font-family:var(--mono);font-size:10px;color:var(--muted);
+  border:1px solid var(--border);border-radius:2px;padding:2px 6px;flex-shrink:0;
+}
+.eq-card.lleno{opacity:.45;cursor:not-allowed;}
+.gen-row{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:11px;}
+.gen-row button{
+  font-family:var(--mono);font-size:11px;font-weight:700;padding:7px 0;
+  border:1px solid color-mix(in srgb, var(--gc) 35%, transparent);
+  background:var(--bg-panel);color:var(--gc);border-radius:var(--r);cursor:pointer;
+}
+.gen-row button.on{background:var(--gc);border-color:var(--gc);color:#fff;}
+.juegos{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.juegos button{
+  font-family:var(--body);font-size:11.5px;padding:9px 6px;border:1px solid var(--border);
+  background:var(--bg-panel);color:var(--muted);border-radius:var(--r);cursor:pointer;
+  text-align:center;line-height:1.2;
+}
+.juegos button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+.mon-hd{
+  display:flex;align-items:center;gap:11px;padding:11px;background:var(--bg-screen);
+  border-radius:var(--r);margin-bottom:14px;
+}
+.mon-hd img{width:56px;height:56px;image-rendering:pixelated;flex-shrink:0;}
+.mon-hd-nom{font-size:14px;font-weight:600;text-transform:capitalize;}
+.toast{
+  position:absolute;left:14px;right:14px;bottom:76px;z-index:60;
+  background:var(--text);color:#fff;border-radius:var(--r);padding:12px 14px;
+  font-size:12.5px;display:flex;align-items:center;gap:9px;
+  transform:translateY(180%);transition:transform .28s cubic-bezier(.2,.8,.3,1);
+  pointer-events:none;
+}
+.toast.show{transform:translateY(0);}
+.toast svg{width:17px;height:17px;stroke:#8DE8C8;fill:none;stroke-width:2.4;flex-shrink:0;}
+
+/* ---------- SELECTOR DE MOVIMIENTOS ---------- */
+.mv-hueco{
+  display:flex;align-items:center;gap:9px;width:100%;text-align:left;cursor:pointer;
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:9px 11px;margin-bottom:7px;font-family:var(--body);
+}
+.mv-hueco:active{border-color:var(--accent);}
+.mv-hueco.vacio{border-style:dashed;}
+.mv-h-idx{
+  font-family:var(--mono);font-size:9px;color:var(--dim);width:14px;flex-shrink:0;
+}
+.mv-h-main{flex:1;min-width:0;}
+.mv-h-nom{font-size:12.5px;font-weight:600;text-transform:capitalize;}
+.mv-h-nom.sin{color:var(--dim);font-weight:400;font-style:normal;}
+.mv-h-sub{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;}
+.mv-h-dat{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.mv-h-x{
+  font-family:var(--mono);font-size:14px;color:var(--dim);flex-shrink:0;
+  padding:0 2px;line-height:1;
+}
+.pick-tabs{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;}
+.pick-tab{
+  font-family:var(--mono);font-size:9.5px;padding:6px 10px;border:1px solid var(--border);
+  border-radius:var(--r);background:var(--bg-panel);cursor:pointer;color:var(--muted);
+  text-transform:uppercase;
+}
+.pick-tab.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+.pick-lista{border:1px solid var(--border);border-radius:var(--r);}
+.pick-item{
+  display:flex;align-items:center;gap:8px;padding:9px 10px;cursor:pointer;
+  border-bottom:1px solid var(--border);
+}
+.pick-item:last-child{border-bottom:none;}
+.pick-item:active{background:var(--bg-screen);}
+.pick-item.on{background:var(--bg-screen);}
+.pick-main{flex:1;min-width:0;}
+.pick-nom{font-size:12.5px;font-weight:500;text-transform:capitalize;}
+.pick-sub{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;}
+.pick-n{
+  width:30px;text-align:right;flex-shrink:0;font-family:var(--mono);font-size:10.5px;
+}
+.pick-cab{
+  display:flex;gap:8px;padding:0 10px 6px;font-family:var(--mono);font-size:8.5px;
+  color:var(--dim);text-transform:uppercase;letter-spacing:.06em;
+}
+.pick-cab .a{flex:1;}
+.pick-cab .b{width:30px;text-align:right;}
 .soon svg{width:38px;height:38px;stroke:var(--dim);fill:none;stroke-width:1.5;margin-bottom:14px;}
 .soon h3{font-size:15px;margin:0 0 6px;}
 .soon p{font-size:12px;color:var(--muted);margin:0;line-height:1.5;}
@@ -463,6 +569,97 @@ select:focus,input:focus{border-color:var(--accent);}
 
   <!-- ============ OVERLAY MIEMBRO ============ -->
   <div class="overlay" id="ov-miembro"><div class="sheet" id="miembro-sheet"></div></div>
+
+  <!-- ============ CREAR EQUIPO ============ -->
+  <div class="overlay" id="ov-crear">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div><h2 class="sheet-title" style="font-size:17px;">Nuevo equipo</h2></div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-crear')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd">
+        <div class="f-group">
+          <label class="f-lab">Nombre del equipo</label>
+          <input type="text" id="in-nombre" placeholder="Mi equipo" maxlength="24" autocomplete="off">
+        </div>
+        <div class="f-group">
+          <label class="f-lab">Generación</label>
+          <div class="gen-row" id="crear-gens"></div>
+          <label class="f-lab">Juego</label>
+          <div class="juegos" id="crear-juegos"></div>
+        </div>
+      </div>
+      <div class="sheet-ft">
+        <button class="btn btn-s" onclick="closeOverlay('ov-crear')">Cancelar</button>
+        <button class="btn btn-p" id="btn-crear-eq" onclick="confirmarCrearEquipo()" disabled>Crear equipo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ AGREGAR A EQUIPO ============ -->
+  <div class="overlay" id="ov-agregar">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num">Agregar a un equipo</div>
+          <h2 class="sheet-title" id="ag-titulo" style="font-size:17px;">—</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-agregar')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd">
+        <div class="mon-hd" id="ag-mon"></div>
+        <label class="f-lab">Elige el equipo</label>
+        <div id="ag-lista"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CONFIRMACIÓN ============ -->
+  <div class="overlay" id="ov-confirmar">
+    <div class="sheet" style="max-width:320px;">
+      <div class="sheet-hd">
+        <div><h2 class="sheet-title" id="cf-titulo" style="font-size:16px;">—</h2></div>
+      </div>
+      <div class="sheet-bd"><p id="cf-texto" style="font-size:12.5px;line-height:1.55;margin:0;color:var(--muted);"></p></div>
+      <div class="sheet-ft">
+        <button class="btn btn-s" onclick="closeOverlay('ov-confirmar')">Cancelar</button>
+        <button class="btn" id="cf-ok" style="background:var(--alert);color:#fff;border-color:var(--alert);">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ELEGIR MOVIMIENTO ============ -->
+  <div class="overlay" id="ov-movimiento">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="pick-sub">Movimiento</div>
+          <h2 class="sheet-title" style="font-size:17px;">Elegir movimiento</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-movimiento')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd">
+        <input type="text" id="pick-busca" placeholder="Buscar movimiento..." autocomplete="off"
+               style="margin-bottom:10px;">
+        <div class="pick-tabs" id="pick-tabs"></div>
+        <div class="pick-cab"><span class="a">Movimiento</span><span class="b">Pot</span>
+          <span class="b">Prec</span><span class="b">PP</span></div>
+        <div class="pick-lista" id="pick-lista"></div>
+      </div>
+      <div class="sheet-ft">
+        <button class="btn btn-s" onclick="quitarMovimiento()">Dejar vacío</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ AVISO ============ -->
+  <div class="toast" id="toast">
+    <svg viewBox="0 0 24 24"><path d="M4 12.5l5.5 5.5L20 7"/></svg>
+    <span id="toast-txt"></span>
+  </div>
 
   <!-- ============ OVERLAY FILTROS ============ -->
   <div class="overlay" id="ov-filters">
@@ -1769,12 +1966,48 @@ function renderEquipos(){
   }).join('');
 }
 
+/* ---------- Crear equipo (panel propio) ---------- */
+let crearGen = 3, crearJuego = 'firered';
+
 function nuevoEquipo(){
   if(equipoAbierto!==null){ verListaEquipos(); return; }
-  const nombre = prompt('Nombre del equipo:', 'Equipo '+(equipos.length+1));
-  if(!nombre) return;
-  equipos.push({nombre:nombre.trim(), juego:'firered', miembros:[]});
+  crearGen = 3; crearJuego = 'firered';
+  document.getElementById('in-nombre').value = '';
+  pintarCrearGens(); pintarCrearJuegos(); validarCrear();
+  openOverlay('ov-crear');
+  setTimeout(()=>document.getElementById('in-nombre').focus(),90);
+}
+
+const GEN_COLOR = {1:'#D64541',2:'#B8901F',3:'#3E9B6C',4:'#4A6FA5',5:'#5C5C6B',
+                   6:'#D96BA0',7:'#E8833A',8:'#6E4F9C',9:'#B33A5B'};
+
+function pintarCrearGens(){
+  document.getElementById('crear-gens').innerHTML = [1,2,3,4,5,6,7,8,9].map(g=>
+    `<button style="--gc:${GEN_COLOR[g]}" class="${g===crearGen?'on':''}"
+      onclick="setCrearGen(${g})">${g}</button>`).join('');
+}
+function pintarCrearJuegos(){
+  document.getElementById('crear-juegos').innerHTML = JUEGOS.filter(j=>j.gen===crearGen).map(j=>
+    `<button class="${j.slug===crearJuego?'on':''}" onclick="setCrearJuego('${j.slug}')">${j.es}</button>`).join('');
+}
+function setCrearGen(g){
+  crearGen = g;
+  const primero = JUEGOS.find(j=>j.gen===g);
+  crearJuego = primero ? primero.slug : '';
+  pintarCrearGens(); pintarCrearJuegos(); validarCrear();
+}
+function setCrearJuego(s){ crearJuego = s; pintarCrearJuegos(); validarCrear(); }
+function validarCrear(){
+  const nom = document.getElementById('in-nombre').value.trim();
+  document.getElementById('btn-crear-eq').disabled = !(nom && crearJuego);
+}
+function confirmarCrearEquipo(){
+  const nombre = document.getElementById('in-nombre').value.trim();
+  if(!nombre || !crearJuego) return;
+  equipos.push({nombre, juego:crearJuego, miembros:[]});
   guardarEquipos();
+  closeOverlay('ov-crear');
+  aviso(`Equipo "${nombre}" creado`);
   abrirEquipo(equipos.length-1);
 }
 
@@ -1839,10 +2072,15 @@ function cambiarJuego(slug){
 }
 
 function borrarEquipo(){
-  if(!confirm('¿Eliminar "'+equipos[equipoAbierto].nombre+'"?')) return;
-  equipos.splice(equipoAbierto,1);
-  guardarEquipos();
-  verListaEquipos();
+  const eq = equipos[equipoAbierto];
+  confirmar('Eliminar equipo',
+    `Se borrará "${eq.nombre}" y sus ${eq.miembros.length} pokémon. No se puede deshacer.`,
+    'Eliminar', ()=>{
+      equipos.splice(equipoAbierto,1);
+      guardarEquipos();
+      verListaEquipos();
+      aviso('Equipo eliminado');
+    });
 }
 
 /* ---------- Editor de un miembro ---------- */
@@ -1921,6 +2159,8 @@ async function pantallaEditor(){
   };
 
   const sumaEV = STATS6.reduce((a,s)=>a+m.evs[s],0);
+  const sumaIV = STATS6.reduce((a,s)=>a+m.ivs[s],0);
+  const maxIV = t.iv*6;
 
   sheet.innerHTML = `
     <div class="sheet-hd">
@@ -1983,8 +2223,12 @@ async function pantallaEditor(){
         <span>Stat</span><span>${t.ivLabel}</span><span>${t.evLabel}</span><span>Total</span>
       </div>
       ${STATS6.map(filaStat).join('')}
-      ${t.evTotal ? `<div class="ev-total ${sumaEV>t.evTotal?'exceso':''}" id="ev-total">
-        ${sumaEV} / ${t.evTotal} EVs</div>` : ''}
+      <div class="totales">
+        <div class="tot-caja ${sumaIV===maxIV?'pleno':''}" id="iv-total">
+          <b>${sumaIV}</b> / ${maxIV} ${t.ivLabel}s</div>
+        ${t.evTotal ? `<div class="tot-caja ${sumaEV>t.evTotal?'exceso':''}" id="ev-total">
+          <b>${sumaEV}</b> / ${t.evTotal} EVs</div>` : ''}
+      </div>
 
       <div class="ed-sec">Movimientos</div>
       <div id="ed-movs"><div class="hint">Cargando movimientos...</div></div>
@@ -2042,27 +2286,142 @@ async function cargarOpcionesEditor(m, mon, gen){
       }`);
       Cache.set(ck,d);
     }
-    const vistos = new Set();
-    const opciones = [];
+    const vistos = {};
     d.pokemonmove.forEach(r=>{
-      const s = r.move.name;
-      if(vistos.has(s)) return;
-      vistos.add(s);
-      opciones.push({slug:s, es:r.move.movenames[0]?.name || s.replace(/-/g,' '),
-                     tipo:r.move.type?.name, pot:r.move.power});
+      const s = r.move.name, met = r.movelearnmethod.name;
+      if(!vistos[s]){
+        vistos[s] = {
+          slug:s,
+          es: r.move.movenames[0]?.name || s.replace(/-/g,' '),
+          tipo: r.move.type?.name || 'normal',
+          clase: r.move.movedamageclass?.name || 'status',
+          pot: r.move.power, prec: r.move.accuracy, pp: r.move.pp,
+          metodos: {}, nivel: null
+        };
+      }
+      vistos[s].metodos[met] = true;
+      if(met==='level-up' && r.level) {
+        vistos[s].nivel = vistos[s].nivel===null ? r.level : Math.min(vistos[s].nivel, r.level);
+      }
     });
-    opciones.sort((a,b)=>a.es.localeCompare(b.es));
-    document.getElementById('ed-movs').innerHTML = [0,1,2,3].map(i=>`
-      <div class="mv-slot">
-        <select onchange="setMov(${i},this.value)">
-          <option value="">— vacío —</option>
-          ${opciones.map(o=>`<option value="${o.slug}" ${o.slug===m.movimientos[i]?'selected':''}>
-            ${o.es}${o.pot?' · '+o.pot:''}</option>`).join('')}
-        </select>
-      </div>`).join('');
+    movsDelMon = Object.values(vistos);
+    pintarHuecosMov();
   }catch(e){
     document.getElementById('ed-movs').innerHTML='<div class="hint">No se pudieron cargar los movimientos.</div>';
   }
+}
+
+/* ---------- Selector de movimientos ---------- */
+let movsDelMon = [];
+let pickSlot = null;
+let pickMetodo = 'level-up';
+
+const MET_ES = {'level-up':'Nivel','machine':'MT / MO','egg':'Huevo','tutor':'Tutor'};
+
+function pintarHuecosMov(){
+  const m = _m();
+  const cont = document.getElementById('ed-movs');
+  if(!cont) return;
+  cont.innerHTML = [0,1,2,3].map(i=>{
+    const slug = m.movimientos[i];
+    const mv = slug ? movsDelMon.find(x=>x.slug===slug) : null;
+    if(!mv) return `
+      <button class="mv-hueco vacio" onclick="abrirPick(${i})">
+        <span class="mv-h-idx">${i+1}</span>
+        <span class="mv-h-main"><span class="mv-h-nom sin">Vacío</span></span>
+        <span class="mv-h-x">+</span>
+      </button>`;
+    return `
+      <button class="mv-hueco" onclick="abrirPick(${i})">
+        <span class="mv-h-idx">${i+1}</span>
+        <span class="mv-h-main">
+          <span class="mv-h-nom">${mv.es}</span>
+          <span class="mv-h-sub">
+            <span class="tchip" style="background:${TCOLOR[mv.tipo]}">${TES[mv.tipo]}</span>
+            <span class="mv-cls" style="color:${CLASE_COL[mv.clase]}">${CLASE_ES[mv.clase]}</span>
+            <span class="mv-h-dat">${mv.pot? 'Pot '+mv.pot : 'Estado'} · PP ${mv.pp??'—'}</span>
+          </span>
+        </span>
+        <span class="mv-h-x">›</span>
+      </button>`;
+  }).join('');
+}
+
+function abrirPick(i){
+  pickSlot = i;
+  const m = _m();
+  const mon = allMons.find(x=>x.id===m.pid);
+  document.getElementById('pick-sub').textContent = `${mon.es||mon.name} · espacio ${i+1}`;
+  document.getElementById('pick-busca').value = '';
+
+  /* Solo se muestran las pestañas de métodos que este pokémon realmente tiene */
+  const disponibles = Object.keys(MET_ES).filter(k=>movsDelMon.some(mv=>mv.metodos[k]));
+  if(!disponibles.includes(pickMetodo)) pickMetodo = disponibles[0] || 'level-up';
+  document.getElementById('pick-tabs').innerHTML = disponibles.map(k=>{
+    const n = movsDelMon.filter(mv=>mv.metodos[k]).length;
+    return `<button class="pick-tab ${k===pickMetodo?'on':''}" onclick="setPickMetodo('${k}')">${MET_ES[k]} (${n})</button>`;
+  }).join('');
+
+  pintarPick();
+  openOverlay('ov-movimiento');
+}
+
+function setPickMetodo(k){
+  pickMetodo = k;
+  document.querySelectorAll('#pick-tabs .pick-tab').forEach(b=>
+    b.classList.toggle('on', b.textContent.startsWith(MET_ES[k])));
+  pintarPick();
+}
+
+function pintarPick(){
+  const cont = document.getElementById('pick-lista');
+  if(!cont || pickSlot===null) return;
+  const m = _m();
+  const txt = document.getElementById('pick-busca').value.trim().toLowerCase();
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+
+  let lista = movsDelMon.filter(mv=>mv.metodos[pickMetodo]);
+  if(txt) lista = movsDelMon.filter(mv=>norm(mv.es).includes(norm(txt)));
+
+  lista.sort((a,b)=>{
+    if(pickMetodo==='level-up' && !txt) return (a.nivel??999)-(b.nivel??999) || a.es.localeCompare(b.es);
+    return a.es.localeCompare(b.es);
+  });
+
+  if(!lista.length){ cont.innerHTML='<div class="hint" style="padding:14px;">Sin resultados.</div>'; return; }
+
+  cont.innerHTML = lista.map(mv=>`
+    <div class="pick-item ${m.movimientos[pickSlot]===mv.slug?'on':''}" onclick="elegirMovimiento('${mv.slug}')">
+      <div class="pick-main">
+        <div class="pick-nom">${mv.es}</div>
+        <div class="pick-sub">
+          <span class="tchip" style="background:${TCOLOR[mv.tipo]}">${TES[mv.tipo]}</span>
+          <span class="mv-cls" style="color:${CLASE_COL[mv.clase]}">${CLASE_ES[mv.clase]}</span>
+          ${mv.nivel && pickMetodo==='level-up' ? `<span class="mv-h-dat">Nv. ${mv.nivel}</span>`:''}
+        </div>
+      </div>
+      <span class="pick-n">${mv.pot ?? '—'}</span>
+      <span class="pick-n">${mv.prec ?? '—'}</span>
+      <span class="pick-n">${mv.pp ?? '—'}</span>
+    </div>`).join('');
+}
+
+function elegirMovimiento(slug){
+  const m = _m();
+  /* No repetir el mismo movimiento en dos espacios */
+  const yaEsta = m.movimientos.findIndex((s,i)=>s===slug && i!==pickSlot);
+  if(yaEsta!==-1) m.movimientos[yaEsta] = '';
+  m.movimientos[pickSlot] = slug;
+  guardarEquipos();
+  closeOverlay('ov-movimiento');
+  pintarHuecosMov();
+}
+
+function quitarMovimiento(){
+  _m().movimientos[pickSlot] = '';
+  guardarEquipos();
+  closeOverlay('ov-movimiento');
+  pintarHuecosMov();
 }
 
 let objetosCargados = false;
@@ -2103,11 +2462,6 @@ function setEV(clave, v){
   guardarEquipos(); refrescarStats();
 }
 
-function setMov(i, slug){
-  _m().movimientos[i] = slug;
-  guardarEquipos();
-}
-
 function refrescarStats(){
   const eq = equipos[equipoAbierto], m = _m();
   const gen = genDeJuego(eq.juego);
@@ -2117,36 +2471,111 @@ function refrescarStats(){
     const el = document.getElementById('res-'+s);
     if(el) el.textContent = calcularStat(s, mon.stats[s]||0, m.ivs[s], m.evs[s], m.nivel, gen, m.naturaleza);
   });
-  const tot = document.getElementById('ev-total');
-  if(tot && t.evTotal){
+  const cajaIV = document.getElementById('iv-total');
+  if(cajaIV){
+    const suma = STATS6.reduce((a,s)=>a+m.ivs[s],0), max = t.iv*6;
+    cajaIV.innerHTML = `<b>${suma}</b> / ${max} ${t.ivLabel}s`;
+    cajaIV.classList.toggle('pleno', suma===max);
+  }
+  const cajaEV = document.getElementById('ev-total');
+  if(cajaEV && t.evTotal){
     const suma = STATS6.reduce((a,s)=>a+m.evs[s],0);
-    tot.textContent = `${suma} / ${t.evTotal} EVs`;
-    tot.classList.toggle('exceso', suma>t.evTotal);
+    cajaEV.innerHTML = `<b>${suma}</b> / ${t.evTotal} EVs`;
+    cajaEV.classList.toggle('exceso', suma>t.evTotal);
   }
 }
 
 function quitarMiembro(){
   const eq = equipos[equipoAbierto];
-  eq.miembros.splice(slotAbierto,1);
-  guardarEquipos();
-  closeOverlay('ov-miembro');
-  renderEquipo();
+  const m = eq.miembros[slotAbierto];
+  const mon = allMons.find(x=>x.id===m.pid) || {};
+  confirmar('Quitar del equipo',
+    `${m.apodo || mon.es || 'Este pokémon'} saldrá de "${eq.nombre}".`,
+    'Quitar', ()=>{
+      eq.miembros.splice(slotAbierto,1);
+      guardarEquipos();
+      closeOverlay('ov-miembro');
+      renderEquipo();
+      aviso('Quitado del equipo');
+    });
 }
 
 /* ---------- Enlace con el botón + de la Pokédex ---------- */
+let monPendiente = null;
+
 function agregarAEquipo(pid){
+  monPendiente = pid;
+  const mon = allMons.find(x=>x.id===pid);
+  if(!mon) return;
+
+  document.getElementById('ag-titulo').textContent = mon.es || mon.name;
+  document.getElementById('ag-mon').innerHTML = `
+    <img src="${SPRITE(pid)}" alt="">
+    <div>
+      <div class="mon-hd-nom">${mon.es || mon.name}</div>
+      <div style="margin-top:5px;">${mon.types.map(t=>
+        `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</div>
+    </div>`;
+
+  const cont = document.getElementById('ag-lista');
   if(!equipos.length){
-    alert('Primero crea un equipo en el apartado Equipo.');
-    return;
+    cont.innerHTML = `
+      <div class="eq-vacio" style="padding:26px 14px;">
+        <p>No tienes equipos todavía.</p>
+      </div>
+      <button class="btn btn-p" style="width:100%;margin-top:6px;"
+        onclick="closeOverlay('ov-agregar');goTo('equipo');nuevoEquipo();">Crear uno ahora</button>`;
+  }else{
+    cont.innerHTML = equipos.map((eq,i)=>{
+      const lleno = eq.miembros.length>=6;
+      const huecos = 6-eq.miembros.length;
+      return `<div class="eq-card ${lleno?'lleno':''}" ${lleno?'':`onclick="meterEnEquipo(${i})"`}>
+        <div class="eq-top">
+          <div>
+            <div class="eq-nom">${eq.nombre}</div>
+            <div class="eq-meta">${nombreDeJuego(eq.juego)}${lleno?' · completo':''}</div>
+          </div>
+          <span class="eq-cont">${eq.miembros.length}/6</span>
+        </div>
+        <div class="eq-mini">
+          ${eq.miembros.map(m=>`<img src="${SPRITE(m.pid)}" alt="">`).join('')}
+          ${Array.from({length:huecos},()=>'<span class="hueco"></span>').join('')}
+        </div>
+      </div>`;
+    }).join('');
   }
-  const opciones = equipos.map((e,i)=>`${i+1}. ${e.nombre} (${e.miembros.length}/6)`).join('\n');
-  const r = prompt('¿A qué equipo?\n\n'+opciones, '1');
-  const i = Number(r)-1;
-  if(isNaN(i) || !equipos[i]) return;
-  if(equipos[i].miembros.length>=6){ alert('Ese equipo ya tiene 6 pokémon.'); return; }
-  equipos[i].miembros.push(miembroNuevo(pid, genDeJuego(equipos[i].juego)));
+  openOverlay('ov-agregar');
+}
+
+function meterEnEquipo(i){
+  const eq = equipos[i];
+  if(eq.miembros.length>=6) return;
+  eq.miembros.push(miembroNuevo(monPendiente, genDeJuego(eq.juego)));
   guardarEquipos();
-  alert('Agregado a '+equipos[i].nombre);
+  closeOverlay('ov-agregar');
+  const mon = allMons.find(x=>x.id===monPendiente);
+  aviso(`${mon.es||mon.name} agregado a ${eq.nombre}`);
+  if(equipoAbierto===i) renderEquipo();
+  else renderEquipos();
+}
+
+/* ---------- Confirmación y aviso ---------- */
+function confirmar(titulo, texto, etiqueta, alAceptar){
+  document.getElementById('cf-titulo').textContent = titulo;
+  document.getElementById('cf-texto').textContent = texto;
+  const ok = document.getElementById('cf-ok');
+  ok.textContent = etiqueta;
+  ok.onclick = ()=>{ closeOverlay('ov-confirmar'); alAceptar(); };
+  openOverlay('ov-confirmar');
+}
+
+let avisoTimer;
+function aviso(txt){
+  const t = document.getElementById('toast');
+  document.getElementById('toast-txt').textContent = txt;
+  t.classList.add('show');
+  clearTimeout(avisoTimer);
+  avisoTimer = setTimeout(()=>t.classList.remove('show'), 2600);
 }
 
 /* ================= CONTROL DE CACHÉ ================= */
@@ -2196,6 +2625,8 @@ async function loadHome(){
 
 /* ================= INIT ================= */
 buildTypeChips();
+document.getElementById('in-nombre').addEventListener('input', validarCrear);
+document.getElementById('pick-busca').addEventListener('input', pintarPick);
 cargarEquipos();
 renderEquipos();
 loadHome();
