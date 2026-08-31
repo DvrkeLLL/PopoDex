@@ -335,14 +335,12 @@ select:focus,input:focus{border-color:var(--accent);}
 .iv-cab span:nth-child(1){width:46px;}
 .iv-cab span:nth-child(2),.iv-cab span:nth-child(3){width:56px;text-align:center;flex:0 0 56px;}
 .iv-cab span:nth-child(4){margin-left:auto;width:44px;text-align:right;}
-.totales{display:flex;gap:7px;margin-top:9px;}
-.tot-caja{
-  flex:1;font-family:var(--mono);font-size:9.5px;color:var(--muted);
-  background:var(--bg-screen);border:1px solid var(--border);border-radius:var(--r);
-  padding:7px 9px;text-align:center;
+.totales{
+  display:flex;justify-content:flex-end;gap:14px;margin-top:8px;
+  font-family:var(--mono);font-size:9.5px;color:var(--muted);
 }
 .tot-caja b{color:var(--text);font-weight:700;}
-.tot-caja.exceso{color:var(--alert);border-color:#f0c4d0;background:#fdeef3;}
+.tot-caja.exceso{color:var(--alert);}
 .tot-caja.exceso b{color:var(--alert);}
 .tot-caja.pleno b{color:var(--accent);}
 .mv-slot{margin-bottom:7px;}
@@ -393,10 +391,11 @@ select:focus,input:focus{border-color:var(--accent);}
   position:absolute;left:14px;right:14px;bottom:76px;z-index:60;
   background:var(--text);color:#fff;border-radius:var(--r);padding:12px 14px;
   font-size:12.5px;display:flex;align-items:center;gap:9px;
-  transform:translateY(180%);transition:transform .28s cubic-bezier(.2,.8,.3,1);
+  transform:translateY(20px);opacity:0;visibility:hidden;
+  transition:transform .28s cubic-bezier(.2,.8,.3,1), opacity .22s ease, visibility .28s;
   pointer-events:none;
 }
-.toast.show{transform:translateY(0);}
+.toast.show{transform:translateY(0);opacity:1;visibility:visible;}
 .toast svg{width:17px;height:17px;stroke:#8DE8C8;fill:none;stroke-width:2.4;flex-shrink:0;}
 
 /* ---------- SELECTOR DE MOVIMIENTOS ---------- */
@@ -446,6 +445,38 @@ select:focus,input:focus{border-color:var(--accent);}
 }
 .pick-cab .a{flex:1;}
 .pick-cab .b{width:30px;text-align:right;}
+
+/* ---------- SELECTOR GENÉRICO ---------- */
+.el-item{
+  display:flex;align-items:center;gap:9px;padding:10px 11px;cursor:pointer;
+  border-bottom:1px solid var(--border);
+}
+.el-item:last-child{border-bottom:none;}
+.el-item:active,.el-item.on{background:var(--bg-screen);}
+.el-item img{width:26px;height:26px;flex-shrink:0;image-rendering:pixelated;}
+.el-main{flex:1;min-width:0;}
+.el-nom{font-size:12.5px;font-weight:500;text-transform:capitalize;}
+.el-sub{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:2px;line-height:1.4;}
+.el-tick{color:var(--accent);font-size:14px;flex-shrink:0;}
+.nat-sube{color:#2E7D6B;font-weight:700;}
+.nat-baja{color:var(--alert);font-weight:700;}
+.nat-neutra{color:var(--dim);}
+
+/* Campo que abre un selector */
+.campo{
+  display:flex;align-items:center;gap:8px;width:100%;text-align:left;cursor:pointer;
+  background:var(--bg-screen);border:1px solid var(--border);border-radius:var(--r);
+  padding:9px 11px;font-family:var(--body);flex:1;min-width:0;
+}
+.campo:active{border-color:var(--accent);}
+.campo-main{flex:1;min-width:0;}
+.campo-val{font-size:12.5px;font-weight:500;text-transform:capitalize;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.campo-val.sin{color:var(--dim);font-weight:400;}
+.campo-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.campo-x{font-family:var(--mono);font-size:13px;color:var(--dim);flex-shrink:0;}
+.campo img{width:22px;height:22px;flex-shrink:0;image-rendering:pixelated;}
 .soon svg{width:38px;height:38px;stroke:var(--dim);fill:none;stroke-width:1.5;margin-bottom:14px;}
 .soon h3{font-size:15px;margin:0 0 6px;}
 .soon p{font-size:12px;color:var(--muted);margin:0;line-height:1.5;}
@@ -626,6 +657,28 @@ select:focus,input:focus{border-color:var(--accent);}
       <div class="sheet-ft">
         <button class="btn btn-s" onclick="closeOverlay('ov-confirmar')">Cancelar</button>
         <button class="btn" id="cf-ok" style="background:var(--alert);color:#fff;border-color:var(--alert);">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SELECTOR GENÉRICO ============ -->
+  <div class="overlay" id="ov-elegir">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="el-sub">—</div>
+          <h2 class="sheet-title" id="el-titulo" style="font-size:17px;">Elegir</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-elegir')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd">
+        <input type="text" id="el-busca" placeholder="Buscar..." autocomplete="off"
+               style="margin-bottom:10px;display:none;">
+        <div class="pick-lista" id="el-lista"></div>
+      </div>
+      <div class="sheet-ft" id="el-pie" style="display:none;">
+        <button class="btn btn-s" onclick="elegirNada()">Dejar vacío</button>
       </div>
     </div>
   </div>
@@ -2195,28 +2248,19 @@ async function pantallaEditor(){
       <div class="ed-sec">Naturaleza y habilidad</div>
       <div class="ed-fila">
         <label>Natur.</label>
-        <select onchange="setCampo('naturaleza',this.value)">
-          ${NATURALEZAS.map(n=>{
-            const efecto = n.sube ? ` (+${STAT_ES[n.sube]} −${STAT_ES[n.baja]})` : ' (neutra)';
-            return `<option value="${n.slug}" ${n.slug===m.naturaleza?'selected':''}>${n.es}${efecto}</option>`;
-          }).join('')}
-        </select>
+        <button class="campo" id="campo-naturaleza" onclick="abrirNaturaleza()"></button>
       </div>
       <div class="ed-fila">
         <label>Habil.</label>
-        <select id="ed-habilidad" onchange="setCampo('habilidad',this.value)">
-          <option value="">Cargando...</option>
-        </select>
+        <button class="campo" id="campo-habilidad" onclick="abrirHabilidad()"></button>
       </div>` : ''}
 
       ${gen>=2 ? `
       <div class="ed-sec">Objeto equipado</div>
       <div class="ed-fila">
         <label>Objeto</label>
-        <input type="text" list="lista-objetos" value="${m.objeto}" placeholder="Ninguno"
-               onchange="setCampo('objeto',this.value)">
-      </div>
-      <datalist id="lista-objetos"></datalist>` : ''}
+        <button class="campo" id="campo-objeto" onclick="abrirObjeto()"></button>
+      </div>` : ''}
 
       <div class="ed-sec">Estadísticas</div>
       <div class="iv-cab">
@@ -2236,6 +2280,7 @@ async function pantallaEditor(){
       <button class="btn-borrar" onclick="quitarMiembro()">Quitar del equipo</button>
     </div>`;
 
+  pintarCampos();
   cargarOpcionesEditor(m, mon, gen);
 }
 
@@ -2251,24 +2296,18 @@ async function cargarOpcionesEditor(m, mon, gen){
             ability { name abilitynames(where:{language_id:{_eq:${ES}}}) { name } } } } }`);
         Cache.set(ck,d);
       }
-      const sel = document.getElementById('ed-habilidad');
-      if(sel){
-        const habs = d.pokemon[0].pokemonabilities.map(a=>({
-          slug:a.ability.name,
-          es:(a.ability.abilitynames[0]?.name || a.ability.name.replace(/-/g,' ')) + (a.is_hidden?' (oculta)':'')
-        }));
-        sel.innerHTML = habs.map(h=>
-          `<option value="${h.slug}" ${h.slug===m.habilidad?'selected':''}>${h.es}</option>`).join('');
-        if(!m.habilidad && habs.length){ m.habilidad = habs[0].slug; guardarEquipos(); }
-      }
-    }catch(e){
-      const sel=document.getElementById('ed-habilidad');
-      if(sel) sel.innerHTML='<option value="">No disponible</option>';
-    }
+      habsDelMon = d.pokemon[0].pokemonabilities.map(a=>({
+        slug:a.ability.name,
+        es: a.ability.abilitynames[0]?.name || a.ability.name.replace(/-/g,' '),
+        nota: a.is_hidden ? 'Habilidad oculta' : ''
+      }));
+      if(!m.habilidad && habsDelMon.length){ m.habilidad = habsDelMon[0].slug; guardarEquipos(); }
+      pintarCampos();
+    }catch(e){ habsDelMon = []; pintarCampos(); }
   }
 
   /* Objetos */
-  if(gen>=2) cargarObjetos();
+  if(gen>=2) cargarObjetos().then(pintarCampos);
 
   /* Movimientos que puede aprender */
   try{
@@ -2424,19 +2463,150 @@ function quitarMovimiento(){
   pintarHuecosMov();
 }
 
-let objetosCargados = false;
+let objetos = [];
 async function cargarObjetos(){
-  const dl = document.getElementById('lista-objetos');
-  if(!dl || objetosCargados) return;
-  const guardado = Cache.get('objetos');
-  const pintar = arr => { dl.innerHTML = arr.map(o=>`<option value="${o}">`).join(''); objetosCargados=true; };
-  if(guardado) return pintar(guardado);
+  if(objetos.length) return objetos;
+  const guardado = Cache.get('objetos2');
+  if(guardado){ objetos = guardado; return objetos; }
   try{
-    const d = await gql(`{ item(order_by:{id:asc}) { itemnames(where:{language_id:{_eq:${ES}}}) { name } } }`);
-    const arr = d.item.map(i=>i.itemnames[0]?.name).filter(Boolean);
-    Cache.set('objetos', arr);
-    pintar(arr);
-  }catch(e){}
+    const d = await gql(`{ item(order_by:{id:asc}) { name itemnames(where:{language_id:{_eq:${ES}}}) { name } } }`);
+    objetos = d.item.map(i=>({
+      slug:i.name,
+      es: i.itemnames[0]?.name || i.name.replace(/-/g,' ')
+    }));
+    Cache.set('objetos2', objetos);
+  }catch(e){ objetos = []; }
+  return objetos;
+}
+
+/* ---------- Selector genérico (naturaleza, habilidad, objeto) ---------- */
+let elConfig = null;
+
+function abrirSelector(cfg){
+  elConfig = cfg;
+  document.getElementById('el-titulo').textContent = cfg.titulo;
+  document.getElementById('el-sub').textContent = cfg.sub || '';
+  const busca = document.getElementById('el-busca');
+  busca.value = '';
+  busca.style.display = cfg.buscar ? 'block' : 'none';
+  document.getElementById('el-pie').style.display = cfg.permitirVacio ? 'flex' : 'none';
+  pintarSelector();
+  openOverlay('ov-elegir');
+  if(cfg.buscar) setTimeout(()=>busca.focus(),90);
+}
+
+function pintarSelector(){
+  if(!elConfig) return;
+  const txt = document.getElementById('el-busca').value.trim().toLowerCase();
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  let lista = elConfig.opciones;
+  if(txt) lista = lista.filter(o=>norm(o.nombre).includes(norm(txt)));
+  const tope = elConfig.buscar ? 80 : lista.length;
+
+  const cont = document.getElementById('el-lista');
+  if(!lista.length){ cont.innerHTML='<div class="hint" style="padding:14px;">Sin resultados.</div>'; return; }
+
+  cont.innerHTML = lista.slice(0,tope).map(o=>`
+    <div class="el-item ${o.valor===elConfig.actual?'on':''}" onclick="elegirOpcion('${o.valor}')">
+      ${o.img ? `<img src="${o.img}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : ''}
+      <div class="el-main">
+        <div class="el-nom">${o.nombre}</div>
+        ${o.detalle ? `<div class="el-sub">${o.detalle}</div>` : ''}
+      </div>
+      ${o.valor===elConfig.actual ? '<span class="el-tick">✓</span>' : ''}
+    </div>`).join('') +
+    (lista.length>tope ? `<div class="hint" style="padding:11px;text-align:center;">
+      ${lista.length-tope} más. Afina la búsqueda.</div>` : '');
+}
+
+function elegirOpcion(valor){
+  const cb = elConfig.alElegir;
+  closeOverlay('ov-elegir');
+  cb(valor);
+}
+function elegirNada(){
+  const cb = elConfig.alElegir;
+  closeOverlay('ov-elegir');
+  cb('');
+}
+
+/* ---------- Campos del editor que abren selector ---------- */
+function abrirNaturaleza(){
+  const m = _m();
+  abrirSelector({
+    titulo:'Naturaleza', sub:'Modifica dos estadísticas un 10 %', buscar:true,
+    actual:m.naturaleza,
+    opciones: NATURALEZAS.map(n=>({
+      valor:n.slug, nombre:n.es,
+      detalle: n.sube
+        ? `<span class="nat-sube">▲ ${STAT_ES[n.sube]}</span> · <span class="nat-baja">▼ ${STAT_ES[n.baja]}</span>`
+        : '<span class="nat-neutra">Sin efecto sobre las estadísticas</span>'
+    })),
+    alElegir: v=>{ setCampo('naturaleza', v); pintarCampos(); }
+  });
+}
+
+let habsDelMon = [];
+function abrirHabilidad(){
+  const m = _m();
+  if(!habsDelMon.length) return;
+  abrirSelector({
+    titulo:'Habilidad', sub:'Elige una de las suyas', buscar:false,
+    actual:m.habilidad,
+    opciones: habsDelMon.map(h=>({valor:h.slug, nombre:h.es, detalle:h.nota||''})),
+    alElegir: v=>{ setCampo('habilidad', v); pintarCampos(); }
+  });
+}
+
+async function abrirObjeto(){
+  const m = _m();
+  if(!objetos.length) await cargarObjetos();
+  abrirSelector({
+    titulo:'Objeto equipado', sub:`${objetos.length} objetos`, buscar:true,
+    actual:m.objeto, permitirVacio:true,
+    opciones: objetos.map(o=>({
+      valor:o.slug, nombre:o.es,
+      img:`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${o.slug}.png`
+    })),
+    alElegir: v=>{ setCampo('objeto', v); pintarCampos(); }
+  });
+}
+
+/* Redibuja los tres campos con su valor actual */
+function pintarCampos(){
+  const m = _m();
+  if(!m) return;
+
+  const cNat = document.getElementById('campo-naturaleza');
+  if(cNat){
+    const n = NATURALEZAS.find(x=>x.slug===m.naturaleza);
+    cNat.innerHTML = `
+      <span class="campo-main">
+        <span class="campo-val">${n?n.es:'—'}</span>
+        <span class="campo-sub">${n && n.sube
+          ? `▲ ${STAT_ES[n.sube]} · ▼ ${STAT_ES[n.baja]}` : 'Sin efecto'}</span>
+      </span><span class="campo-x">›</span>`;
+  }
+
+  const cHab = document.getElementById('campo-habilidad');
+  if(cHab){
+    const h = habsDelMon.find(x=>x.slug===m.habilidad);
+    cHab.innerHTML = `
+      <span class="campo-main">
+        <span class="campo-val ${h?'':'sin'}">${h?h.es:'Cargando...'}</span>
+      </span><span class="campo-x">›</span>`;
+  }
+
+  const cObj = document.getElementById('campo-objeto');
+  if(cObj){
+    const o = objetos.find(x=>x.slug===m.objeto);
+    cObj.innerHTML = `
+      ${o?`<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${o.slug}.png"
+            alt="" onerror="this.style.visibility='hidden'">`:''}
+      <span class="campo-main">
+        <span class="campo-val ${o?'':'sin'}">${o?o.es:'Ninguno'}</span>
+      </span><span class="campo-x">›</span>`;
+  }
 }
 
 /* ---------- Cambios en el editor ---------- */
@@ -2627,6 +2797,7 @@ async function loadHome(){
 buildTypeChips();
 document.getElementById('in-nombre').addEventListener('input', validarCrear);
 document.getElementById('pick-busca').addEventListener('input', pintarPick);
+document.getElementById('el-busca').addEventListener('input', pintarSelector);
 cargarEquipos();
 renderEquipos();
 loadHome();
