@@ -186,6 +186,7 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
 .mv-cls{font-family:var(--mono);font-size:9px;font-weight:700;text-transform:uppercase;}
 .mv-lvl{font-family:var(--mono);font-size:9px;color:var(--muted);}
 .mv-n{width:32px;text-align:right;flex-shrink:0;font-family:var(--mono);font-size:11px;font-weight:500;}
+.mv-n.hist{color:var(--accent);font-weight:700;}
 
 .evo-chain{display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:center;}
 .evo-node{text-align:center;cursor:pointer;width:74px;}
@@ -414,6 +415,8 @@ select:focus,input:focus{border-color:var(--accent);}
 .mv-h-nom.sin{color:var(--dim);font-weight:400;font-style:normal;}
 .mv-h-sub{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;}
 .mv-h-dat{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.mv-h-dat.hist{color:var(--accent);font-weight:700;}
+.pick-n.hist{color:var(--accent);font-weight:700;}
 .mv-h-x{
   font-family:var(--mono);font-size:14px;color:var(--dim);flex-shrink:0;
   padding:0 2px;line-height:1;
@@ -477,6 +480,7 @@ select:focus,input:focus{border-color:var(--accent);}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .campo-x{font-family:var(--mono);font-size:13px;color:var(--dim);flex-shrink:0;}
 .campo img{width:22px;height:22px;flex-shrink:0;image-rendering:pixelated;}
+.juego-campo{background:var(--bg-panel);width:100%;padding:12px 13px;}
 
 /* ---------- COBERTURA ---------- */
 .cob-bloque{
@@ -532,7 +536,10 @@ select:focus,input:focus{border-color:var(--accent);}
       </div>
     </div>
     <div class="pad">
-      <p class="section-label">Pokémon del día</p>
+      <p class="section-label">Juego actual</p>
+      <button class="campo juego-campo" id="campo-juego" onclick="abrirElegirJuego()"></button>
+
+      <p class="section-label" style="margin-top:22px;">Pokémon del día</p>
       <div class="card spot" id="spot"><div class="hint">Cargando...</div></div>
 
       <p class="section-label">Apartados</p>
@@ -574,7 +581,8 @@ select:focus,input:focus{border-color:var(--accent);}
     <div class="hdr">
       <div class="hdr-row">
         <div>
-          <p class="hdr-sub" id="dex-count">— pokémon</p>
+          <p class="hdr-sub" id="dex-count" onclick="abrirElegirJuego()"
+             style="cursor:pointer;">— pokémon</p>
           <h1 class="hdr-title">Pokédex</h1>
         </div>
         <button class="icon-btn" id="btn-filters" style="position:relative;">
@@ -693,6 +701,29 @@ select:focus,input:focus{border-color:var(--accent);}
       <div class="sheet-ft">
         <button class="btn btn-s" onclick="closeOverlay('ov-confirmar')">Cancelar</button>
         <button class="btn" id="cf-ok" style="background:var(--alert);color:#fff;border-color:var(--alert);">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ELEGIR JUEGO ============ -->
+  <div class="overlay" id="ov-juego">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num">Ajusta tipos, movimientos y efectividades</div>
+          <h2 class="sheet-title" style="font-size:17px;">Juego actual</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-juego')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd">
+        <label class="f-lab">Generación</label>
+        <div class="gen-row" id="juego-gens"></div>
+        <label class="f-lab">Juego</label>
+        <div class="juegos" id="juego-lista"></div>
+      </div>
+      <div class="sheet-ft">
+        <button class="btn btn-s" onclick="fijarJuego('')">Sin juego fijado</button>
       </div>
     </div>
   </div>
@@ -842,7 +873,7 @@ select:focus,input:focus{border-color:var(--accent);}
             <button class="pill" data-cat="physical">Físico</button>
             <button class="pill" data-cat="special">Especial</button>
           </div>
-          <div class="warn">Solo aplica de 3.ª generación hacia abajo: ahí la categoría dependía del tipo del movimiento, no del movimiento en sí.</div>
+          <div class="warn" id="warn-cat">Solo aplica de 3.ª generación hacia abajo: ahí la categoría dependía del tipo del movimiento, no del movimiento en sí.</div>
         </div>
 
         <div class="f-group">
@@ -976,6 +1007,164 @@ let openMonId = null;      // pokémon abierto en el panel de detalle
 let detailCache = {};      // id -> datos completos (moves, abilities...)
 let filters = {gens:[],sort:"",mins:{},types:[],cats:[],moves:[],ranks:[]};
 let dataReady = false;
+
+/* ================= JUEGO ACTUAL ================= */
+/* Grupos de versión de PokeAPI: definen qué movimientos existían en cada juego */
+const GRUPO_VERSION = {
+  red:'red-blue', blue:'red-blue', yellow:'yellow',
+  gold:'gold-silver', silver:'gold-silver', crystal:'crystal',
+  ruby:'ruby-sapphire', sapphire:'ruby-sapphire', emerald:'emerald',
+  firered:'firered-leafgreen', leafgreen:'firered-leafgreen',
+  diamond:'diamond-pearl', pearl:'diamond-pearl', platinum:'platinum',
+  heartgold:'heartgold-soulsilver', soulsilver:'heartgold-soulsilver',
+  black:'black-white', white:'black-white',
+  'black-2':'black-2-white-2', 'white-2':'black-2-white-2',
+  x:'x-y', y:'x-y',
+  'omega-ruby':'omega-ruby-alpha-sapphire', 'alpha-sapphire':'omega-ruby-alpha-sapphire',
+  sun:'sun-moon', moon:'sun-moon',
+  'ultra-sun':'ultra-sun-ultra-moon', 'ultra-moon':'ultra-sun-ultra-moon',
+  'lets-go-pikachu':'lets-go-pikachu-lets-go-eevee',
+  'lets-go-eevee':'lets-go-pikachu-lets-go-eevee',
+  sword:'sword-shield', shield:'sword-shield',
+  'brilliant-diamond':'brilliant-diamond-and-shining-pearl',
+  'shining-pearl':'brilliant-diamond-and-shining-pearl',
+  'legends-arceus':'legends-arceus',
+  scarlet:'scarlet-violet', violet:'scarlet-violet'
+};
+
+let juegoActual = '';          // '' = sin juego fijado (todo moderno)
+let tiposPasados = null;       // id -> {gen: [tipos]}
+
+function genActual(){ return juegoActual ? genDeJuego(juegoActual) : 9; }
+function grupoActual(){ return juegoActual ? GRUPO_VERSION[juegoActual] : ''; }
+
+function guardarJuego(){
+  try{ localStorage.setItem('popodex:juego', juegoActual); }catch(e){}
+}
+function cargarJuego(){
+  try{ juegoActual = localStorage.getItem('popodex:juego') || ''; }catch(e){ juegoActual=''; }
+}
+
+/* Tipos históricos: Clefable era Normal antes de la 6.ª generación */
+async function cargarTiposPasados(){
+  if(tiposPasados) return tiposPasados;
+  const guardado = Cache.get('tipospasados');
+  if(guardado){ tiposPasados = guardado; return tiposPasados; }
+  const mapa = {};
+  try{
+    const d = await gql(`{
+      pokemontypepast(order_by:{pokemon_id:asc}) {
+        pokemon_id generation_id slot type { name }
+      }
+    }`);
+    d.pokemontypepast.forEach(r=>{
+      if(!mapa[r.pokemon_id]) mapa[r.pokemon_id] = {};
+      if(!mapa[r.pokemon_id][r.generation_id]) mapa[r.pokemon_id][r.generation_id] = [];
+      mapa[r.pokemon_id][r.generation_id][r.slot-1] = r.type.name;
+    });
+  }catch(e){ /* si falla, se usan los tipos actuales */ }
+  tiposPasados = mapa;
+  Cache.set('tipospasados', mapa);
+  return mapa;
+}
+
+/* Tipos de un pokémon en una generación concreta */
+function tiposEnGen(mon, gen){
+  if(!tiposPasados) return mon.types;
+  const hist = tiposPasados[mon.id];
+  if(!hist) return mon.types;
+  const claves = Object.keys(hist).map(Number).sort((a,b)=>a-b);
+  for(const g of claves){
+    if(gen<=g) return hist[g].filter(Boolean);
+  }
+  return mon.types;
+}
+
+/* Tipos de un pokémon tal como eran en el juego elegido */
+function tiposDe(mon){
+  if(!juegoActual || !tiposPasados) return mon.types;
+  const hist = tiposPasados[mon.id];
+  if(!hist) return mon.types;
+  const gen = genActual();
+  /* La entrada indica hasta qué generación valía ese conjunto de tipos */
+  const claves = Object.keys(hist).map(Number).sort((a,b)=>a-b);
+  for(const g of claves){
+    if(gen<=g) return hist[g].filter(Boolean);
+  }
+  return mon.types;
+}
+
+/* ¿Este pokémon existía en el juego elegido? */
+function existeEnJuego(mon){
+  if(!juegoActual) return true;
+  const [ , max] = GEN_RANGE[genActual()] || [1, MAX_ID];
+  return mon.id <= max;
+}
+
+/* Historial de cambios de los movimientos: potencia, precisión, PP y tipo
+   que tenían en generaciones anteriores. */
+let cambiosMov = null;
+
+const CONSULTAS_CAMBIOS = [
+  {
+    q:`{ movechangelog { power accuracy pp move { name } type { name }
+         versiongroup { generation_id } } }`,
+    lee: d => d.movechangelog
+  },
+  {
+    q:`{ movechange { power accuracy pp move { name } type { name }
+         versiongroup { generation_id } } }`,
+    lee: d => d.movechange
+  }
+];
+
+async function cargarCambiosMov(){
+  if(cambiosMov) return cambiosMov;
+  const guardado = Cache.get('cambiosmov');
+  if(guardado){ cambiosMov = guardado; return cambiosMov; }
+
+  const mapa = {};
+  for(const c of CONSULTAS_CAMBIOS){
+    try{
+      const d = await gql(c.q);
+      const filas = c.lee(d);
+      if(!filas || !filas.length) continue;
+      filas.forEach(r=>{
+        const nombre = r.move?.name;
+        const gen = r.versiongroup?.generation_id;
+        if(!nombre || !gen) return;
+        if(!mapa[nombre]) mapa[nombre] = [];
+        mapa[nombre].push({
+          gen,
+          power: r.power, accuracy: r.accuracy, pp: r.pp,
+          type: r.type?.name || null
+        });
+      });
+      break;
+    }catch(e){ /* probar la siguiente forma */ }
+  }
+  Object.values(mapa).forEach(arr=>arr.sort((a,b)=>a.gen-b.gen));
+  cambiosMov = mapa;
+  Cache.set('cambiosmov', mapa);
+  return mapa;
+}
+
+/* Valores de un movimiento tal como eran en una generación dada.
+   Los datos base son los actuales; el historial los reemplaza si corresponde. */
+function valoresMov(slug, gen, base){
+  const r = {pot:base.pot, prec:base.prec, pp:base.pp, tipo:base.tipo, cambiado:false};
+  if(!cambiosMov || !gen || gen>=9) return r;
+  const hist = cambiosMov[slug];
+  if(!hist) return r;
+  /* La primera entrada cuya generación alcanza o supera la buscada es la que valía */
+  const e = hist.find(x=>gen<=x.gen);
+  if(!e) return r;
+  if(e.power!=null && e.power!==base.pot){ r.pot=e.power; r.cambiado=true; }
+  if(e.accuracy!=null && e.accuracy!==base.prec){ r.prec=e.accuracy; r.cambiado=true; }
+  if(e.pp!=null && e.pp!==base.pp){ r.pp=e.pp; r.cambiado=true; }
+  if(e.type && e.type!==base.tipo){ r.tipo=e.type; r.cambiado=true; }
+  return r;
+}
 
 /* ================= CACHÉ LOCAL ================= */
 /* Guarda en el navegador lo que no cambia seguido, para no
@@ -1248,11 +1437,12 @@ function passesFilters(m){
     const val = k==='total'? m.total : (m.stats[k]??0);
     if(val < v) return false;
   }
+  const tips = tiposDe(m);
   if(filters.types.length){
-    if(!filters.types.every(t=>m.types.includes(t))) return false;
+    if(!filters.types.every(t=>tips.includes(t))) return false;
   }
   if(filters.cats.length){
-    const monCats = [...new Set(m.types.map(t=>TCAT[t]))];
+    const monCats = [...new Set(tips.map(t=>TCAT[t]))];
     if(!filters.cats.some(c=>monCats.includes(c))) return false;
   }
   if(filters.moveIds){
@@ -1264,7 +1454,7 @@ function passesFilters(m){
 }
 
 function render(){
-  let list = allMons.filter(passesFilters);
+  let list = allMons.filter(m=>existeEnJuego(m) && passesFilters(m));
   if(filters.sort){
     const key = filters.sort;
     list = [...list].sort((a,b)=>{
@@ -1274,7 +1464,8 @@ function render(){
     });
   }
   currentList = list;
-  document.getElementById('dex-count').textContent = `${list.length} pokémon`;
+  document.getElementById('dex-count').textContent =
+    juegoActual ? `${list.length} · ${nombreDeJuego(juegoActual)}` : `${list.length} pokémon`;
   const grid = document.getElementById('dex-grid');
   if(!list.length){
     grid.innerHTML='<div class="empty" style="grid-column:1/-1;">Ningún pokémon cumple esos filtros.</div>';
@@ -1292,7 +1483,7 @@ function render(){
       <span class="num">${String(m.id).padStart(3,'0')}</span>
       <img loading="lazy" src="${SPRITE(m.id)}" alt="${m.es||m.name}">
       <div class="nm">${m.es || m.name.replace(/-/g,' ')}</div>
-      <div class="tchips">${m.types.map(t=>`<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]||t}</span>`).join('')}</div>
+      <div class="tchips">${tiposDe(m).map(t=>`<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]||t}</span>`).join('')}</div>
     </div>`;
   }).join('');
   actualizarSaltos();
@@ -1479,11 +1670,12 @@ function updateGenHint(){
 }
 
 /* ================= DETALLE ================= */
-function effectiveness(types){
+function effectiveness(types, tabla){
+  const t = tabla || CHART;
   const res={};
   TYPES.forEach(atk=>{
     let mult=1;
-    types.forEach(def=>{ mult *= (CHART[atk]?.[def] ?? 1); });
+    types.forEach(def=>{ mult *= (t[atk]?.[def] ?? 1); });
     res[atk]=mult;
   });
   return res;
@@ -1506,7 +1698,8 @@ async function openDetail(id){
   openOverlay('ov-detail');
   sheet.innerHTML = `<div class="sheet-bd"><div class="hint">Cargando...</div></div>`;
 
-  const eff = effectiveness(m.types);
+  const tips = tiposDe(m);
+  const eff = effectiveness(tips, tablaPara(genActual()));
   const statsHTML = ['hp','attack','defense','special-attack','special-defense','speed'].map(k=>{
     const v = m.stats[k]??0;
     return `<div class="strow">
@@ -1515,8 +1708,9 @@ async function openDetail(id){
       <span class="stnum">${v}</span></div>`;
   }).join('');
 
+  const tiposAtk = tiposValidos(genActual());
   const effHTML = EFF_ORDER.map(o=>{
-    const list = TYPES.filter(t=>eff[t]===o.v);
+    const list = tiposAtk.filter(t=>eff[t]===o.v);
     if(!list.length) return '';
     return `<div class="eff-row">
       <span class="eff-mult" style="background:${o.col}">${o.lab}</span>
@@ -1542,7 +1736,7 @@ async function openDetail(id){
     <div class="sheet-bd">
       <div class="det-top">
         <div class="det-img"><img src="${SPRITE(m.id)}" alt="${m.name}"></div>
-        <div class="det-types">${m.types.map(t=>`<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</div>
+        <div class="det-types">${tips.map(t=>`<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</div>
       </div>
       ${statsHTML}
       <div class="strow sttotal">
@@ -1605,7 +1799,17 @@ async function loadLocations(id){
       bd.innerHTML='<div class="hint">No aparece en estado salvaje (se obtiene por evolución, intercambio o evento).</div>';
       return;
     }
-    bd.innerHTML = data.slice(0,40).map(e=>{
+    let entradas = data;
+    if(juegoActual){
+      entradas = data
+        .map(e=>({...e, version_details:e.version_details.filter(v=>v.version.name===juegoActual)}))
+        .filter(e=>e.version_details.length);
+      if(!entradas.length){
+        bd.innerHTML = `<div class="hint">No aparece en estado salvaje en ${nombreDeJuego(juegoActual)}.</div>`;
+        return;
+      }
+    }
+    bd.innerHTML = entradas.slice(0,40).map(e=>{
       const lugar = nombreLugar(e.location_area.name);
       const juegos = [...new Set(e.version_details.map(v=>nombreJuego(v.version.name)))].join(', ');
       const niveles = e.version_details
@@ -1627,10 +1831,13 @@ const CLASE_COL = {physical:'#C0392B', special:'#2E6FA3', status:'#7C7593'};
 async function loadMoves(id){
   const bd = document.querySelector('#acc-mov .acc-bd');
   try{
-    const ck = 'mv:'+id;
+    const gv = grupoActual();
+    const filtro = gv ? `pokemon_id:{_eq:${id}}, versiongroup:{name:{_eq:"${gv}"}}`
+                      : `pokemon_id:{_eq:${id}}`;
+    const ck = 'mv:'+id+(gv?':'+gv:'');
     let d = Cache.get(ck);
     if(!d) d = await gql(`{
-      pokemonmove(where:{pokemon_id:{_eq:${id}}},
+      pokemonmove(where:{${filtro}},
                   distinct_on:[move_id, move_learn_method_id],
                   order_by:[{move_id:asc},{move_learn_method_id:asc}]) {
         level
@@ -1645,15 +1852,23 @@ async function loadMoves(id){
     }`);
     Cache.set(ck, d);
 
+    if(!d.pokemonmove.length){
+      bd.innerHTML = `<div class="hint">No aprende movimientos en ${nombreDeJuego(juegoActual)}.</div>`;
+      return;
+    }
+    if(juegoActual) await cargarCambiosMov();
+    const genJ = genActual();
     const groups = {'level-up':[], 'egg':[], 'machine':[], 'tutor':[]};
     d.pokemonmove.forEach(r=>{
       const m = r.move, met = r.movelearnmethod.name;
       if(!groups[met]) return;
+      const base = {pot:m.power, prec:m.accuracy, pp:m.pp, tipo:m.type?.name||'normal'};
+      const v = juegoActual ? valoresMov(m.name, genJ, base) : {...base, cambiado:false};
       groups[met].push({
         nombre: m.movenames[0]?.name || m.name.replace(/-/g,' '),
-        tipo: m.type?.name || 'normal',
-        clase: m.movedamageclass?.name || 'status',
-        pot: m.power, prec: m.accuracy, pp: m.pp,
+        tipo: v.tipo,
+        clase: genJ<=3 ? (TCAT[v.tipo]||'status') : (m.movedamageclass?.name || 'status'),
+        pot: v.pot, prec: v.prec, pp: v.pp, cambiado: v.cambiado,
         lvl: r.level || 0
       });
     });
@@ -1674,7 +1889,9 @@ async function loadMoves(id){
         <span class="mv-h-nm">Movimiento</span>
         <span class="mv-h-n">Pot</span><span class="mv-h-n">Prec</span><span class="mv-h-n">PP</span>
       </div>
-      <div id="mv-list"></div>`;
+      <div id="mv-list"></div>
+      ${juegoActual ? `<div class="hint" style="padding-top:9px;font-size:9.5px;">
+        En morado, los valores propios de ${nombreDeJuego(juegoActual)}.</div>` : ''}`;
 
     const paint = k=>{
       document.getElementById('mv-list').innerHTML = groups[k].map(m=>`
@@ -1687,9 +1904,9 @@ async function loadMoves(id){
               ${k==='level-up' ? `<span class="mv-lvl">${m.lvl>0?'Nv. '+m.lvl:'—'}</span>` : ''}
             </div>
           </div>
-          <span class="mv-n">${m.pot ?? '—'}</span>
-          <span class="mv-n">${m.prec ?? '—'}</span>
-          <span class="mv-n">${m.pp ?? '—'}</span>
+          <span class="mv-n ${m.cambiado?'hist':''}">${m.pot ?? '—'}</span>
+          <span class="mv-n ${m.cambiado?'hist':''}">${m.prec ?? '—'}</span>
+          <span class="mv-n ${m.cambiado?'hist':''}">${m.pp ?? '—'}</span>
         </div>`).join('');
     };
     paint(avail[0]);
@@ -2380,30 +2597,23 @@ async function cargarOpcionesEditor(m, mon, gen){
 
   /* Movimientos que puede aprender */
   try{
-    const ck='mv:'+m.pid;
-    let d = Cache.get(ck);
-    if(!d){
-      d = await gql(`{
-        pokemonmove(where:{pokemon_id:{_eq:${m.pid}}},
-                    distinct_on:[move_id, move_learn_method_id],
-                    order_by:[{move_id:asc},{move_learn_method_id:asc}]) {
-          level movelearnmethod { name }
-          move { name power accuracy pp type { name } movedamageclass { name }
-                 movenames(where:{language_id:{_eq:${ES}}}) { name } }
-        }
-      }`);
-      Cache.set(ck,d);
-    }
+    const eqJuego = equipos[equipoAbierto].juego;
+    const d = await movsDe(m.pid, GRUPO_VERSION[eqJuego] || '');
+    const genEq = genDeJuego(eqJuego);
+    await cargarCambiosMov();
     const vistos = {};
     d.pokemonmove.forEach(r=>{
       const s = r.move.name, met = r.movelearnmethod.name;
       if(!vistos[s]){
+        const base = {pot:r.move.power, prec:r.move.accuracy, pp:r.move.pp,
+                      tipo:r.move.type?.name||'normal'};
+        const v = valoresMov(s, genEq, base);
         vistos[s] = {
           slug:s,
           es: r.move.movenames[0]?.name || s.replace(/-/g,' '),
-          tipo: r.move.type?.name || 'normal',
-          clase: r.move.movedamageclass?.name || 'status',
-          pot: r.move.power, prec: r.move.accuracy, pp: r.move.pp,
+          tipo: v.tipo,
+          clase: genEq<=3 ? (TCAT[v.tipo]||'status') : (r.move.movedamageclass?.name || 'status'),
+          pot: v.pot, prec: v.prec, pp: v.pp, cambiado: v.cambiado,
           metodos: {}, nivel: null
         };
       }
@@ -2447,7 +2657,7 @@ function pintarHuecosMov(){
           <span class="mv-h-sub">
             <span class="tchip" style="background:${TCOLOR[mv.tipo]}">${TES[mv.tipo]}</span>
             <span class="mv-cls" style="color:${CLASE_COL[mv.clase]}">${CLASE_ES[mv.clase]}</span>
-            <span class="mv-h-dat">${mv.pot? 'Pot '+mv.pot : 'Estado'} · PP ${mv.pp??'—'}</span>
+            <span class="mv-h-dat ${mv.cambiado?'hist':''}">${mv.pot? 'Pot '+mv.pot : 'Estado'} · PP ${mv.pp??'—'}</span>
           </span>
         </span>
         <span class="mv-h-x">›</span>
@@ -2508,9 +2718,9 @@ function pintarPick(){
           ${mv.nivel && pickMetodo==='level-up' ? `<span class="mv-h-dat">Nv. ${mv.nivel}</span>`:''}
         </div>
       </div>
-      <span class="pick-n">${mv.pot ?? '—'}</span>
-      <span class="pick-n">${mv.prec ?? '—'}</span>
-      <span class="pick-n">${mv.pp ?? '—'}</span>
+      <span class="pick-n ${mv.cambiado?'hist':''}">${mv.pot ?? '—'}</span>
+      <span class="pick-n ${mv.cambiado?'hist':''}">${mv.prec ?? '—'}</span>
+      <span class="pick-n ${mv.cambiado?'hist':''}">${mv.pp ?? '—'}</span>
     </div>`).join('');
 }
 
@@ -2676,6 +2886,55 @@ function pintarCampos(){
         <span class="campo-val ${o?'':'sin'}">${o?o.es:'Ninguno'}</span>
       </span><span class="campo-x">›</span>`;
   }
+}
+
+/* ---------- Selector de juego global ---------- */
+let juegoGenTmp = 3;
+
+function pintarCampoJuego(){
+  const el = document.getElementById('campo-juego');
+  if(!el) return;
+  if(!juegoActual){
+    el.innerHTML = `
+      <span class="campo-main">
+        <span class="campo-val sin">Sin juego fijado</span>
+        <span class="campo-sub">Se usan los datos más recientes</span>
+      </span><span class="campo-x">›</span>`;
+  }else{
+    const g = genDeJuego(juegoActual);
+    el.innerHTML = `
+      <span class="pt" style="background:${GEN_COLOR[g]};width:10px;height:10px;"></span>
+      <span class="campo-main">
+        <span class="campo-val">${nombreDeJuego(juegoActual)}</span>
+        <span class="campo-sub">${g}.ª generación · tipos y movimientos de la época</span>
+      </span><span class="campo-x">›</span>`;
+  }
+}
+
+function abrirElegirJuego(){
+  juegoGenTmp = juegoActual ? genDeJuego(juegoActual) : 3;
+  pintarJuegoGens(); pintarJuegoLista();
+  openOverlay('ov-juego');
+}
+function pintarJuegoGens(){
+  document.getElementById('juego-gens').innerHTML = [1,2,3,4,5,6,7,8,9].map(g=>
+    `<button style="--gc:${GEN_COLOR[g]}" class="${g===juegoGenTmp?'on':''}"
+      onclick="setJuegoGen(${g})">${g}</button>`).join('');
+}
+function pintarJuegoLista(){
+  document.getElementById('juego-lista').innerHTML = JUEGOS.filter(j=>j.gen===juegoGenTmp).map(j=>
+    `<button class="${j.slug===juegoActual?'on':''}" onclick="fijarJuego('${j.slug}')">${j.es}</button>`).join('');
+}
+function setJuegoGen(g){ juegoGenTmp = g; pintarJuegoGens(); pintarJuegoLista(); }
+
+async function fijarJuego(slug){
+  juegoActual = slug;
+  guardarJuego();
+  closeOverlay('ov-juego');
+  pintarCampoJuego();
+  if(slug) await cargarTiposPasados();
+  render();
+  aviso(slug ? `Ajustado a ${nombreDeJuego(slug)}` : 'Sin juego fijado');
 }
 
 /* ---------- Cambios en el editor ---------- */
@@ -2895,12 +3154,15 @@ async function especiesDeDex(slug){
 }
 
 /* Datos completos de los movimientos de un pokémon */
-async function movsDe(pid){
-  const ck = 'mv:'+pid;
+async function movsDe(pid, grupo){
+  const gv = grupo !== undefined ? grupo : grupoActual();
+  const filtro = gv ? `pokemon_id:{_eq:${pid}}, versiongroup:{name:{_eq:"${gv}"}}`
+                    : `pokemon_id:{_eq:${pid}}`;
+  const ck = 'mv:'+pid+(gv?':'+gv:'');
   let d = Cache.get(ck);
   if(!d){
     d = await gql(`{
-      pokemonmove(where:{pokemon_id:{_eq:${pid}}},
+      pokemonmove(where:{${filtro}},
                   distinct_on:[move_id, move_learn_method_id],
                   order_by:[{move_id:asc},{move_learn_method_id:asc}]) {
         level movelearnmethod { name }
@@ -2926,23 +3188,26 @@ async function calcularCobertura(){
 
   const caja = document.getElementById('cob-caja');
   if(caja) caja.innerHTML = '<div class="hint">Calculando...</div>';
+  await cargarCambiosMov();
 
   /* Tipos de ataque del equipo, con quién los aporta */
   const porTipo = {};
   for(const miembro of eq.miembros){
     let info;
-    try{ info = await movsDe(miembro.pid); }catch(e){ continue; }
+    try{ info = await movsDe(miembro.pid, GRUPO_VERSION[eq.juego] || ''); }catch(e){ continue; }
     const mon = allMons.find(x=>x.id===miembro.pid) || {};
     miembro.movimientos.filter(Boolean).forEach(slug=>{
       const fila = info.pokemonmove.find(r=>r.move.name===slug);
       if(!fila) return;
       const mv = fila.move;
-      if(!mv.power || mv.power<=0) return;                 // solo movimientos de daño
-      const tipo = mv.type?.name;
+      const v = valoresMov(slug, gen, {pot:mv.power, prec:mv.accuracy, pp:mv.pp,
+                                       tipo:mv.type?.name||'normal'});
+      if(!v.pot || v.pot<=0) return;                       // solo movimientos de daño
+      const tipo = v.tipo;
       if(!tipo || !validos.includes(tipo)) return;
       const nombre = mv.movenames[0]?.name || slug.replace(/-/g,' ');
       if(!porTipo[tipo]) porTipo[tipo] = [];
-      porTipo[tipo].push({mov:nombre, de:miembro.apodo || mon.es || mon.name, pot:mv.power});
+      porTipo[tipo].push({mov:nombre, de:miembro.apodo || mon.es || mon.name, pot:v.pot});
     });
   }
   const tiposAtaque = Object.keys(porTipo);
@@ -2956,9 +3221,10 @@ async function calcularCobertura(){
   ids.forEach(id=>{
     const mon = allMons.find(x=>x.id===id);
     if(!mon || !mon.types.length) return;
-    if(!mon.types.every(t=>validos.includes(t))) return;
-    const clave = [...mon.types].sort().join('/');
-    if(!combos[clave]) combos[clave] = {tipos:mon.types, mons:[]};
+    const tips = tiposEnGen(mon, gen);
+    if(!tips.length || !tips.every(t=>validos.includes(t))) return;
+    const clave = [...tips].sort().join('/');
+    if(!combos[clave]) combos[clave] = {tipos:tips, mons:[]};
     combos[clave].mons.push(mon.es || mon.name);
   });
 
@@ -3114,6 +3380,9 @@ async function loadHome(){
 
 /* ================= INIT ================= */
 buildTypeChips();
+cargarJuego();
+pintarCampoJuego();
+if(juegoActual) cargarTiposPasados().then(render);
 document.getElementById('in-nombre').addEventListener('input', validarCrear);
 document.getElementById('pick-busca').addEventListener('input', pintarPick);
 document.getElementById('el-busca').addEventListener('input', pintarSelector);
