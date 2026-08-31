@@ -2843,15 +2843,27 @@ async function cargarOpcionesEditor(m, mon, gen){
   if(gen>=2) cargarObjetos().then(pintarCampos);
 
   /* Movimientos que puede aprender */
+  const cont = document.getElementById('ed-movs');
   try{
     const eqJuego = equipos[equipoAbierto].juego;
-    const d = await movsDe(m.pid, GRUPO_VERSION[eqJuego] || '');
     const genEq = genDeJuego(eqJuego);
+    let d = await movsDe(m.pid, GRUPO_VERSION[eqJuego] || '');
+
+    /* Si ese juego no devuelve nada, se recurre a la lista completa
+       para que siempre se puedan asignar movimientos */
+    let completa = false;
+    if(!d.pokemonmove.length){
+      d = await movsDe(m.pid, '');
+      completa = true;
+    }
     await cargarCambiosMov();
     movsDelMon = armarMovs(d, genEq);
+    movsDelMon.completa = completa || d.filtrado===false;
     pintarHuecosMov();
   }catch(e){
-    document.getElementById('ed-movs').innerHTML='<div class="hint">No se pudieron cargar los movimientos.</div>';
+    movsDelMon = [];
+    if(cont) cont.innerHTML =
+      `<div class="hint">No se pudieron cargar los movimientos.<br>${e.message||''}</div>`;
   }
 }
 
@@ -2955,6 +2967,12 @@ function abrirPickMovs(cfg){
   openOverlay('ov-movimiento');
 }
 
+function avisoLista(){
+  return movsDelMon.completa
+    ? '<div class="hint" style="padding:4px 2px 10px;">No se pudo filtrar por juego: se muestran todos los movimientos.</div>'
+    : '';
+}
+
 function setPickMetodo(k){
   pickMetodo = k;
   document.querySelectorAll('#pick-tabs .pick-tab').forEach(b=>
@@ -2978,7 +2996,7 @@ function pintarPick(){
 
   if(!lista.length){ cont.innerHTML='<div class="hint" style="padding:14px;">Sin resultados.</div>'; return; }
 
-  cont.innerHTML = lista.map(mv=>`
+  cont.innerHTML = (pickCfg.movs===movsDelMon ? avisoLista() : '') + lista.map(mv=>`
     <div class="pick-item ${pickCfg.actual===mv.slug?'on':''}" onclick="elegirMovimiento('${mv.slug}')">
       <div class="pick-main">
         <div class="pick-nom">${mv.es}</div>
@@ -3403,6 +3421,20 @@ async function especiesDeDex(slug){
 /* Datos completos de los movimientos de un pokémon */
 let movsFiltroOK = true;   // se apaga si el servidor rechaza el filtro por juego
 
+/* Identificadores de grupo de versión en PokeAPI.
+   Filtrar por este número usa solo una columna, sin depender de relaciones. */
+const ID_GRUPO = {
+  'red-blue':1, 'yellow':2, 'gold-silver':3, 'crystal':4,
+  'ruby-sapphire':5, 'emerald':6, 'firered-leafgreen':7,
+  'diamond-pearl':8, 'platinum':9, 'heartgold-soulsilver':10,
+  'black-white':11, 'colosseum':12, 'xd':13, 'black-2-white-2':14,
+  'x-y':15, 'omega-ruby-alpha-sapphire':16, 'sun-moon':17,
+  'ultra-sun-ultra-moon':18, 'lets-go-pikachu-lets-go-eevee':19,
+  'sword-shield':20, 'the-isle-of-armor':21, 'the-crown-tundra':22,
+  'brilliant-diamond-and-shining-pearl':23, 'legends-arceus':24,
+  'scarlet-violet':25
+};
+
 const CUERPO_MOV = `
   level
   movelearnmethod { name }
@@ -3412,8 +3444,9 @@ const CUERPO_MOV = `
          movenames(where:{language_id:{_eq:7}}) { name } }`;
 
 async function consultaMovs(pid, gv){
+  const idg = ID_GRUPO[gv];
   const conFiltro = `{
-    pokemonmove(where:{pokemon_id:{_eq:${pid}}, versiongroup:{name:{_eq:"${gv}"}}},
+    pokemonmove(where:{pokemon_id:{_eq:${pid}}, version_group_id:{_eq:${idg}}},
                 distinct_on:[move_id, move_learn_method_id],
                 order_by:[{move_id:asc},{move_learn_method_id:asc}]) {${CUERPO_MOV}}
   }`;
@@ -3423,9 +3456,13 @@ async function consultaMovs(pid, gv){
                 order_by:[{move_id:asc},{move_learn_method_id:asc}]) {${CUERPO_MOV}}
   }`;
 
-  if(gv && movsFiltroOK){
-    try{ return {datos: await gql(conFiltro), filtrado:true}; }
-    catch(e){ movsFiltroOK = false; }   // el servidor no acepta ese filtro: no reintentar
+  if(idg && movsFiltroOK){
+    try{
+      const datos = await gql(conFiltro);
+      if(datos.pokemonmove.length) return {datos, filtrado:true};
+      /* Sin resultados en ese juego: puede ser real, se devuelve igual */
+      return {datos, filtrado:true};
+    }catch(e){ movsFiltroOK = false; }   // el servidor rechaza el filtro: no reintentarlo
   }
   return {datos: await gql(sinFiltro), filtrado:false};
 }
@@ -3433,7 +3470,7 @@ async function consultaMovs(pid, gv){
 /* Movimientos de un pokémon, según el juego indicado */
 async function movsDe(pid, grupo){
   const gv = grupo !== undefined ? grupo : grupoActual();
-  const ck = 'mv:'+pid+(gv&&movsFiltroOK?':'+gv:'');
+  const ck = 'mv:'+pid+((gv && movsFiltroOK && ID_GRUPO[gv]) ? ':'+ID_GRUPO[gv] : '');
   let d = Cache.get(ck);
   if(d) return d;
   const {datos, filtrado} = await consultaMovs(pid, gv);
