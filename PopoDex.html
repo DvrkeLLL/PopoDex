@@ -442,6 +442,23 @@ select:focus,input:focus{border-color:var(--accent);}
 .campo.mini .campo-val{font-size:11.5px;}
 .campo.mini .campo-sub{font-size:8.5px;}
 .rank.swipeable{cursor:grab;}
+.resumen-hd{
+  width:100%;display:flex;align-items:center;gap:8px;background:none;border:none;
+  padding:16px 2px 9px;cursor:pointer;font-family:var(--body);
+}
+.resumen-t{
+  font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--muted);
+  text-transform:uppercase;flex:1;text-align:left;
+}
+.resumen-n{
+  font-family:var(--mono);font-size:9.5px;color:var(--muted);
+  border:1px solid var(--border);border-radius:2px;padding:1px 6px;
+}
+.resumen-chev{
+  font-family:var(--mono);font-size:14px;color:var(--accent);
+  transition:transform .2s;display:inline-block;
+}
+.resumen-chev.abierto{transform:rotate(90deg);}
 
 /* ---------- EQUIPO ---------- */
 .eq-card{
@@ -2341,26 +2358,29 @@ document.querySelectorAll('[data-jump]').forEach(b=>{
 /* ================= GESTOS ================= */
 const ORDEN_PANTALLAS = ['inicio','pokedex','equipo','dano','info'];
 
-function detectarArrastre(el, alIzquierda, alDerecha, permitido){
+function detectarArrastre(el, alIzquierda, alDerecha, permitido, aislar){
   let x0=0, y0=0, t0=0, activo=false;
 
   const inicio = (x,y)=>{ x0=x; y0=y; t0=Date.now(); activo=true; };
   const fin = (x,y)=>{
-    if(!activo) return;
+    if(!activo) return false;
     activo=false;
     const dx = x-x0, dy = y-y0, dt = Date.now()-t0;
-    if(dt>700) return;                          // demasiado lento
-    if(Math.abs(dx) < 55) return;               // recorrido corto
-    if(Math.abs(dx) < Math.abs(dy)*1.4) return; // fue scroll vertical
-    if(permitido && !permitido()) return;
+    if(dt>700) return false;                          // demasiado lento
+    if(Math.abs(dx) < 55) return false;               // recorrido corto
+    if(Math.abs(dx) < Math.abs(dy)*1.4) return false; // fue scroll vertical
+    if(permitido && !permitido()) return false;
     (dx<0 ? alIzquierda : alDerecha)();
+    return true;
   };
 
   el.addEventListener('touchstart', e=>{
     if(e.touches.length!==1) { activo=false; return; }
+    if(aislar) e.stopPropagation();
     inicio(e.touches[0].clientX, e.touches[0].clientY);
   }, {passive:true});
   el.addEventListener('touchend', e=>{
+    if(aislar) e.stopPropagation();
     const t = e.changedTouches[0];
     if(t) fin(t.clientX, t.clientY);
   }, {passive:true});
@@ -2369,9 +2389,13 @@ function detectarArrastre(el, alIzquierda, alDerecha, permitido){
   /* Equivalente con mouse, para escritorio */
   el.addEventListener('mousedown', e=>{
     if(e.button!==0) return;
+    if(aislar) e.stopPropagation();
     inicio(e.clientX, e.clientY);
   });
-  el.addEventListener('mouseup', e=>fin(e.clientX, e.clientY));
+  el.addEventListener('mouseup', e=>{
+    if(aislar) e.stopPropagation();
+    fin(e.clientX, e.clientY);
+  });
   el.addEventListener('mouseleave', ()=>{ activo=false; });
 }
 
@@ -2405,7 +2429,7 @@ detectarArrastre(document.getElementById('app'),
 
 detectarArrastre(document.getElementById('ov-detail'),
   ()=>moverPokemon(1), ()=>moverPokemon(-1),
-  ()=>document.getElementById('ov-detail').classList.contains('open'));
+  ()=>document.getElementById('ov-detail').classList.contains('open'), true);
 
 /* ================= EQUIPO ================= */
 
@@ -3978,6 +4002,13 @@ let dnEqMejor = 0;          // equipo elegido para comparar
 let dnTop = 0;              // posición en el ranking general
 let dnIdxMov = {};          // por pokémon, qué movimiento suyo se muestra
 let dnFilas = [];
+let dnVerResumen = (()=>{ try{ return localStorage.getItem('popodex:resumen')!=='0'; }catch(e){ return true; } })();
+
+function alternarResumen(){
+  dnVerResumen = !dnVerResumen;
+  try{ localStorage.setItem('popodex:resumen', dnVerResumen?'1':'0'); }catch(e){}
+  panelMejor();
+}
 
 async function panelMejor(){
   const juego = juegoDanio(), gen = genDeJuego(juego);
@@ -4074,8 +4105,12 @@ async function panelMejor(){
           :`Derriba en ${g.golpes}–${g.golpesMax} golpes`}</div>
     </div>
 
-    <p class="section-label" style="margin:18px 0 9px;">Resumen del equipo</p>
-    ${resumen.map((lista,pos)=>{
+    <button class="resumen-hd" onclick="alternarResumen()">
+      <span class="resumen-t">Resumen del equipo</span>
+      <span class="resumen-n">${resumen.length}</span>
+      <span class="resumen-chev ${dnVerResumen?'abierto':''}">›</span>
+    </button>
+    ${!dnVerResumen ? '' : resumen.map((lista,pos)=>{
       const pid = lista[0].pid;
       if(dnIdxMov[pid]===undefined || dnIdxMov[pid]>=lista.length) dnIdxMov[pid]=0;
       const f = lista[dnIdxMov[pid]];
@@ -4107,14 +4142,15 @@ async function panelMejor(){
   const gan = document.getElementById('gan-card');
   if(gan) detectarArrastre(gan,
     ()=>{ if(dnTop<dnFilas.length-1){dnTop++;panelMejor();} },
-    ()=>{ if(dnTop>0){dnTop--;panelMejor();} });
+    ()=>{ if(dnTop>0){dnTop--;panelMejor();} }, null, true);
 
-  cont.querySelectorAll('.swipeable').forEach(el=>{
+  if(dnVerResumen) cont.querySelectorAll('.swipeable').forEach(el=>{
     const pid = Number(el.dataset.pid);
     const n = porMon[pid].length;
+    if(n<2) return;
     detectarArrastre(el,
       ()=>{ dnIdxMov[pid]=(dnIdxMov[pid]+1)%n; panelMejor(); },
-      ()=>{ dnIdxMov[pid]=(dnIdxMov[pid]-1+n)%n; panelMejor(); });
+      ()=>{ dnIdxMov[pid]=(dnIdxMov[pid]-1+n)%n; panelMejor(); }, null, true);
   });
 }
 
