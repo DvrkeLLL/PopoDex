@@ -62,6 +62,12 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
 .mini{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);padding:8px 4px;text-align:center;cursor:pointer;}
 .mini img{width:46px;height:46px;image-rendering:pixelated;}
 .mini div{font-family:var(--mono);font-size:8.5px;color:var(--muted);}
+.cache-box{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:24px;
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;
+}
+.cache-t{font-size:12.5px;font-weight:600;}
+.cache-s{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4;}
 
 /* ---------- POKEDEX GRID ---------- */
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:14px 16px 20px;}
@@ -210,6 +216,9 @@ select:focus,input:focus{border-color:var(--accent);}
   border-radius:var(--r);background:var(--bg-panel);cursor:pointer;color:var(--muted);text-transform:uppercase;
 }
 .pill.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+/* Botones de generación: color propio de cada región */
+.pill[data-gen]{color:var(--gc);border-color:color-mix(in srgb, var(--gc) 40%, transparent);}
+.pill[data-gen].on{background:var(--gc);border-color:var(--gc);color:#fff;}
 .warn{
   font-family:var(--mono);font-size:9.5px;color:var(--alert);background:#fdeef3;
   border:1px solid #f7cddc;border-radius:var(--r);padding:7px 9px;margin-top:7px;line-height:1.4;
@@ -277,6 +286,15 @@ select:focus,input:focus{border-color:var(--accent);}
 
       <p class="section-label">Iniciales</p>
       <div class="mini-grid" id="starters"></div>
+
+      <div class="cache-box">
+        <div>
+          <div class="cache-t">Datos guardados</div>
+          <div class="cache-s" id="cache-info">—</div>
+        </div>
+        <button class="btn btn-s" style="flex:0 0 auto;padding:8px 14px;font-size:12px;"
+                onclick="vaciarCache()">Vaciar</button>
+      </div>
     </div>
   </div>
 
@@ -335,16 +353,21 @@ select:focus,input:focus{border-color:var(--accent);}
         <div class="f-group">
           <label class="f-lab">Generación <span id="gen-hint" style="text-transform:none;letter-spacing:0;">(todas)</span></label>
           <div class="grid3" id="f-gens">
-            <button class="pill" data-gen="1">1 · Kanto</button>
-            <button class="pill" data-gen="2">2 · Johto</button>
-            <button class="pill" data-gen="3">3 · Hoenn</button>
-            <button class="pill" data-gen="4">4 · Sinnoh</button>
-            <button class="pill" data-gen="5">5 · Teselia</button>
-            <button class="pill" data-gen="6">6 · Kalos</button>
-            <button class="pill" data-gen="7">7 · Alola</button>
-            <button class="pill" data-gen="8">8 · Galar</button>
-            <button class="pill" data-gen="9">9 · Paldea</button>
+            <button class="pill" data-gen="1" style="--gc:#D64541">1 · Kanto</button>
+            <button class="pill" data-gen="2" style="--gc:#B8901F">2 · Johto</button>
+            <button class="pill" data-gen="3" style="--gc:#3E9B6C">3 · Hoenn</button>
+            <button class="pill" data-gen="4" style="--gc:#4A6FA5">4 · Sinnoh</button>
+            <button class="pill" data-gen="5" style="--gc:#5C5C6B">5 · Teselia</button>
+            <button class="pill" data-gen="6" style="--gc:#D96BA0">6 · Kalos</button>
+            <button class="pill" data-gen="7" style="--gc:#E8833A">7 · Alola</button>
+            <button class="pill" data-gen="8" style="--gc:#6E4F9C">8 · Galar</button>
+            <button class="pill" data-gen="9" style="--gc:#B33A5B">9 · Paldea</button>
           </div>
+        </div>
+
+        <div class="f-group">
+          <label class="f-lab">Tipo/s</label>
+          <div class="grid3" id="f-types"></div>
         </div>
 
         <div class="f-group">
@@ -354,20 +377,6 @@ select:focus,input:focus{border-color:var(--accent);}
             <button class="pill" data-rank="mythical">Singular</button>
             <button class="pill" data-rank="common">Común</button>
           </div>
-        </div>
-
-        <div class="f-group">
-          <label class="f-lab">Prioridad (ordenar por)</label>
-          <select id="f-sort">
-            <option value="">N.º de Pokédex</option>
-            <option value="hp">PS</option>
-            <option value="attack">Ataque</option>
-            <option value="defense">Defensa</option>
-            <option value="special-attack">Ataque Esp.</option>
-            <option value="special-defense">Defensa Esp.</option>
-            <option value="speed">Velocidad</option>
-            <option value="total">Total</option>
-          </select>
         </div>
 
         <div class="f-group">
@@ -384,8 +393,17 @@ select:focus,input:focus{border-color:var(--accent);}
         </div>
 
         <div class="f-group">
-          <label class="f-lab">Tipo/s</label>
-          <div class="grid3" id="f-types"></div>
+          <label class="f-lab">Ordenar por</label>
+          <select id="f-sort">
+            <option value="">Estándar (n.º de Pokédex)</option>
+            <option value="hp">PS</option>
+            <option value="attack">Ataque</option>
+            <option value="defense">Defensa</option>
+            <option value="special-attack">Ataque Esp.</option>
+            <option value="special-defense">Defensa Esp.</option>
+            <option value="speed">Velocidad</option>
+            <option value="total">Total</option>
+          </select>
         </div>
 
         <div class="f-group">
@@ -518,6 +536,48 @@ let detailCache = {};      // id -> datos completos (moves, abilities...)
 let filters = {gens:[],sort:"",mins:{},types:[],cats:[],moves:[],ranks:[]};
 let dataReady = false;
 
+/* ================= CACHÉ LOCAL ================= */
+/* Guarda en el navegador lo que no cambia seguido, para no
+   pedirle lo mismo a PokeAPI en cada visita. */
+const CACHE_VER = 'v3';           // subir esto invalida todo lo guardado
+const CACHE_DIAS = 14;
+
+const Cache = {
+  k(key){ return `popodex:${CACHE_VER}:${key}`; },
+  get(key){
+    try{
+      const raw = localStorage.getItem(this.k(key));
+      if(!raw) return null;
+      const {t, d} = JSON.parse(raw);
+      if(Date.now() - t > CACHE_DIAS*86400000){ localStorage.removeItem(this.k(key)); return null; }
+      return d;
+    }catch(e){ return null; }
+  },
+  set(key, data){
+    try{
+      localStorage.setItem(this.k(key), JSON.stringify({t:Date.now(), d:data}));
+      return true;
+    }catch(e){
+      /* Sin espacio: limpiamos lo viejo de PopoDex y reintentamos una vez */
+      try{
+        Object.keys(localStorage).filter(k=>k.startsWith('popodex:') && !k.startsWith(`popodex:${CACHE_VER}:`))
+          .forEach(k=>localStorage.removeItem(k));
+        localStorage.setItem(this.k(key), JSON.stringify({t:Date.now(), d:data}));
+        return true;
+      }catch(e2){ return false; }
+    }
+  },
+  limpiar(){
+    Object.keys(localStorage).filter(k=>k.startsWith('popodex:')).forEach(k=>localStorage.removeItem(k));
+  },
+  tamano(){
+    let b = 0;
+    Object.keys(localStorage).filter(k=>k.startsWith('popodex:'))
+      .forEach(k=>{ b += k.length + (localStorage.getItem(k)||'').length; });
+    return b;
+  }
+};
+
 /* ================= HELPERS ================= */
 async function gql(query){
   const r = await fetch(GQL,{
@@ -534,17 +594,22 @@ const TRAD = { juegos:null, lugares:null, metodos:null };
 
 async function cargarJuegos(){
   if(TRAD.juegos) return TRAD.juegos;
+  const guardado = Cache.get('juegos');
+  if(guardado){ TRAD.juegos = guardado; return guardado; }
   const map = {};
   try{
     const d = await gql(`{ version { name versionnames(where:{language_id:{_eq:${ES}}}) { name } } }`);
     d.version.forEach(v=>{ map[v.name] = v.versionnames[0]?.name || v.name.replace(/-/g,' '); });
   }catch(e){ /* sin traducción: se usan los slugs */ }
   TRAD.juegos = map;
+  if(Object.keys(map).length) Cache.set('juegos', map);
   return map;
 }
 
 async function cargarLugares(){
   if(TRAD.lugares) return TRAD.lugares;
+  const guardado = Cache.get('lugares');
+  if(guardado){ TRAD.lugares = guardado; return guardado; }
   const map = {};
   try{
     const d = await gql(`{
@@ -561,6 +626,7 @@ async function cargarLugares(){
     });
   }catch(e){ /* el diccionario local cubre igual */ }
   TRAD.lugares = map;
+  if(Object.keys(map).length) Cache.set('lugares', map);
   return map;
 }
 
@@ -677,7 +743,20 @@ const GQL_SOURCES = [
 async function loadAll(){
   const statusTxt = document.getElementById('status-txt');
   const statusBar = document.getElementById('status-bar');
-  statusTxt.textContent = 'Cargando pokédex...';
+
+  /* 1. ¿Ya lo tenemos guardado en el navegador? */
+  const guardado = Cache.get('pokemon');
+  if(guardado && guardado.length){
+    allMons = guardado;
+    dataReady = true;
+    statusTxt.textContent = 'Cargado desde el dispositivo';
+    statusBar.style.width='100%';
+    setTimeout(()=>document.getElementById('dex-status').style.display='none',300);
+    render();
+    return;
+  }
+
+  statusTxt.textContent = 'Descargando pokédex (solo la primera vez)...';
   statusBar.style.width = '20%';
 
   for(const src of GQL_SOURCES){
@@ -693,6 +772,7 @@ async function loadAll(){
       allMons = src.parse(json.data);
       if(!allMons.length) continue;
       dataReady = true;
+      Cache.set('pokemon', allMons);
       statusBar.style.width='100%';
       setTimeout(()=>document.getElementById('dex-status').style.display='none',400);
       render();
@@ -773,6 +853,15 @@ let movesLoaded = false;
 async function loadMoveList(){
   if(movesLoaded) return;
   const state = document.getElementById('move-state');
+  const guardado = Cache.get('movimientos');
+  if(guardado && guardado.length){
+    MOVES = guardado; movesLoaded = true;
+    document.getElementById('move-list').innerHTML =
+      MOVES.map(m=>`<option value="${m.es}">${m.en}</option>`).join('');
+    state.textContent = `${MOVES.length} movimientos disponibles`;
+    state.className = 'mv-state';
+    return;
+  }
   const q = `{ move(order_by:{id:asc}) { name movenames(where:{language_id:{_eq:${ES}}}) { name } } }`;
   try{
     const j = {data: await gql(q)};
@@ -790,6 +879,7 @@ async function loadMoveList(){
     }
   }
   movesLoaded = true;
+  Cache.set('movimientos', MOVES);
   document.getElementById('move-list').innerHTML =
     MOVES.map(m=>`<option value="${m.es}">${m.en}</option>`).join('');
   state.textContent = `${MOVES.length} movimientos disponibles`;
@@ -1054,7 +1144,9 @@ async function loadLocations(id){
   const bd = document.querySelector('#acc-loc .acc-bd');
   try{
     await Promise.all([cargarLugares(), cargarJuegos()]);
-    const data = await fetchJSON(`${API}/pokemon/${id}/encounters`);
+    const ckLoc = 'loc:'+id;
+    let data = Cache.get(ckLoc);
+    if(!data){ data = await fetchJSON(`${API}/pokemon/${id}/encounters`); Cache.set(ckLoc, data); }
     if(!data.length){
       bd.innerHTML='<div class="hint">No aparece en estado salvaje (se obtiene por evolución, intercambio o evento).</div>';
       return;
@@ -1081,7 +1173,9 @@ const CLASE_COL = {physical:'#C0392B', special:'#2E6FA3', status:'#7C7593'};
 async function loadMoves(id){
   const bd = document.querySelector('#acc-mov .acc-bd');
   try{
-    const d = await gql(`{
+    const ck = 'mv:'+id;
+    let d = Cache.get(ck);
+    if(!d) d = await gql(`{
       pokemonmove(where:{pokemon_id:{_eq:${id}}},
                   distinct_on:[move_id, move_learn_method_id],
                   order_by:[{move_id:asc},{move_learn_method_id:asc}]) {
@@ -1095,6 +1189,7 @@ async function loadMoves(id){
         }
       }
     }`);
+    Cache.set(ck, d);
 
     const groups = {'level-up':[], 'egg':[], 'machine':[], 'tutor':[]};
     d.pokemonmove.forEach(r=>{
@@ -1286,6 +1381,24 @@ async function openInfo(id){
   }
 }
 
+/* ================= CONTROL DE CACHÉ ================= */
+function actualizarInfoCache(){
+  const el = document.getElementById('cache-info');
+  if(!el) return;
+  const b = Cache.tamano();
+  if(!b){ el.textContent = 'Nada guardado todavía'; return; }
+  const kb = (b/1024).toFixed(0);
+  const n = Object.keys(localStorage).filter(k=>k.startsWith('popodex:')).length;
+  el.textContent = `${kb} KB · ${n} elementos · se renueva cada ${CACHE_DIAS} días`;
+}
+
+function vaciarCache(){
+  Cache.limpiar();
+  actualizarInfoCache();
+  const el = document.getElementById('cache-info');
+  if(el) el.textContent = 'Vaciado. Se descargará de nuevo al recargar la app.';
+}
+
 /* ================= INICIO ================= */
 const STARTERS = [1,4,7,25,152,155,158,133];
 async function loadHome(){
@@ -1293,7 +1406,9 @@ async function loadHome(){
   const seed = new Date().toISOString().slice(0,10).split('-').reduce((a,b)=>a+Number(b),0);
   const pid = (seed*37 % MAX_ID)+1;
   try{
-    const p = await fetchJSON(`${API}/pokemon/${pid}`);
+    const ck = 'spot:'+pid;
+    let p = Cache.get(ck);
+    if(!p){ p = await fetchJSON(`${API}/pokemon/${pid}`); Cache.set(ck, p); }
     document.getElementById('spot').innerHTML = `
       <div class="spot-img"><img src="${SPRITE(p.id)}" alt="${p.name}"></div>
       <div>
@@ -1314,7 +1429,8 @@ async function loadHome(){
 /* ================= INIT ================= */
 buildTypeChips();
 loadHome();
-loadAll();
+loadAll().then(actualizarInfoCache);
+actualizarInfoCache();
 </script>
 </body>
 </html>
