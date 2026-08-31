@@ -9,7 +9,7 @@
    Fuente de los nombres: WikiDex (columna "Español (España)"),
    que usa la nomenclatura oficial de los juegos localizados.
    Cobertura verificada: Kanto, Archi7, Johto y Hoenn.
-   Lo que no esté acá cae al español de la API y, si tampoco
+   Lo que no esté aquí cae al español de la API y, si tampoco
    existe, se muestra el nombre en inglés sin inventar nada.
    ============================================================ */
 
