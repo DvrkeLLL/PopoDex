@@ -42,6 +42,14 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
   font-family:var(--mono);font-size:9px;min-width:16px;height:16px;border-radius:8px;
   display:flex;align-items:center;justify-content:center;padding:0 4px;
 }
+.gen-jump{display:flex;gap:4px;margin-top:10px;}
+.gen-jump button{
+  flex:1;font-family:var(--mono);font-size:11px;font-weight:700;padding:6px 0;
+  border:1px solid color-mix(in srgb, var(--gc) 35%, transparent);
+  background:var(--bg-panel);color:var(--gc);border-radius:var(--r);cursor:pointer;
+}
+.gen-jump button:active{background:var(--gc);color:#fff;border-color:var(--gc);}
+.gen-jump button:disabled{opacity:.28;cursor:default;}
 
 /* ---------- INICIO ---------- */
 .pad{padding:16px;}
@@ -76,6 +84,8 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
   padding:8px 6px 9px;cursor:pointer;position:relative;text-align:center;
 }
 .pcard:active{border-color:var(--accent);}
+/* Primer pokémon de cada generación: arranca fila nueva */
+.pcard.gen-start{grid-column-start:1;}
 .pcard .num{
   position:absolute;top:4px;right:5px;font-family:var(--mono);font-size:8.5px;
   color:var(--dim);border:1px solid var(--border);border-radius:2px;padding:0 3px;
@@ -311,6 +321,17 @@ select:focus,input:focus{border-color:var(--accent);}
           <span class="badge-count" id="f-count" style="display:none;">0</span>
         </button>
       </div>
+      <div class="gen-jump" id="gen-jump">
+        <button data-jump="1" style="--gc:#D64541">1</button>
+        <button data-jump="2" style="--gc:#B8901F">2</button>
+        <button data-jump="3" style="--gc:#3E9B6C">3</button>
+        <button data-jump="4" style="--gc:#4A6FA5">4</button>
+        <button data-jump="5" style="--gc:#5C5C6B">5</button>
+        <button data-jump="6" style="--gc:#D96BA0">6</button>
+        <button data-jump="7" style="--gc:#E8833A">7</button>
+        <button data-jump="8" style="--gc:#6E4F9C">8</button>
+        <button data-jump="9" style="--gc:#B33A5B">9</button>
+      </div>
     </div>
     <div class="status" id="dex-status">
       <span id="status-txt">Cargando lista...</span>
@@ -529,6 +550,15 @@ function statColor(v){
 }
 
 const MAX_ID = 1025;
+
+/* Generación a la que pertenece un número de Pokédex */
+function genDe(id){
+  for(const g in GEN_RANGE){
+    const [a,b] = GEN_RANGE[g];
+    if(id>=a && id<=b) return Number(g);
+  }
+  return 0;
+}
 
 /* ================= ESTADO ================= */
 let allMons = [];          // {id,name,es,types,stats,total,rank,methods}
@@ -837,16 +867,26 @@ function render(){
   currentList = list;
   document.getElementById('dex-count').textContent = `${list.length} pokémon`;
   const grid = document.getElementById('dex-grid');
-  if(!list.length){ grid.innerHTML='<div class="empty" style="grid-column:1/-1;">Ningún pokémon cumple esos filtros.</div>'; return; }
+  if(!list.length){
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1;">Ningún pokémon cumple esos filtros.</div>';
+    actualizarSaltos();
+    return;
+  }
 
-  grid.innerHTML = list.map(m=>`
-    <div class="pcard" onclick="openDetail(${m.id})">
+  /* El corte por generación solo tiene sentido en el orden estándar */
+  const marcarGen = !filters.sort;
+
+  grid.innerHTML = list.map((m,i)=>{
+    const nuevaGen = marcarGen && i>0 && genDe(m.id)!==genDe(list[i-1].id);
+    return `
+    <div class="pcard${nuevaGen?' gen-start':''}" id="c-${m.id}" onclick="openDetail(${m.id})">
       <span class="num">${String(m.id).padStart(3,'0')}</span>
-      <img loading="lazy" src="${SPRITE(m.id)}" alt="${m.name}">
+      <img loading="lazy" src="${SPRITE(m.id)}" alt="${m.es||m.name}">
       <div class="nm">${m.es || m.name.replace(/-/g,' ')}</div>
       <div class="tchips">${m.types.map(t=>`<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]||t}</span>`).join('')}</div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
+  actualizarSaltos();
 }
 
 /* ================= MOVIMIENTOS (filtro) ================= */
@@ -1385,6 +1425,31 @@ async function openInfo(id){
       <button class="btn btn-s" onclick="closeOverlay('ov-info')" style="margin-top:10px;">Cerrar</button></div>`;
   }
 }
+
+/* ================= SALTO POR GENERACIÓN ================= */
+function irAGeneracion(g){
+  const objetivo = currentList.find(m=>genDe(m.id)===g);
+  if(!objetivo) return;
+  const cont = document.getElementById('s-pokedex');
+  const card = document.getElementById('c-'+objetivo.id);
+  if(!card) return;
+  const hdr = cont.querySelector('.hdr');
+  const alto = hdr ? hdr.offsetHeight : 0;
+  const delta = card.getBoundingClientRect().top - cont.getBoundingClientRect().top - alto - 10;
+  cont.scrollTo({top: cont.scrollTop + delta, behavior:'smooth'});
+}
+
+/* Apaga los números de generaciones que los filtros dejaron sin resultados */
+function actualizarSaltos(){
+  const presentes = new Set(currentList.map(m=>genDe(m.id)));
+  document.querySelectorAll('[data-jump]').forEach(b=>{
+    b.disabled = !presentes.has(Number(b.dataset.jump));
+  });
+}
+
+document.querySelectorAll('[data-jump]').forEach(b=>{
+  b.addEventListener('click',()=>irAGeneracion(Number(b.dataset.jump)));
+});
 
 /* ================= GESTOS ================= */
 const ORDEN_PANTALLAS = ['inicio','pokedex','equipo','dano','info'];
