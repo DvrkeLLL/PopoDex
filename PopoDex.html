@@ -87,16 +87,17 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
 /* ---------- OVERLAYS ---------- */
 .overlay{
   position:absolute;inset:0;background:rgba(34,31,51,.4);z-index:40;
-  display:none;align-items:flex-start;justify-content:center;padding:26px 14px;overflow-y:auto;
+  display:none;align-items:center;justify-content:center;padding:22px 14px;overflow:hidden;
 }
 .overlay.open{display:flex;}
 .sheet{
   background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
-  width:100%;max-width:420px;margin:auto 0;
+  width:100%;max-width:420px;max-height:100%;
+  display:flex;flex-direction:column;overflow:hidden;
 }
 .sheet-hd{
   display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
-  padding:14px 14px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg-panel);z-index:2;
+  padding:14px 14px 10px;border-bottom:1px solid var(--border);background:var(--bg-panel);flex-shrink:0;
 }
 .sheet-title{font-size:19px;font-weight:700;text-transform:capitalize;margin:0;line-height:1.15;}
 .sheet-num{font-family:var(--mono);font-size:10px;color:var(--dim);}
@@ -107,7 +108,7 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
 }
 .mini-btn svg{width:17px;height:17px;stroke:var(--accent);fill:none;stroke-width:1.9;stroke-linecap:round;}
 .mini-btn.close svg{stroke:var(--muted);}
-.sheet-bd{padding:14px;}
+.sheet-bd{padding:14px;overflow-y:auto;flex:1;min-height:0;-webkit-overflow-scrolling:touch;}
 
 .det-top{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:14px;}
 .det-img{width:130px;height:130px;background:var(--bg-screen);border-radius:var(--r);display:flex;align-items:center;justify-content:center;}
@@ -118,7 +119,7 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
 .strow{display:flex;align-items:center;gap:9px;margin-bottom:6px;}
 .stlab{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:52px;flex-shrink:0;text-transform:uppercase;}
 .sttrack{flex:1;height:7px;background:var(--bg-screen);border:1px solid var(--border);border-radius:3px;overflow:hidden;}
-.stfill{height:100%;background:var(--accent);width:0;transition:width .7s cubic-bezier(.2,.8,.3,1);}
+.stfill{display:block;height:100%;width:0;background:var(--accent);transition:width .7s cubic-bezier(.2,.8,.3,1);}
 .stnum{font-family:var(--mono);font-size:10.5px;width:30px;text-align:right;flex-shrink:0;font-weight:500;}
 .sttotal{border-top:1px solid var(--border);margin-top:8px;padding-top:8px;}
 .sttotal .stlab,.sttotal .stnum{color:var(--text);font-weight:700;}
@@ -461,6 +462,17 @@ const GEN_RANGE = {1:[1,151],2:[152,251],3:[252,386],4:[387,493],5:[494,649],
 const STAT_ES = {hp:"PS",attack:"ATA",defense:"DEF","special-attack":"AT.ESP",
   "special-defense":"DF.ESP",speed:"VEL"};
 
+/* Color de la barra: rosa en valores bajos, morado en valores altos.
+   Satura en 140: de ahí hacia arriba ya no cambia. */
+function statColor(v){
+  const t = Math.min(Math.max(v,0),140)/140;
+  const lerp = (a,b,k)=>a.map((x,i)=>Math.round(x+(b[i]-x)*k));
+  const c = t<.5
+    ? lerp([228,80,122],[170,110,220], t*2)
+    : lerp([170,110,220],[76,58,200], (t-.5)*2);
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
 const MAX_ID = 1025;
 
 /* ================= ESTADO ================= */
@@ -708,7 +720,7 @@ async function openDetail(id){
     const v = m.stats[k]??0;
     return `<div class="strow">
       <span class="stlab">${STAT_ES[k]}</span>
-      <span class="sttrack"><i class="stfill" data-w="${Math.min(v,180)/180*100}"></i></span>
+      <span class="sttrack"><i class="stfill" style="background:${statColor(v)}" data-w="${Math.min(v,180)/180*100}"></i></span>
       <span class="stnum">${v}</span></div>`;
   }).join('');
 
@@ -744,7 +756,7 @@ async function openDetail(id){
       ${statsHTML}
       <div class="strow sttotal">
         <span class="stlab">Total</span>
-        <span class="sttrack"><i class="stfill" data-w="${Math.min(m.total,720)/720*100}"></i></span>
+        <span class="sttrack"><i class="stfill" style="background:${statColor(m.total/6)}" data-w="${Math.min(m.total,720)/720*100}"></i></span>
         <span class="stnum">${m.total}</span>
       </div>
 
@@ -773,7 +785,8 @@ async function openDetail(id){
       </div>
     </div>`;
 
-  document.getElementById('ov-detail').scrollTop = 0;
+  const bd = sheet.querySelector('.sheet-bd');
+  if(bd) bd.scrollTop = 0;
   requestAnimationFrame(()=>setTimeout(()=>{
     sheet.querySelectorAll('.stfill').forEach(f=>f.style.width=f.dataset.w+'%');
   },60));
