@@ -149,7 +149,7 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
 
 .mv-row{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:11.5px;align-items:center;}
 .mv-row:last-child{border-bottom:none;}
-.mv-nm{text-transform:capitalize;}
+.mv-nm{text-transform:capitalize;font-weight:500;font-size:12px;}
 .mv-tag{font-family:var(--mono);font-size:9px;color:var(--muted);flex-shrink:0;}
 .mv-tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
 .mv-tab{
@@ -157,6 +157,19 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
   border-radius:var(--r);background:var(--bg-panel);cursor:pointer;color:var(--muted);text-transform:uppercase;
 }
 .mv-tab.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+.mv-head{
+  display:flex;align-items:center;gap:4px;padding:0 0 6px;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;
+}
+.mv-h-nm{flex:1;}
+.mv-h-n{width:32px;text-align:right;flex-shrink:0;}
+.mv-row2{display:flex;align-items:center;gap:4px;padding:8px 0;border-bottom:1px solid var(--border);}
+.mv-row2:last-child{border-bottom:none;}
+.mv-main{flex:1;min-width:0;}
+.mv-meta{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;}
+.mv-cls{font-family:var(--mono);font-size:9px;font-weight:700;text-transform:uppercase;}
+.mv-lvl{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.mv-n{width:32px;text-align:right;flex-shrink:0;font-family:var(--mono);font-size:11px;font-weight:500;}
 
 .evo-chain{display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:center;}
 .evo-node{text-align:center;cursor:pointer;width:74px;}
@@ -431,9 +444,12 @@ select:focus,input:focus{border-color:var(--accent);}
   </nav>
 </div>
 
+<script src="traducciones.js"></script>
 <script>
 /* ================= CONSTANTES ================= */
 const API = 'https://pokeapi.co/api/v2';
+const GQL = 'https://graphql.pokeapi.co/v1beta2';
+const ES = 7;   // language_id del español en PokeAPI
 const SPRITE = id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
 
 const TYPES = ["normal","fire","water","electric","grass","ice","fighting","poison","ground",
@@ -502,6 +518,73 @@ let detailCache = {};      // id -> datos completos (moves, abilities...)
 let filters = {gens:[],sort:"",mins:{},types:[],cats:[],moves:[],ranks:[]};
 let dataReady = false;
 
+/* ================= HELPERS ================= */
+async function gql(query){
+  const r = await fetch(GQL,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({query})
+  });
+  const j = await r.json();
+  if(!j.data) throw new Error('graphql');
+  return j.data;
+}
+
+/* Cachés de traducción (se llenan una vez por sesión) */
+const TRAD = { juegos:null, lugares:null, metodos:null };
+
+async function cargarJuegos(){
+  if(TRAD.juegos) return TRAD.juegos;
+  const map = {};
+  try{
+    const d = await gql(`{ version { name versionnames(where:{language_id:{_eq:${ES}}}) { name } } }`);
+    d.version.forEach(v=>{ map[v.name] = v.versionnames[0]?.name || v.name.replace(/-/g,' '); });
+  }catch(e){ /* sin traducción: se usan los slugs */ }
+  TRAD.juegos = map;
+  return map;
+}
+
+async function cargarLugares(){
+  if(TRAD.lugares) return TRAD.lugares;
+  const map = {};
+  try{
+    const d = await gql(`{
+      locationarea {
+        name
+        location { name locationnames(where:{language_id:{_eq:${ES}}}) { name } }
+      }
+    }`);
+    d.locationarea.forEach(a=>{
+      map[a.name] = {
+        loc: a.location?.name || '',
+        es: a.location?.locationnames?.[0]?.name || ''
+      };
+    });
+  }catch(e){ /* el diccionario local cubre igual */ }
+  TRAD.lugares = map;
+  return map;
+}
+
+async function cargarMetodos(){
+  if(TRAD.metodos) return TRAD.metodos;
+  const map = {};
+  try{
+    const d = await gql(`{ encountermethod { name encountermethodnames(where:{language_id:{_eq:${ES}}}) { name } } }`);
+    d.encountermethod.forEach(m=>{ map[m.name] = m.encountermethodnames[0]?.name || ''; });
+  }catch(e){}
+  TRAD.metodos = map;
+  return map;
+}
+
+function nombreJuego(slug){
+  return (TRAD.juegos && TRAD.juegos[slug]) || slug.replace(/-/g,' ');
+}
+
+function nombreLugar(slugArea){
+  const info = TRAD.lugares ? TRAD.lugares[slugArea] : null;
+  return window.PopoTrad.traducirLugar(slugArea, info?.es, info?.loc);
+}
+
+
 /* ================= NAVEGACIÓN ================= */
 function goTo(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -540,7 +623,10 @@ const GQL_SOURCES = [
         id name
         pokemontypes { type { name } }
         pokemonstats { base_stat stat { name } }
-        pokemonspecy { is_legendary is_mythical }
+        pokemonspecy {
+          is_legendary is_mythical
+          pokemonspeciesnames(where:{language_id:{_eq:${ES}}}) { name }
+        }
         pokemonmoves(distinct_on: move_learn_method_id, order_by:{move_learn_method_id:asc}) {
           movelearnmethod { name }
         }
@@ -551,6 +637,7 @@ const GQL_SOURCES = [
       p.pokemonstats.forEach(s=>{ stats[s.stat.name]=s.base_stat; total+=s.base_stat; });
       const sp = p.pokemonspecy||{};
       return {id:p.id, name:p.name,
+        es: sp.pokemonspeciesnames?.[0]?.name || p.name.replace(/-/g,' '),
         types:p.pokemontypes.map(t=>t.type.name),
         stats, total,
         rank: sp.is_legendary?'legendary' : sp.is_mythical?'mythical' : 'common',
@@ -564,7 +651,10 @@ const GQL_SOURCES = [
         id name
         pokemon_v2_pokemontypes { pokemon_v2_type { name } }
         pokemon_v2_pokemonstats { base_stat pokemon_v2_stat { name } }
-        pokemon_v2_pokemonspecy { is_legendary is_mythical }
+        pokemon_v2_pokemonspecy {
+          is_legendary is_mythical
+          pokemon_v2_pokemonspeciesnames(where:{language_id:{_eq:7}}) { name }
+        }
         pokemon_v2_pokemonmoves(distinct_on: move_learn_method_id, order_by:{move_learn_method_id:asc}) {
           pokemon_v2_movelearnmethod { name }
         }
@@ -575,6 +665,7 @@ const GQL_SOURCES = [
       p.pokemon_v2_pokemonstats.forEach(s=>{ stats[s.pokemon_v2_stat.name]=s.base_stat; total+=s.base_stat; });
       const sp = p.pokemon_v2_pokemonspecy||{};
       return {id:p.id, name:p.name,
+        es: sp.pokemon_v2_pokemonspeciesnames?.[0]?.name || p.name.replace(/-/g,' '),
         types:p.pokemon_v2_pokemontypes.map(t=>t.pokemon_v2_type.name),
         stats, total,
         rank: sp.is_legendary?'legendary' : sp.is_mythical?'mythical' : 'common',
@@ -614,7 +705,7 @@ async function loadAll(){
   statusBar.style.width='100%';
   try{
     const list = await fetchJSON(`${API}/pokemon?limit=${MAX_ID}`);
-    allMons = list.results.map((p,i)=>({id:i+1,name:p.name,types:[],stats:{},total:0,methods:[]}));
+    allMons = list.results.map((p,i)=>({id:i+1,name:p.name,es:p.name.replace(/-/g,' '),types:[],stats:{},total:0,methods:[]}));
     render();
   }catch(err){
     document.getElementById('dex-grid').innerHTML='<div class="empty" style="grid-column:1/-1;">No se pudo conectar a PokeAPI.</div>';
@@ -669,7 +760,7 @@ function render(){
     <div class="pcard" onclick="openDetail(${m.id})">
       <span class="num">${String(m.id).padStart(3,'0')}</span>
       <img loading="lazy" src="${SPRITE(m.id)}" alt="${m.name}">
-      <div class="nm">${m.name.replace(/-/g,' ')}</div>
+      <div class="nm">${m.es || m.name.replace(/-/g,' ')}</div>
       <div class="tchips">${m.types.map(t=>`<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]||t}</span>`).join('')}</div>
     </div>
   `).join('');
@@ -682,13 +773,9 @@ let movesLoaded = false;
 async function loadMoveList(){
   if(movesLoaded) return;
   const state = document.getElementById('move-state');
-  const q = `{ move(order_by:{id:asc}) { name movenames(where:{language_id:{_eq:7}}) { name } } }`;
+  const q = `{ move(order_by:{id:asc}) { name movenames(where:{language_id:{_eq:${ES}}}) { name } } }`;
   try{
-    const r = await fetch('https://graphql.pokeapi.co/v1beta2',{
-      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})
-    });
-    const j = await r.json();
-    if(!j.data) throw new Error();
+    const j = {data: await gql(q)};
     MOVES = j.data.move.map(m=>({
       slug:m.name,
       es:(m.movenames[0]?.name) || m.name.replace(/-/g,' '),
@@ -728,13 +815,9 @@ async function whoLearns(slug){
     }
   }`;
   try{
-    const r = await fetch('https://graphql.pokeapi.co/v1beta2',{
-      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})
-    });
-    const j = await r.json();
-    if(!j.data) throw new Error();
+    const data = await gql(q);
     const map = new Map();
-    j.data.pokemonmove.forEach(row=>{
+    data.pokemonmove.forEach(row=>{
       const arr = map.get(row.pokemon_id) || [];
       arr.push(row.movelearnmethod.name);
       map.set(row.pokemon_id, arr);
@@ -901,7 +984,7 @@ async function openDetail(id){
     <div class="sheet-hd">
       <div>
         <div class="sheet-num">N.º ${String(m.id).padStart(4,'0')}</div>
-        <h2 class="sheet-title">${m.name.replace(/-/g,' ')}</h2>
+        <h2 class="sheet-title">${m.es || m.name.replace(/-/g,' ')}</h2>
       </div>
       <div class="hd-actions">
         <button class="mini-btn" title="Agregar al equipo" onclick="alert('Se conectará con el apartado Equipo')">
@@ -970,30 +1053,66 @@ function toggleAcc(id, loader){
 async function loadLocations(id){
   const bd = document.querySelector('#acc-loc .acc-bd');
   try{
+    await Promise.all([cargarLugares(), cargarJuegos()]);
     const data = await fetchJSON(`${API}/pokemon/${id}/encounters`);
-    if(!data.length){ bd.innerHTML='<div class="hint">No se encuentra en estado salvaje (evolución, intercambio o evento).</div>'; return; }
-    bd.innerHTML = data.slice(0,30).map(e=>{
-      const games = [...new Set(e.version_details.map(v=>v.version.name.replace(/-/g,' ')))].join(', ');
-      return `<div class="loc-item">${e.location_area.name.replace(/-/g,' ')}
-        <div class="loc-games">${games}</div></div>`;
+    if(!data.length){
+      bd.innerHTML='<div class="hint">No aparece en estado salvaje (se obtiene por evolución, intercambio o evento).</div>';
+      return;
+    }
+    bd.innerHTML = data.slice(0,40).map(e=>{
+      const lugar = nombreLugar(e.location_area.name);
+      const juegos = [...new Set(e.version_details.map(v=>nombreJuego(v.version.name)))].join(', ');
+      const niveles = e.version_details
+        .flatMap(v=>v.encounter_details.map(d=>[d.min_level,d.max_level]))
+        .reduce((a,[mn,mx])=>[Math.min(a[0],mn),Math.max(a[1],mx)],[99,0]);
+      const rango = niveles[1]>0
+        ? (niveles[0]===niveles[1] ? `Nv. ${niveles[0]}` : `Nv. ${niveles[0]}-${niveles[1]}`)
+        : '';
+      return `<div class="loc-item">${lugar}
+        <div class="loc-games">${juegos}${rango? ' · '+rango : ''}</div></div>`;
     }).join('');
   }catch(e){ bd.innerHTML='<div class="hint">No se pudieron cargar las localizaciones.</div>'; }
 }
 
 /* --- Movimientos --- */
+const CLASE_ES = {physical:'Físico', special:'Especial', status:'Estado'};
+const CLASE_COL = {physical:'#C0392B', special:'#2E6FA3', status:'#7C7593'};
+
 async function loadMoves(id){
   const bd = document.querySelector('#acc-mov .acc-bd');
   try{
-    const data = detailCache[id] || (detailCache[id] = await fetchJSON(`${API}/pokemon/${id}`));
+    const d = await gql(`{
+      pokemonmove(where:{pokemon_id:{_eq:${id}}},
+                  distinct_on:[move_id, move_learn_method_id],
+                  order_by:[{move_id:asc},{move_learn_method_id:asc}]) {
+        level
+        movelearnmethod { name }
+        move {
+          name power accuracy pp
+          type { name }
+          movedamageclass { name }
+          movenames(where:{language_id:{_eq:${ES}}}) { name }
+        }
+      }
+    }`);
+
     const groups = {'level-up':[], 'egg':[], 'machine':[], 'tutor':[]};
-    data.moves.forEach(mv=>{
-      const d = mv.version_group_details[mv.version_group_details.length-1];
-      const method = d.move_learn_method.name;
-      if(groups[method]) groups[method].push({name:mv.move.name, lvl:d.level_learned_at});
+    d.pokemonmove.forEach(r=>{
+      const m = r.move, met = r.movelearnmethod.name;
+      if(!groups[met]) return;
+      groups[met].push({
+        nombre: m.movenames[0]?.name || m.name.replace(/-/g,' '),
+        tipo: m.type?.name || 'normal',
+        clase: m.movedamageclass?.name || 'status',
+        pot: m.power, prec: m.accuracy, pp: m.pp,
+        lvl: r.level || 0
+      });
     });
     Object.keys(groups).forEach(k=>{
-      groups[k].sort((a,b)=> k==='level-up' ? a.lvl-b.lvl : a.name.localeCompare(b.name));
+      groups[k].sort((a,b)=> k==='level-up' ? (a.lvl-b.lvl)||a.nombre.localeCompare(b.nombre)
+                                            : a.nombre.localeCompare(b.nombre));
     });
+
     const LABELS={'level-up':'Nivel','egg':'Huevo','machine':'MT/MO','tutor':'Tutor'};
     const avail = Object.keys(groups).filter(k=>groups[k].length);
     if(!avail.length){ bd.innerHTML='<div class="hint">Sin datos de movimientos.</div>'; return; }
@@ -1002,12 +1121,27 @@ async function loadMoves(id){
       <div class="mv-tabs">${avail.map((k,i)=>
         `<button class="mv-tab ${i===0?'on':''}" data-g="${k}">${LABELS[k]} (${groups[k].length})</button>`).join('')}
       </div>
+      <div class="mv-head">
+        <span class="mv-h-nm">Movimiento</span>
+        <span class="mv-h-n">Pot</span><span class="mv-h-n">Prec</span><span class="mv-h-n">PP</span>
+      </div>
       <div id="mv-list"></div>`;
 
     const paint = k=>{
-      document.getElementById('mv-list').innerHTML = groups[k].map(m=>
-        `<div class="mv-row"><span class="mv-nm">${m.name.replace(/-/g,' ')}</span>
-         <span class="mv-tag">${k==='level-up'? (m.lvl>0?'Nv. '+m.lvl:'—') : LABELS[k]}</span></div>`).join('');
+      document.getElementById('mv-list').innerHTML = groups[k].map(m=>`
+        <div class="mv-row2">
+          <div class="mv-main">
+            <div class="mv-nm">${m.nombre}</div>
+            <div class="mv-meta">
+              <span class="tchip" style="background:${TCOLOR[m.tipo]}">${TES[m.tipo]||m.tipo}</span>
+              <span class="mv-cls" style="color:${CLASE_COL[m.clase]}">${CLASE_ES[m.clase]}</span>
+              ${k==='level-up' ? `<span class="mv-lvl">${m.lvl>0?'Nv. '+m.lvl:'—'}</span>` : ''}
+            </div>
+          </div>
+          <span class="mv-n">${m.pot ?? '—'}</span>
+          <span class="mv-n">${m.prec ?? '—'}</span>
+          <span class="mv-n">${m.pp ?? '—'}</span>
+        </div>`).join('');
     };
     paint(avail[0]);
     bd.querySelectorAll('.mv-tab').forEach(t=>t.addEventListener('click',()=>{
@@ -1027,13 +1161,48 @@ function flattenChain(node, depth=0, out=[]){
 function evoCondition(d){
   if(!d || !d.length) return '';
   const e = d[0];
-  if(e.min_level) return 'Nv. '+e.min_level;
-  if(e.item) return e.item.name.replace(/-/g,' ');
-  if(e.trigger?.name==='trade') return 'Intercambio';
-  if(e.min_happiness) return 'Felicidad';
-  if(e.held_item) return e.held_item.name.replace(/-/g,' ');
-  return e.trigger?.name.replace(/-/g,' ')||'';
+  const OBJ = {
+    'fire-stone':'Piedra Fuego','water-stone':'Piedra Agua','thunder-stone':'Piedra Trueno',
+    'leaf-stone':'Piedra Hoja','moon-stone':'Piedra Lunar','sun-stone':'Piedra Solar',
+    'shiny-stone':'Piedra Día','dusk-stone':'Piedra Noche','dawn-stone':'Piedra Alba',
+    'ice-stone':'Piedra Hielo','oval-stone':'Piedra Oval','kings-rock':'Roca del Rey',
+    'metal-coat':'Revestim. Metálico','dragon-scale':'Escama Dragón','up-grade':'Mejora',
+    'deep-sea-tooth':'Diente Marino','deep-sea-scale':'Escama Marina','razor-claw':'Garra Afilada',
+    'razor-fang':'Colmillo Agudo','protector':'Protector','electirizer':'Electrizador',
+    'magmarizer':'Magmatizador','dubious-disc':'Disco Extraño','reaper-cloth':'Tela Terrible',
+    'prism-scale':'Escama Bella','sachet':'Saquito Fragante','whipped-dream':'Dulce Batido',
+    'linking-cord':'Cordón Unión','sweet-apple':'Manzana Dulce','tart-apple':'Manzana Ácida',
+    'cracked-pot':'Tetera Agrietada','chipped-pot':'Tetera Rota','black-augurite':'Mineral Negro',
+    'peat-block':'Bloque de Turba','auspicious-armor':'Armadura Auspiciosa','malicious-armor':'Armadura Maldita'
+  };
+  const TRIG = {
+    'level-up':'Subir nivel','trade':'Intercambio','use-item':'Objeto',
+    'shed':'Muda','spin':'Girar','tower-of-darkness':'Torre Oscuridad',
+    'tower-of-waters':'Torre Agua','three-critical-hits':'3 golpes críticos',
+    'take-damage':'Recibir daño','other':'Método especial','agile-style-move':'Estilo Fuerte',
+    'strong-style-move':'Estilo Fuerte','recoil-damage':'Daño de retroceso'
+  };
+  const bits = [];
+  if(e.min_level) bits.push('Nv. '+e.min_level);
+  if(e.item) bits.push(OBJ[e.item.name] || e.item.name.replace(/-/g,' '));
+  if(e.held_item) bits.push('con '+(OBJ[e.held_item.name] || e.held_item.name.replace(/-/g,' ')));
+  if(e.min_happiness) bits.push('Felicidad');
+  if(e.min_affection) bits.push('Afecto');
+  if(e.min_beauty) bits.push('Belleza');
+  if(e.time_of_day==='day') bits.push('de día');
+  if(e.time_of_day==='night') bits.push('de noche');
+  if(e.known_move) bits.push('sabiendo '+e.known_move.name.replace(/-/g,' '));
+  if(e.location) bits.push('en '+window.PopoTrad.traducirLugar(e.location.name));
+  if(e.gender===1) bits.push('♀');
+  if(e.gender===2) bits.push('♂');
+  if(e.needs_overworld_rain) bits.push('con lluvia');
+  if(e.turn_upside_down) bits.push('consola al revés');
+  if(!bits.length && e.trigger) bits.push(TRIG[e.trigger.name] || e.trigger.name.replace(/-/g,' '));
+  else if(e.trigger && e.trigger.name==='trade') bits.unshift('Intercambio');
+  else if(e.trigger && e.trigger.name==='use-item' && !e.item) bits.unshift('Objeto');
+  return bits.join(' ');
 }
+
 async function loadEvolutions(id){
   const bd = document.querySelector('#acc-evo .acc-bd');
   try{
@@ -1041,10 +1210,12 @@ async function loadEvolutions(id){
     const chain = await fetchJSON(sp.evolution_chain.url);
     const nodes = flattenChain(chain.chain);
     if(nodes.length===1){ bd.innerHTML='<div class="hint">Este pokémon no evoluciona.</div>'; return; }
+    const esNombre = pid => (allMons.find(x=>x.id===pid)||{}).es;
     bd.innerHTML = `<div class="evo-chain">${nodes.map((n,i)=>{
       const arrow = i>0 ? `<div class="evo-arrow">→<br>${evoCondition(n.details)}</div>` : '';
+      const nm = esNombre(n.id) || n.name.replace(/-/g,' ');
       return `${arrow}<div class="evo-node" onclick="closeOverlay('ov-detail');setTimeout(()=>openDetail(${n.id}),120)">
-        <img src="${SPRITE(n.id)}" alt="${n.name}"><div>${n.name.replace(/-/g,' ')}</div></div>`;
+        <img src="${SPRITE(n.id)}" alt="${nm}"><div>${nm}</div></div>`;
     }).join('')}</div>`;
   }catch(e){ bd.innerHTML='<div class="hint">No se pudieron cargar las evoluciones.</div>'; }
 }
@@ -1055,23 +1226,43 @@ async function openInfo(id){
   openOverlay('ov-info');
   sheet.innerHTML = `<div class="sheet-bd"><div class="hint">Cargando...</div></div>`;
   try{
-    const p = detailCache[id] || (detailCache[id] = await fetchJSON(`${API}/pokemon/${id}`));
-    const sp = await fetchJSON(`${API}/pokemon-species/${id}`);
+    const d = await gql(`{
+      pokemon(where:{id:{_eq:${id}}}) {
+        name height weight base_experience
+        pokemonabilities(order_by:{slot:asc}) {
+          is_hidden
+          ability { name abilitynames(where:{language_id:{_eq:${ES}}}) { name } }
+        }
+        pokemonstats { effort stat { name } }
+        pokemonspecy {
+          capture_rate gender_rate hatch_counter
+          pokemonegggroups { egggroup { name egggroupnames(where:{language_id:{_eq:${ES}}}) { name } } }
+          pokemonspeciesnames(where:{language_id:{_eq:${ES}}}) { name genus }
+        }
+      }
+    }`);
+    const p = d.pokemon[0];
+    const sp = p.pokemonspecy || {};
+    const nombre = sp.pokemonspeciesnames?.[0]?.name || p.name;
+    const genero = sp.pokemonspeciesnames?.[0]?.genus || '';
 
-    const evYield = p.stats.filter(s=>s.effort>0)
+    const evYield = p.pokemonstats.filter(s=>s.effort>0)
       .map(s=>`${s.effort} ${STAT_ES[s.stat.name]}`).join(', ') || '—';
-    const abilities = p.abilities.map(a=>
-      a.is_hidden ? `${a.ability.name.replace(/-/g,' ')} (oculta)` : a.ability.name.replace(/-/g,' ')
-    ).join(', ');
-    const eggs = sp.egg_groups.map(g=>g.name.replace(/-/g,' ')).join(', ') || '—';
-    const gender = sp.gender_rate===-1 ? 'Sin género'
+    const habs = p.pokemonabilities.map(a=>{
+      const n = a.ability.abilitynames[0]?.name || a.ability.name.replace(/-/g,' ');
+      return a.is_hidden ? `${n} (oculta)` : n;
+    }).join(', ') || '—';
+    const huevos = (sp.pokemonegggroups||[]).map(g=>
+      g.egggroup.egggroupnames[0]?.name || g.egggroup.name.replace(/-/g,' ')).join(', ') || '—';
+    const gen = sp.gender_rate===-1 ? 'Sin género'
       : `${(8-sp.gender_rate)/8*100}% ♂ / ${sp.gender_rate/8*100}% ♀`;
 
     sheet.innerHTML = `
       <div class="sheet-hd">
         <div>
           <div class="sheet-num">N.º ${String(id).padStart(4,'0')}</div>
-          <h2 class="sheet-title" style="font-size:17px;">${p.name.replace(/-/g,' ')}</h2>
+          <h2 class="sheet-title" style="font-size:17px;">${nombre}</h2>
+          ${genero? `<div class="sheet-num" style="margin-top:2px;">${genero}</div>`:''}
         </div>
         <div class="hd-actions">
           <button class="mini-btn close" onclick="closeOverlay('ov-info')">
@@ -1081,17 +1272,17 @@ async function openInfo(id){
       <div class="sheet-bd">
         <div class="kv"><span>Altura</span><span>${(p.height/10).toFixed(1)} m</span></div>
         <div class="kv"><span>Peso</span><span>${(p.weight/10).toFixed(1)} kg</span></div>
-        <div class="kv"><span>Habilidades</span><span>${abilities}</span></div>
-        <div class="kv"><span>Grupo huevo</span><span>${eggs}</span></div>
+        <div class="kv"><span>Habilidades</span><span>${habs}</span></div>
+        <div class="kv"><span>Grupo huevo</span><span>${huevos}</span></div>
         <div class="kv"><span>Ptos. esfuerzo</span><span>${evYield}</span></div>
         <div class="kv"><span>Exp. base</span><span>${p.base_experience??'—'}</span></div>
-        <div class="kv"><span>Ratio captura</span><span>${sp.capture_rate}</span></div>
-        <div class="kv"><span>Género</span><span>${gender}</span></div>
+        <div class="kv"><span>Ratio captura</span><span>${sp.capture_rate??'—'}</span></div>
+        <div class="kv"><span>Género</span><span>${gen}</span></div>
         <div class="kv"><span>Ciclos huevo</span><span>${sp.hatch_counter??'—'}</span></div>
       </div>`;
   }catch(e){
     sheet.innerHTML = `<div class="sheet-bd"><div class="hint">No se pudo cargar la información.</div>
-      <button class="btn btn-s" onclick="closeOverlay('ov-info')">Cerrar</button></div>`;
+      <button class="btn btn-s" onclick="closeOverlay('ov-info')" style="margin-top:10px;">Cerrar</button></div>`;
   }
 }
 
@@ -1107,7 +1298,7 @@ async function loadHome(){
       <div class="spot-img"><img src="${SPRITE(p.id)}" alt="${p.name}"></div>
       <div>
         <p class="spot-meta">N.º ${String(p.id).padStart(4,'0')} · destacado</p>
-        <p class="spot-name">${p.name.replace(/-/g,' ')}</p>
+        <p class="spot-name">${(allMons.find(x=>x.id===p.id)||{}).es || p.name.replace(/-/g,' ')}</p>
         <div class="det-types" style="gap:4px;">${p.types.map(t=>
           `<span class="tchip" style="background:${TCOLOR[t.type.name]}">${TES[t.type.name]}</span>`).join('')}</div>
       </div>`;
