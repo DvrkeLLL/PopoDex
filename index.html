@@ -1,0 +1,3163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RamOS</title>
+
+<link rel="icon" href="RamOS.png" type="image/png">
+<link rel="apple-touch-icon" href="RamOS.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RamOS">
+<meta name="application-name" content="RamOS">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#2F6E4E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F3F5F1;
+    --ink:#1B2A22;
+    --ink-soft:#5E6E63;
+    --accent:#2F6E4E;
+    --accent-dark:#215239;
+    --accent-wash:rgba(47,110,78,0.12);
+    --on-accent:#FFFFFF;
+    --danger:#B5473A;
+    --card:#FFFFFF;
+    --border:#D9E0D6;
+    --th-bg:#E9EEE6;
+    --pastel-green-bg:#D9F0DF;
+    --pastel-green-ink:#2F6E4E;
+    --pastel-orange-bg:#FBE4C8;
+    --pastel-orange-ink:#B0692A;
+    --pastel-yellow-bg:#FBF0B8;
+    --pastel-yellow-ink:#8A7418;
+    --radius:20px;
+    --radius-sm:14px;
+    --font-display:'Space Grotesk',sans-serif;
+    --font-body:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:#DEE3DA;font-family:var(--font-body);color:var(--ink);}
+  #phone{
+    max-width:430px;
+    margin:0 auto;
+    height:100vh;
+    background:var(--bg);
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    box-shadow:0 0 40px rgba(0,0,0,0.15);
+  }
+  #scrollArea{
+    flex:1;
+    overflow-y:auto;
+    padding-bottom:104px;
+  }
+
+  header{ padding:34px 22px 16px; }
+  header h1{
+    font-family:var(--font-display);
+    font-size:27px;
+    font-weight:800;
+    letter-spacing:0.01em;
+    margin:0;
+    color:var(--ink);
+    display:inline-block;
+    border-bottom:3px solid var(--accent);
+    padding-bottom:7px;
+  }
+  header .sub{ font-size:12.5px; color:var(--ink-soft); margin-top:5px; }
+  header.header-center{ text-align:center; }
+
+  main{ padding:6px 18px 0; }
+  .ramo-wrap{
+    position:relative;
+    border-radius:var(--radius);
+    margin-bottom:12px;
+    overflow:hidden;
+  }
+  .ramo-delete-bg{
+    position:absolute;
+    inset:0;
+    background:var(--danger);
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    padding-right:22px;
+    color:#fff;
+    font-weight:700;
+    font-family:var(--font-display);
+    font-size:13px;
+    cursor:pointer;
+  }
+  .ramo-card, .add-card{
+    min-height:84px;
+    border-radius:var(--radius);
+    margin-bottom:12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    cursor:pointer;
+    transition:transform .12s ease;
+    touch-action:pan-y;
+    position:relative;
+  }
+  .ramo-wrap .ramo-card{ margin-bottom:0; }
+  .ramo-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    padding:14px 18px;
+  }
+  .ramo-card:active{transform:none;}
+  .ramo-card .name{font-weight:700;font-size:15.5px;font-family:var(--font-display);}
+  .ramo-card .meta{font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+
+  .add-card{
+    border:2px solid var(--accent);
+    color:var(--accent-dark);
+    background:var(--accent-wash);
+    margin-bottom:12px;
+  }
+  .add-card svg{width:26px;height:26px;}
+  .add-card:active{background:var(--accent);color:#fff;}
+
+  nav{
+    position:absolute;
+    left:16px; right:16px; bottom:16px;
+    display:flex;
+    background:var(--ink);
+    border-radius:26px;
+    padding:10px 8px;
+    box-shadow:0 10px 30px rgba(27,42,34,0.35);
+    z-index:10;
+  }
+  nav .tab{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    color:rgba(255,255,255,0.55);
+    cursor:pointer;
+    font-size:9.5px;
+    font-weight:700;
+    font-family:var(--font-display);
+  }
+  nav .tab svg{width:20px;height:20px;}
+  nav .tab.active{color:#fff;}
+  nav .icon-wrap{
+    width:38px;height:28px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  nav .tab.active .icon-wrap{background:var(--accent);}
+
+  .topbar{
+    display:flex;align-items:center;gap:10px;
+    padding:20px 18px 10px;
+  }
+  .back{
+    width:36px;height:36px;border-radius:12px;
+    border:1px solid var(--border);background:var(--card);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    color:var(--ink);
+    flex-shrink:0;
+  }
+  .back svg{width:20px;height:20px;display:block;}
+  .topbar h2{font-family:var(--font-display);font-size:19px;margin:0;font-weight:700;}
+  .topbar h2 svg{width:14px;height:14px;color:var(--ink-soft);flex-shrink:0;}
+
+  .section-btn{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;margin:0 18px 12px;
+    display:flex;justify-content:space-between;align-items:center;
+    cursor:pointer;
+  }
+  .section-btn .label{font-weight:700;font-size:14.5px;font-family:var(--font-display);}
+  .section-btn .status{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .section-btn .status.ok{color:var(--accent-dark);font-weight:600;}
+
+  .inline-form{margin:0 18px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+  .inline-form label{font-size:12px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:6px;}
+  .inline-form input, .inline-form select{
+    width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);
+    font-size:14.5px;font-family:var(--font-body);margin-bottom:12px;background:#fff;color:var(--ink);
+  }
+  .btn-primary{
+    background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--radius-sm);
+    padding:13px 16px;font-weight:700;font-family:var(--font-display);font-size:14px;cursor:pointer;width:100%;
+  }
+  .btn-primary:active{background:var(--accent-dark);}
+  .btn-ghost{
+    background:transparent;color:var(--ink-soft);border:1.5px solid var(--border);
+    border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-display);
+  }
+
+  .table-wrap{margin:0 18px 14px;overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);}
+  table{border-collapse:collapse;width:100%;min-width:560px;}
+  th{
+    background:var(--th-bg);font-size:10.5px;text-transform:uppercase;letter-spacing:0.03em;
+    color:var(--ink-soft);padding:10px 8px;text-align:left;border-bottom:1px solid var(--border);
+    position:sticky;top:0;font-family:var(--font-display);
+  }
+  td{padding:6px 8px;border-bottom:1px solid var(--border);font-size:13px;}
+  td input, td select{
+    width:100%;border:1px solid transparent;background:transparent;font-size:13px;
+    padding:6px 5px;border-radius:9px;font-family:var(--font-body);color:var(--ink);
+  }
+  td input:focus, td select:focus{border-color:var(--accent);background:#fff;outline:none;}
+  td input.suggested{color:var(--ink-soft);font-style:italic;}
+  .num-cell{color:var(--ink-soft);font-weight:700;text-align:center;width:34px;touch-action:none;user-select:none;-webkit-user-select:none;}
+  .fecha-cell{padding:6px 4px;min-width:100px;}
+  .hora-cell{min-width:96px;padding:6px 4px;}
+  .hora-inner{display:flex;align-items:center;gap:5px;}
+  .hora-inner input{flex:1;min-width:0;}
+  .fecha-cell input, .hora-cell input{
+    padding:7px 6px;font-size:12px;
+    border:1px solid var(--border) !important;
+    background:#fff !important;
+    -webkit-appearance:none;
+    appearance:none;
+    color:var(--ink);
+  }
+  .clear-hora{
+    width:20px;height:20px;border-radius:50%;background:var(--bg);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--ink-soft);
+    cursor:pointer;flex-shrink:0;
+  }
+
+  .save-bar{margin:0 18px 24px;display:flex;gap:10px;}
+  .save-bar .btn-primary{flex:1;}
+  .warn{
+    margin:0 18px 14px;background:#FBEAE7;border:1px solid var(--danger);color:var(--danger);
+    padding:11px 12px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:700;
+  }
+  .toast{
+    position:fixed;left:50%;bottom:110px;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:20px;
+    font-size:13px;font-weight:700;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;
+    font-family:var(--font-display);
+  }
+  .toast.show{opacity:1;}
+  .hint{font-size:11px;color:var(--ink-soft);margin:0 18px 14px;line-height:1.5;}
+
+  .fila-excluida td, .fila-excluida input, .fila-excluida select{
+    color:var(--ink-soft) !important;text-decoration:line-through;opacity:0.6;
+  }
+
+  .switch-row{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:16px;}
+  .switch-title{font-weight:700;font-family:var(--font-display);font-size:13.5px;}
+  .switch-sub{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  .switch-toggle{
+    width:46px;height:26px;border-radius:14px;background:var(--border);
+    position:relative;cursor:pointer;flex-shrink:0;transition:background .15s;
+  }
+  .switch-toggle::after{
+    content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+    background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,0.25);
+  }
+  .switch-toggle[data-on="1"]{background:var(--accent);}
+  .switch-toggle[data-on="1"]::after{left:23px;}
+  .switch-toggle.locked{background:#E4E9E1;cursor:not-allowed;opacity:.65;}
+  .switch-toggle.locked::after{background:var(--bg);}
+
+  /* ---------- EVALUACIÓN INDIVIDUAL / GRUPO ---------- */
+  .categoria{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin:0 18px 14px;overflow:hidden;}
+  .categoria.individual{border-color:#CFE0D6;}
+  .cat-header{padding:14px 16px 4px;}
+  .cat-titulo{
+    flex:1;font-family:var(--font-display);font-size:15.5px;font-weight:700;color:var(--ink);
+  }
+  .del-cell{width:34px;padding:6px 4px;text-align:center;}
+  .row-del{
+    width:22px;height:22px;border-radius:50%;background:#F5EAE8;color:var(--danger);
+    display:inline-flex;align-items:center;justify-content:center;font-size:11px;
+    cursor:pointer;flex-shrink:0;
+  }
+  .cat-top-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .cat-nombre{
+    flex:1;font-family:var(--font-display);font-size:15.5px;font-weight:700;border:none;background:transparent;
+    padding:2px 0;color:var(--ink);
+  }
+  .cat-nombre:focus{outline:none;border-bottom:1px solid var(--accent);}
+  .cat-peso-box{display:flex;align-items:center;gap:3px;background:var(--th-bg);border-radius:9px;padding:5px 9px;flex-shrink:0;}
+  .cat-peso-box input{width:32px;border:none;background:transparent;text-align:right;font-weight:700;font-size:13px;padding:0;color:var(--ink);}
+  .cat-peso-box span{font-size:13px;font-weight:700;color:var(--ink-soft);}
+  .cat-del{
+    width:28px;height:28px;border-radius:50%;background:#F5EAE8;color:var(--danger);
+    display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;flex-shrink:0;
+  }
+  .categoria .switch-row{margin-bottom:12px;}
+  .add-eval{
+    display:block;width:100%;padding:13px;background:var(--th-bg);border:none;border-top:1px solid var(--border);
+    color:var(--accent-dark);font-weight:700;font-family:var(--font-display);font-size:12.5px;cursor:pointer;
+  }
+  .add-buttons-row{margin:0 18px 16px;display:flex;gap:10px;}
+  .add-btn{
+    flex:1;padding:14px 8px;border-radius:var(--radius-sm);border:1.5px dashed var(--border);
+    background:transparent;color:var(--accent-dark);font-weight:700;font-family:var(--font-display);font-size:12px;cursor:pointer;line-height:1.3;
+  }
+  .add-btn .sub{display:block;font-size:10px;font-weight:400;font-family:var(--font-body);color:var(--ink-soft);margin-top:3px;}
+
+  /* ---------- HORARIO ---------- */
+  .hor-dias-header{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
+    padding:0 14px;margin-bottom:8px;
+  }
+  .hor-dias-header div{
+    text-align:center;font-family:var(--font-display);font-weight:700;
+    font-size:13px;color:var(--ink-soft);
+  }
+  .hor-grid{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
+    padding:0 14px 6px;
+  }
+  .hor-card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;
+    height:78px;display:flex;flex-direction:column;overflow:hidden;cursor:pointer;
+  }
+  .hor-card.empty{
+    background:transparent;border:1px dashed var(--border);cursor:default;
+  }
+  .hor-card:active{background:var(--accent-wash);}
+  .hor-ramo{
+    flex:1;display:flex;align-items:center;justify-content:center;
+    font-size:9.5px;font-weight:700;text-align:center;color:var(--ink-soft);
+    padding:2px 4px;line-height:1.15;
+    border-bottom:1px solid var(--border);
+    font-family:var(--font-display);
+  }
+  .hor-sala{
+    flex:2;display:flex;align-items:center;justify-content:center;
+    font-size:17px;font-weight:800;color:var(--accent-dark);
+    font-family:var(--font-display);
+  }
+  .hor-almuerzo{
+    grid-column:1 / -1;
+    display:flex;align-items:center;justify-content:center;
+    height:26px;margin:2px 0;
+  }
+  .hor-almuerzo span{
+    font-size:10px;font-weight:700;color:var(--ink-soft);
+    letter-spacing:0.05em;text-transform:uppercase;
+    border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);
+    padding:4px 14px;
+  }
+
+  .hor-overlay{
+    display:none;position:fixed;inset:0;background:rgba(27,42,34,0.45);
+    z-index:20;align-items:center;justify-content:center;padding:24px;
+  }
+  .hor-overlay.show{display:flex;}
+  .hor-overlay-card{
+    position:relative;background:var(--card);border-radius:var(--radius);
+    padding:26px 22px 22px;width:100%;max-width:320px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.3);
+  }
+  .hor-overlay-card h2{
+    font-family:var(--font-display);font-size:19px;margin:0 0 10px;font-weight:700;
+  }
+  .hor-overlay-close{
+    position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:9px;
+    background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;
+    transform:rotate(180deg);
+  }
+  .hor-overlay-close svg{width:16px;height:16px;}
+  .hor-line{font-size:13.5px;margin-bottom:8px;color:var(--ink);}
+  .hor-line b{color:var(--ink-soft);font-family:var(--font-display);font-weight:700;font-size:12px;}
+  #hoHorario{font-weight:700;font-family:var(--font-display);color:var(--accent-dark);margin-bottom:14px;}
+  #hoCorreo a{color:var(--accent-dark);text-decoration:none;font-weight:600;word-break:break-all;}
+  .linea-excluida{text-decoration:line-through;color:var(--ink-soft) !important;opacity:0.65;}
+
+  /* Línea de cierre de la tarjeta de promedio (nota necesaria / estado final) */
+  .linea-cierre{margin-top:12px;font-weight:700;color:var(--accent-dark);}
+  .linea-cierre.aprobado{cursor:pointer;}
+  .linea-cierre.reprobado{color:var(--danger);}
+
+  .eval-seccion{margin-bottom:8px;}
+  .eval-seccion-title{
+    margin:4px 18px 10px;font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--accent-dark);
+  }
+  .ponderacion-row{display:flex;gap:10px;margin:0 18px 16px;}
+  .ponderacion-box{
+    flex:1;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;
+  }
+  .ponderacion-box label{display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;}
+  .ponderacion-box input{
+    width:100%;border:none;background:transparent;font-family:var(--font-display);font-size:18px;font-weight:700;
+    color:var(--accent-dark);padding:0;
+  }
+  .ponderacion-box input:focus{outline:none;}
+
+  .prom-carousel{
+    display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .prom-carousel::-webkit-scrollbar{display:none;}
+  .prom-slide{flex:0 0 100%;scroll-snap-align:start;}
+  .prom-dots{display:flex;justify-content:center;gap:6px;margin-top:14px;}
+  .prom-dot{width:6px;height:6px;border-radius:50%;background:var(--border);}
+  .prom-dot.active{background:var(--accent);}
+
+  /* ---------- CALENDARIO ---------- */
+  .cal-tabs{display:flex;gap:10px;padding:0 18px;margin-bottom:14px;}
+  .cal-tab{
+    flex:1;padding:14px;border-radius:var(--radius-sm);text-align:center;
+    font-family:var(--font-display);font-weight:700;font-size:13.5px;cursor:pointer;
+    background:var(--pastel-orange-bg);color:var(--pastel-orange-ink);
+  }
+  .cal-tab.active{background:var(--pastel-green-bg);color:var(--pastel-green-ink);}
+
+  .cal-fecha-cell{
+    cursor:pointer;padding:3px 9px;border-radius:8px;display:inline-block;font-weight:700;
+  }
+  .cal-fecha-cell.pasada{background:var(--pastel-green-bg);color:var(--pastel-green-ink);}
+  .cal-fecha-cell.pendiente{background:var(--pastel-orange-bg);color:var(--pastel-orange-ink);}
+  .table-zebra tbody tr:nth-child(even) td{background:rgba(27,42,34,0.07);}
+
+  .cal-month-card{margin:0 18px 18px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px;}
+  .cal-month-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .cal-month-header h2{font-family:var(--font-display);font-size:18px;font-weight:700;margin:0;text-align:center;flex:1;}
+  .cal-arrow{width:32px;height:32px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .cal-arrow svg{width:15px;height:15px;}
+  .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-family:var(--font-display);font-weight:700;font-size:11px;color:var(--ink-soft);}
+  .cal-divider{height:1px;background:var(--border);margin:8px 14px 10px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cal-day{
+    position:relative;
+    aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+    border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink);
+  }
+  .cal-day.empty{cursor:default;}
+  .cal-day-green{background:var(--pastel-green-bg);color:var(--pastel-green-ink);}
+  .cal-day-orange{background:var(--pastel-orange-bg);color:var(--pastel-orange-ink);}
+  /* El día de hoy ya no pinta toda la celda: es un círculo más chico que se
+     superpone al fondo verde/naranjo de las pruebas de ese día. */
+  .cal-day-today .cal-num{color:var(--pastel-yellow-ink);}
+  .cal-hoy-mark{
+    position:absolute;width:68%;height:68%;border-radius:50%;
+    background:var(--pastel-yellow-bg);
+  }
+  .cal-num{position:relative;z-index:1;}
+  .cal-day.static{cursor:default;}
+
+  /* ---------- INICIO ---------- */
+  .inicio-tercio{padding:22px 20px;text-align:center;touch-action:pan-y;user-select:none;-webkit-user-select:none;}
+  .inicio-dots{font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-soft);opacity:0.7;}
+  .inicio-etiqueta{
+    font-family:var(--font-display);font-size:11px;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.06em;color:var(--ink-soft);margin-bottom:10px;
+  }
+  .inicio-divider{height:1px;background:var(--border);margin:0 22px;}
+  .inicio-ramo-nombre{font-family:var(--font-display);font-weight:800;font-size:21px;margin-bottom:8px;}
+  .inicio-sala{font-family:var(--font-display);font-weight:800;font-size:42px;color:var(--accent-dark);line-height:1;margin-bottom:8px;}
+  .inicio-bloque{font-size:12px;color:var(--ink-soft);font-weight:700;font-family:var(--font-display);letter-spacing:0.04em;}
+  .inicio-prueba-ramo{font-family:var(--font-display);font-weight:800;font-size:18px;margin-bottom:6px;}
+  .inicio-prueba-fecha{font-size:13.5px;color:var(--ink-soft);margin-bottom:4px;}
+  .inicio-prueba-tipo{font-size:15px;font-weight:700;margin-bottom:4px;}
+  .inicio-prueba-pond{color:var(--accent-dark);font-family:var(--font-display);font-weight:700;}
+  .inicio-prueba-sala{font-size:13px;color:var(--ink-soft);}
+
+  .btn-icono{
+    display:flex;align-items:center;gap:11px;text-align:left;line-height:1.25;
+  }
+  .btn-icono svg{flex-shrink:0;}
+  .btn-icono span{display:flex;flex-direction:column;}
+  .btn-icono small{
+    font-family:var(--font-body);font-weight:400;font-size:10.5px;opacity:.72;margin-top:2px;
+  }
+
+  /* ---------- CONFIGURACIÓN DEL HORARIO ---------- */
+  .cfg-sec{margin-top:14px;border-top:1px solid var(--border);padding-top:14px;}
+  .cfg-lista{max-height:46vh;overflow-y:auto;margin:10px 0;}
+  .cfg-bloque{display:flex;align-items:center;gap:6px;padding:5px 0;}
+  .cfg-n{
+    width:22px;height:22px;border-radius:50%;background:var(--th-bg);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:11px;color:var(--ink-soft);
+  }
+  .cfg-bloque input[type=time]{
+    flex:1;min-width:0;border:1px solid var(--border);background:#fff;border-radius:9px;
+    padding:6px;font-size:12px;font-family:var(--font-body);color:var(--ink);
+    -webkit-appearance:none;appearance:none;
+  }
+  .cfg-sep{font-size:11px;color:var(--ink-soft);}
+  .cfg-x{
+    width:22px;height:22px;border-radius:50%;background:#F5EAE8;color:var(--danger);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;
+  }
+  .cfg-desc{display:flex;align-items:center;gap:8px;padding:2px 0 6px 28px;}
+  .cfg-desc input{
+    flex:1;min-width:0;border:none;border-bottom:1px dashed var(--border);background:transparent;
+    font-size:11.5px;color:var(--ink-soft);padding:2px 0;font-family:var(--font-body);
+  }
+  .cfg-desc .switch-toggle{width:34px;height:19px;}
+  .cfg-desc .switch-toggle::after{width:15px;height:15px;top:2px;left:2px;}
+  .cfg-desc .switch-toggle[data-on="1"]::after{left:17px;}
+  .cfg-desc-off input{visibility:hidden;}
+  .cfg-desc-label{font-size:11px;color:var(--ink-soft);flex:1;}
+
+  .celeb-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .celeb-chip{
+    padding:9px 13px;border-radius:999px;border:1.5px solid var(--border);
+    background:transparent;color:var(--ink-soft);cursor:pointer;
+    font-family:var(--font-display);font-weight:700;font-size:12px;
+  }
+  .celeb-chip[data-on="1"]{
+    background:var(--accent-wash);border-color:var(--accent);color:var(--accent-dark);
+  }
+
+  .gear-btn{
+    position:absolute;top:20px;right:18px;width:36px;height:36px;border-radius:12px;
+    background:var(--card);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .gear-btn svg{width:19px;height:19px;color:var(--ink);}
+
+  .vert-table{margin-bottom:12px;overflow-x:auto;border:1px solid var(--border);border-radius:14px;background:var(--card);}
+  .vert-table table{border-collapse:separate;border-spacing:0;min-width:0;}
+  .vert-table th{
+    background:var(--th-bg);font-family:var(--font-display);font-size:10px;text-transform:uppercase;
+    letter-spacing:0.03em;color:var(--ink-soft);padding:9px 10px;text-align:left;width:74px;
+    white-space:nowrap;position:sticky;left:0;
+    border-bottom:1px solid var(--border);border-right:1px solid var(--border);
+  }
+  .vert-table td{
+    padding:9px 14px;font-size:13px;text-align:left;white-space:nowrap;
+    border-bottom:1px solid var(--border);border-right:1px solid var(--border);
+  }
+  .vert-table tr:last-child th, .vert-table tr:last-child td{border-bottom:none;}
+  .vert-table td:last-child{border-right:none;}
+</style>
+</head>
+<body>
+<div id="phone">
+  <div id="scrollArea"></div>
+  <nav id="bottomNav"></nav>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ============ CONFIGURACIÓN DEL HORARIO (personalizable) ============
+   Bloques, descansos y días se guardan aparte de los ramos, para que el
+   usuario pueda adaptar la grilla a su universidad. Los valores por
+   defecto son los de siempre: 6 bloques y almuerzo después del 3. */
+const CONFIG_DEFAULT = {
+  bloques: [
+    {inicio:'08:15', fin:'09:35'},
+    {inicio:'09:50', fin:'11:10'},
+    {inicio:'11:25', fin:'12:45'},
+    {inicio:'13:45', fin:'15:05'},
+    {inicio:'15:20', fin:'16:40'},
+    {inicio:'16:55', fin:'18:15'},
+  ],
+  descansos: [{despues:3, nombre:'Almuerzo'}],
+  sabado: false,
+  celebraciones: ['confeti','fuegos','globos','estrellas'],
+  celebracionAuto: true
+};
+function cargarConfig(){
+  try{
+    const guardada = JSON.parse(localStorage.getItem('config_v1'));
+    if(guardada && Array.isArray(guardada.bloques) && guardada.bloques.length){
+      return {
+        bloques: guardada.bloques,
+        descansos: Array.isArray(guardada.descansos) ? guardada.descansos : [],
+        sabado: !!guardada.sabado,
+        celebraciones: (Array.isArray(guardada.celebraciones) && guardada.celebraciones.length)
+          ? guardada.celebraciones
+          : CONFIG_DEFAULT.celebraciones.slice(),
+        celebracionAuto: guardada.celebracionAuto !== false
+      };
+    }
+  }catch(e){}
+  return JSON.parse(JSON.stringify(CONFIG_DEFAULT));
+}
+function persistConfig(){ localStorage.setItem('config_v1', JSON.stringify(state.config)); }
+
+function hhmm(t){
+  const [h,m] = String(t||'').split(':');
+  return `${String(parseInt(h,10)||0).padStart(2,'0')}:${String(parseInt(m,10)||0).padStart(2,'0')}`;
+}
+function toMin(t){ const [h,m]=String(t||'0:0').split(':').map(Number); return (h||0)*60+(m||0); }
+
+function getBloques(){
+  return state.config.bloques.map((b,i)=>({
+    n:i+1, inicio:hhmm(b.inicio), fin:hhmm(b.fin),
+    rango:`${hhmm(b.inicio)}–${hhmm(b.fin)}`
+  }));
+}
+function getBloquesMin(){
+  return getBloques().map(b=> ({...b, start:toMin(b.inicio), end:toMin(b.fin)}));
+}
+function getDescanso(n){
+  return (state.config.descansos||[]).find(d=> Number(d.despues)===Number(n)) || null;
+}
+function getDias(){
+  return state.config.sabado ? DIAS_BASE.concat(['Sábado']) : DIAS_BASE.slice();
+}
+
+let state = {
+  section:'inicio',      // editar | horario | promedio | calendario | inicio
+  view:'list',
+  ramoId:null,
+  calSubview:'lista',    // lista | calendario
+  inicioClaseIdx:0,
+  inicioPruebaIdx:0,
+  calYear:null,
+  calMonth:null,
+  settingsOpen:false,
+  configOpen:false,
+  config:null,
+  ramos: JSON.parse(localStorage.getItem('ramos_v1') || '[]')
+};
+state.config = cargarConfig();
+
+const DIAS_BASE = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+const DIA_HEADER = {Lunes:'L',Martes:'Ma',Miércoles:'Mi',Jueves:'J',Viernes:'V',Sábado:'S'};
+const DIA_INICIAL = {Lunes:'L',Martes:'M',Miércoles:'W',Jueves:'J',Viernes:'V',Sábado:'S'};
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+/* Nota mínima de aprobación: se aprueba con promedio final >= 3,95 */
+const APROBACION = 3.95;
+
+function persist(){ localStorage.setItem('ramos_v1', JSON.stringify(state.ramos)); }
+function getRamo(){ return state.ramos.find(r=>r.id===state.ramoId); }
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1600);
+}
+function uid(){ return 'r'+Math.random().toString(36).slice(2,9); }
+
+/* ============ EVALUACIONES: individuales y grupos ============ */
+function getGroupOfRow(grupos, rowId){
+  return (grupos||[]).find(g=> g.rowIds.includes(rowId));
+}
+
+function tieneLab(r){ return (r.sesiones||[]).some(s=>s.tipo==='L'); }
+
+function getEvalSet(r, target){
+  return target==='lab'
+    ? {arr:r.evaluacionesLab||[], grupos:r.gruposEvalLab||[]}
+    : {arr:r.evaluaciones||[], grupos:r.gruposEval||[]};
+}
+
+/* Al agregar una evaluación nueva a un grupo, si la primera fila del grupo
+   ya tiene nombre, las siguientes se numeran solas a partir de ese nombre
+   (Control -> Control 1, Control 2...). El texto queda como escrito a mano
+   (sin cursiva); tipoAuto solo sirve para poder renumerarlas después. */
+function agregarEvalAGrupo(set, grupo){
+  const filas = grupo.rowIds.map(id=> set.arr.find(e=>e.id===id)).filter(Boolean);
+  const primero = filas[0];
+  let nuevaFila;
+  if(primero && primero.tipo && String(primero.tipo).trim()){
+    const raw = String(primero.tipo).trim();
+    const m = raw.match(/^(.*?)\s*(\d+)$/);
+    let base, numPrimero;
+    if(m){ base = m[1].trim(); numPrimero = parseInt(m[2],10); }
+    else { base = raw; numPrimero = 1; primero.tipo = `${base} 1`; primero.tipoSuggested = false; }
+    const nuevoNum = numPrimero + filas.length;
+    nuevaFila = {id:uid(), tipo:`${base} ${nuevoNum}`, tipoSuggested:false, tipoAuto:true, nota:'', porcentaje:'', fecha:'', hora:'', sala:'', excluida:false};
+  } else {
+    nuevaFila = {id:uid(), tipo:'', nota:'', porcentaje:'', fecha:'', hora:'', sala:'', excluida:false};
+  }
+  set.arr.push(nuevaFila);
+  grupo.rowIds.push(nuevaFila.id);
+}
+
+/* Descartar nota dentro de un grupo:
+   - Mientras falte alguna nota, se descarta la ÚLTIMA fila pendiente, así el
+     promedio parcial ya asume que esa evaluación no contará.
+   - Cuando todas tienen nota, se descarta la peor real.
+   Si "repartir" está activo, el porcentaje total se divide entre las que cuentan. */
+function aplicarDescartePeorNotaSet(evaluaciones, grupos){
+  (grupos||[]).forEach(grupo=>{
+    const filas = grupo.rowIds.map(id=> evaluaciones.find(e=>e.id===id)).filter(Boolean);
+    if(!grupo.descartarPeor){
+      filas.forEach(f=> f.excluida=false);
+    } else {
+      const conNota = f=>{
+        const n = parseFloat(String(f.nota).replace(',', '.'));
+        return !isNaN(n) && f.nota!=='' && f.nota!=='-';
+      };
+      const pendientes = filas.filter(f=> !conNota(f));
+      let descartada = null;
+      if(pendientes.length){
+        descartada = pendientes[pendientes.length-1];
+      } else {
+        let peorVal = Infinity;
+        filas.forEach(f=>{
+          const n = parseFloat(String(f.nota).replace(',', '.'));
+          if(n < peorVal){ peorVal = n; descartada = f; }
+        });
+      }
+      filas.forEach(f=> f.excluida = (f===descartada));
+    }
+    if(grupo.repartirActivo){
+      const activas = filas.filter(f=> !f.excluida);
+      const total = parseFloat(grupo.porcentajeTotal) || 0;
+      if(activas.length>0 && total>0){
+        const cada = truncarDecimal(total/activas.length);
+        activas.forEach(f=> f.porcentaje = cada);
+      }
+    }
+  });
+}
+function aplicarDescartePeorNota(r){
+  aplicarDescartePeorNotaSet(r.evaluaciones||[], r.gruposEval||[]);
+  if(r.separarLab){
+    aplicarDescartePeorNotaSet(r.evaluacionesLab||[], r.gruposEvalLab||[]);
+  }
+}
+
+const ICONS = {
+  home:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>`,
+  horario:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/></svg>`,
+  plus:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+  promedio:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M12 19V5M20 19v-6"/></svg>`,
+  calendario:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l2 2 4-4"/></svg>`,
+  chev:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`,
+  back:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`,
+  check:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`,
+  guardar:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 19h16"/></svg>`,
+  recuperar:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><path d="M7 13l5-5 5 5"/><path d="M4 5h16"/></svg>`,
+  pdf:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/><path d="M9 15h6"/><path d="M9 11h3"/></svg>`,
+  settings:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  edit:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+};
+
+function renderNavOnce(){
+  const tabs = [
+    {id:'home', icon:ICONS.home, label:'Inicio'},
+    {id:'horario', icon:ICONS.horario, label:'Horario'},
+    {id:'plus', icon:ICONS.plus, label:'Editar'},
+    {id:'promedio', icon:ICONS.promedio, label:'Promedio'},
+    {id:'calendario', icon:ICONS.calendario, label:'Evaluaciones'},
+  ];
+  const nav = document.getElementById('bottomNav');
+  nav.innerHTML = tabs.map(t=>`
+    <div class="tab" data-nav="${t.id}">
+      <div class="icon-wrap">${t.icon}</div>
+      <span>${t.label}</span>
+    </div>
+  `).join('');
+  nav.querySelectorAll('[data-nav]').forEach(el=>{
+    el.onclick = ()=>{
+      if(el.dataset.nav==='plus'){ state.section='editar'; state.view='list'; render(); }
+      else if(el.dataset.nav==='home'){ state.section='inicio'; state.inicioClaseIdx=0; state.inicioPruebaIdx=0; render(); }
+      else if(el.dataset.nav==='horario'){ state.section='horario'; render(); }
+      else if(el.dataset.nav==='promedio'){ state.section='promedio'; render(); }
+      else if(el.dataset.nav==='calendario'){ state.section='calendario'; state.calSubview='lista'; render(); }
+      else toast('Esa sección aún no está construida');
+    };
+  });
+  updateNavActive();
+}
+function updateNavActive(){
+  document.querySelectorAll('#bottomNav .tab').forEach(el=>{
+    const isActive =
+      (state.section==='editar' && el.dataset.nav==='plus') ||
+      (state.section==='inicio' && el.dataset.nav==='home') ||
+      (state.section==='horario' && el.dataset.nav==='horario') ||
+      (state.section==='promedio' && el.dataset.nav==='promedio') ||
+      (state.section==='calendario' && el.dataset.nav==='calendario');
+    el.classList.toggle('active', isActive);
+  });
+}
+
+/* Al editar una celda se redibuja toda la vista, lo que perdía la posición
+   de scroll: la tabla saltaba al inicio y había que volver a deslizarla para
+   seguir llenando una columna. Se guarda antes y se repone después. */
+function tomarScroll(){
+  const c = document.getElementById('scrollArea');
+  return {
+    y: c ? c.scrollTop : 0,
+    tablas: Array.from(document.querySelectorAll('.table-wrap')).map(t=>t.scrollLeft)
+  };
+}
+function reponerScroll(pos){
+  const aplicar = ()=>{
+    const c = document.getElementById('scrollArea');
+    if(c && pos.y) c.scrollTop = pos.y;
+    document.querySelectorAll('.table-wrap').forEach((t,i)=>{
+      if(pos.tablas[i]) t.scrollLeft = pos.tablas[i];
+    });
+  };
+  aplicar();
+  // Safari en iOS a veces ignora el ajuste hasta el siguiente cuadro
+  requestAnimationFrame(aplicar);
+}
+
+function render(){
+  const pos = tomarScroll();
+  const resultado = renderInterno();
+  reponerScroll(pos);
+  return resultado;
+}
+
+function renderInterno(){
+  const c = document.getElementById('scrollArea');
+  if(state.section==='inicio'){ c.innerHTML = renderInicio(); attachInicioEvents(); updateNavActive(); return; }
+  if(state.section==='horario'){ c.innerHTML = renderHorario(); attachHorarioEvents(); updateNavActive(); return; }
+  if(state.section==='promedio'){ c.innerHTML = renderPromedio(); attachPromedioEvents(); updateNavActive(); return; }
+  if(state.section==='calendario'){ c.innerHTML = renderCalendarioSection(); attachCalendarioEvents(); updateNavActive(); return; }
+  if(state.view==='list') c.innerHTML = renderList();
+  else if(state.view==='detail') c.innerHTML = renderDetail();
+  else if(state.view==='evaluaciones') c.innerHTML = renderEvaluaciones();
+  else if(state.view==='semana') c.innerHTML = renderSemana();
+  else if(state.view==='info') c.innerHTML = renderInfo();
+  attachEvents();
+  updateNavActive();
+}
+
+function renderList(){
+  const cards = state.ramos.map(r=>`
+    <div class="ramo-wrap" data-wrap="${r.id}">
+      <div class="ramo-delete-bg" data-delete="${r.id}">Eliminar</div>
+      <div class="ramo-card" data-open="${r.id}">
+        <div class="name">${escapeHtml(r.nombre)}</div>
+        <div class="meta">${r.evaluaciones && r.evaluaciones.length ? r.evaluaciones.length+' evaluaciones' : 'Sin configurar'}</div>
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <header class="header-center">
+      <h1>EDITAR RAMOS</h1>
+      <div class="sub">Toca un ramo para configurar evaluaciones, horario e información</div>
+    </header>
+    <main>
+      ${cards}
+      <div class="add-card" id="addRamoBtn">${ICONS.plus}</div>
+    </main>
+  `;
+}
+
+/* Nombres de evaluaciones para el sub texto: primero las sueltas (en el orden
+   en que fueron creadas) y después los grupos. Ej: Informe | Video | Exámenes */
+function resumenEvaluaciones(r){
+  const nombres = [];
+  ['teoria','lab'].forEach(target=>{
+    if(target==='lab' && !r.separarLab) return;
+    const set = getEvalSet(r, target);
+    set.arr.forEach(row=>{
+      if(getGroupOfRow(set.grupos, row.id)) return;
+      const t = String(row.tipo||'').trim();
+      if(t) nombres.push(t);
+    });
+    (set.grupos||[]).forEach(g=>{
+      const n = String(g.nombre||'').trim();
+      if(n) nombres.push(n);
+    });
+  });
+  return nombres.join(' | ');
+}
+
+/* Bloques de clase para el sub texto del horario. Ej: L1 | M1 | W4 | W5 */
+function resumenHorario(r){
+  return (r.sesiones||[])
+    .filter(s=> s.dia && s.bloque)
+    .map(s=> `${DIA_INICIAL[s.dia]||''}${s.bloque}`)
+    .join(' | ');
+}
+
+function renderDetail(){
+  const r = getRamo();
+  const resEval = resumenEvaluaciones(r);
+  const resHor = resumenHorario(r);
+  return `
+    <div class="topbar">
+      <div class="back" data-back="list">${ICONS.back}</div>
+      <h2 id="renameRamoBtn" style="cursor:pointer;display:flex;align-items:center;gap:7px;">
+        ${escapeHtml(r.nombre)} ${ICONS.edit}
+      </h2>
+    </div>
+    <main style="padding-top:6px;">
+      <div class="section-btn" data-go="evaluaciones">
+        <div>
+          <div class="label">Evaluaciones</div>
+          <div class="status ${resEval?'ok':''}">${resEval ? escapeHtml(resEval) : 'Sin configurar — toca para agregarlas'}</div>
+        </div>
+        <div class="chev">${ICONS.chev}</div>
+      </div>
+      <div class="section-btn" data-go="semana">
+        <div>
+          <div class="label">Horario</div>
+          <div class="status ${resHor?'ok':''}">${resHor ? escapeHtml(resHor) : 'Sin configurar — toca para agregarlo'}</div>
+        </div>
+        <div class="chev">${ICONS.chev}</div>
+      </div>
+      <div class="section-btn" data-go="info">
+        <div>
+          <div class="label">Información del ramo</div>
+          <div class="status ${(r.profesor||r.seccion||r.correo)?'ok':''}">${r.profesor ? escapeHtml(r.profesor) : 'Profesor, sección y correo'}</div>
+        </div>
+        <div class="chev">${ICONS.chev}</div>
+      </div>
+    </main>
+  `;
+}
+
+/* Tabla única que agrupa todas las evaluaciones sueltas (las que no
+   pertenecen a ningún grupo). Antes cada una era su propia tarjeta. */
+function renderCardIndividuales(filas, target){
+  const rows = filas.map((row,i)=>`
+    <tr>
+      <td class="num-cell">${i+1}</td>
+      <td><input type="text" data-rowfield="tipo" data-rowid="${row.id}" data-target="${target}" value="${escapeHtml(row.tipo||'')}" placeholder="ej: Tarea 1" style="min-width:90px;"></td>
+      <td><input type="text" data-rowfield="nota" data-rowid="${row.id}" data-target="${target}" value="${escapeHtml(row.nota||'')}" placeholder="-" style="width:50px;"></td>
+      <td><input type="number" data-rowfield="porcentaje" data-rowid="${row.id}" data-target="${target}" value="${row.porcentaje==='' || row.porcentaje==null ? '' : formatPorcentaje(row.porcentaje)}" placeholder="%" style="width:50px;"></td>
+      <td class="fecha-cell">
+        <input type="date" data-rowfield="fecha" data-rowid="${row.id}" data-target="${target}" value="${row.fecha||''}">
+      </td>
+      <td class="hora-cell">
+        <div class="hora-inner">
+          <input type="time" data-rowfield="hora" data-rowid="${row.id}" data-target="${target}" value="${row.hora||''}">
+          ${row.hora ? `<div class="clear-hora" data-clearhora="${row.id}" data-target="${target}">✕</div>` : ''}
+        </div>
+      </td>
+      <td><input type="text" data-rowfield="sala" data-rowid="${row.id}" data-target="${target}" value="${escapeHtml(row.sala||'')}" placeholder="-" style="width:50px;"></td>
+      <td class="del-cell"><div class="row-del" data-inddel="${row.id}" data-target="${target}">✕</div></td>
+    </tr>`).join('');
+
+  return `
+  <div class="categoria individual" data-target="${target}">
+    <div class="cat-header">
+      <div class="cat-top-row">
+        <div class="cat-titulo">Evaluaciones</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>N</th><th>Nombre</th><th>Nota</th><th>%</th><th>Fecha</th><th>Hora</th><th>Sala</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <button class="add-eval" data-addindividual="${target}">+ Agregar evaluación</button>
+  </div>`;
+}
+
+function renderGrupoCard(set, grupo, target){
+  const filas = grupo.rowIds.map(id=> set.arr.find(e=>e.id===id)).filter(Boolean);
+  const descartarLocked = !grupo.repartirActivo;
+
+  const rows = filas.map((row,i)=>{
+    const pctDisabled = row.excluida || grupo.repartirActivo;
+    const pctVal = row.excluida ? 0 : (row.porcentaje==='' || row.porcentaje==null ? '' : formatPorcentaje(row.porcentaje));
+    return `
+    <tr class="${row.excluida?'fila-excluida':''}">
+      <td class="num-cell">${i+1}</td>
+      <td><input type="text" data-rowfield="tipo" data-rowid="${row.id}" data-target="${target}" class="${row.tipoSuggested?'suggested':''}" value="${escapeHtml(row.tipo||'')}" placeholder="ej: Control 1" style="min-width:90px;"></td>
+      <td><input type="text" data-rowfield="nota" data-rowid="${row.id}" data-target="${target}" value="${escapeHtml(row.nota||'')}" placeholder="-" style="width:50px;"></td>
+      <td><input type="number" data-rowfield="porcentaje" data-rowid="${row.id}" data-target="${target}" value="${pctVal}" placeholder="%" style="width:50px;" ${pctDisabled?'disabled':''}></td>
+      <td class="fecha-cell">
+        <input type="date" data-rowfield="fecha" data-rowid="${row.id}" data-target="${target}" value="${row.fecha||''}">
+      </td>
+      <td class="hora-cell">
+        <div class="hora-inner">
+          <input type="time" data-rowfield="hora" data-rowid="${row.id}" data-target="${target}" value="${row.hora||''}">
+          ${row.hora ? `<div class="clear-hora" data-clearhora="${row.id}" data-target="${target}">✕</div>` : ''}
+        </div>
+      </td>
+      <td><input type="text" data-rowfield="sala" data-rowid="${row.id}" data-target="${target}" value="${escapeHtml(row.sala||'')}" placeholder="-" style="width:50px;"></td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <div class="categoria" data-target="${target}">
+    <div class="cat-header">
+      <div class="cat-top-row">
+        <input type="text" class="cat-nombre" value="${escapeHtml(grupo.nombre)}" data-gruponombre="${grupo.id}" data-target="${target}">
+        <div class="cat-peso-box">
+          <input type="number" value="${formatPorcentaje(grupo.porcentajeTotal||0)}" data-grupopeso="${grupo.id}" data-target="${target}">
+          <span>%</span>
+        </div>
+        <div class="cat-del" data-grupodel="${grupo.id}" data-target="${target}">✕</div>
+      </div>
+      <div class="switch-row">
+        <div class="switch-label">
+          <div class="switch-title">Distribuir % en partes iguales</div>
+          <div class="switch-sub">Reparte el ${formatPorcentaje(grupo.porcentajeTotal||0)}% del grupo por igual entre sus evaluaciones</div>
+        </div>
+        <div class="switch-toggle" data-grupotoggledist="${grupo.id}" data-target="${target}" data-on="${grupo.repartirActivo?'1':'0'}"></div>
+      </div>
+      <div class="switch-row" style="margin-bottom:0;">
+        <div class="switch-label">
+          <div class="switch-title">Descartar peor nota</div>
+          <div class="switch-sub">${descartarLocked ? 'Activa primero "Distribuir % en partes iguales"' : 'Mientras falten notas descarta la última pendiente'}</div>
+        </div>
+        <div class="switch-toggle ${descartarLocked?'locked':''}" data-grupotoggledescartar="${grupo.id}" data-target="${target}" data-on="${grupo.descartarPeor?'1':'0'}"></div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>N</th><th>Tipo de prueba</th><th>Nota</th><th>%</th><th>Fecha</th><th>Hora</th><th>Sala</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="7" style="color:var(--ink-soft);padding:16px;">Sin evaluaciones aún</td></tr>`}</tbody>
+      </table>
+    </div>
+    <button class="add-eval" data-addevalgrupo="${grupo.id}" data-target="${target}">+ Agregar evaluación a "${escapeHtml(grupo.nombre)}"</button>
+  </div>`;
+}
+
+function renderTablaSeccion(r, target, titulo){
+  const set = getEvalSet(r, target);
+  set.arr.forEach(row=>{ if(!row.id) row.id = uid(); if(row.excluida===undefined) row.excluida=false; });
+
+  const individuales = set.arr.filter(row=> !getGroupOfRow(set.grupos, row.id));
+  const individualesHtml = individuales.length ? renderCardIndividuales(individuales, target) : '';
+  const gruposHtml = set.grupos.map(grupo=> renderGrupoCard(set, grupo, target)).join('');
+
+  return `
+    <div class="eval-seccion" data-target="${target}">
+      ${titulo ? `<h3 class="eval-seccion-title">${titulo}</h3>` : ''}
+      ${individualesHtml}
+      ${gruposHtml}
+      <div class="add-buttons-row">
+        ${individuales.length ? '' : `<button class="add-btn" data-crearindividuales="${target}">+ Evaluaciones<span class="sub">Tabla de notas sueltas</span></button>`}
+        <button class="add-btn" data-addgrupo="${target}">+ Grupo de evaluaciones<span class="sub">Varias notas, % compartido</span></button>
+      </div>
+    </div>
+  `;
+}
+
+function renderEvaluaciones(){
+  const r = getRamo();
+  r.gruposEval = r.gruposEval || [];
+  r.evaluaciones = r.evaluaciones || [];
+  if(r.separarLab){
+    r.gruposEvalLab = r.gruposEvalLab || [];
+    r.evaluacionesLab = r.evaluacionesLab || [];
+  }
+  aplicarDescartePeorNota(r);
+  persist();
+
+  const puedeLab = tieneLab(r);
+
+  const seccionTeoria = renderTablaSeccion(r, 'teoria', r.separarLab ? 'Teoría' : null);
+  const seccionLab = r.separarLab ? renderTablaSeccion(r, 'lab', 'Laboratorio') : '';
+
+  return `
+    <div class="topbar">
+      <div class="back" data-back="detail">${ICONS.back}</div>
+      <h2>Evaluaciones</h2>
+    </div>
+    ${puedeLab ? `
+      <div class="switch-row" style="margin:0 18px 14px;">
+        <div class="switch-label">
+          <div class="switch-title">Separar nota de laboratorio</div>
+          <div class="switch-sub">Divide en dos tablas con ponderación propia</div>
+        </div>
+        <div class="switch-toggle" id="toggleSepararLab" data-on="${r.separarLab?'1':'0'}"></div>
+      </div>
+    ` : ''}
+    ${r.separarLab ? `
+      <div class="ponderacion-row">
+        <div class="ponderacion-box">
+          <label>% Teoría</label>
+          <input type="number" min="0" max="100" id="pondTeoriaInput" value="${r.ponderacionTeoria ?? 50}">
+        </div>
+        <div class="ponderacion-box">
+          <label>% Laboratorio</label>
+          <input type="number" min="0" max="100" id="pondLabInput" value="${r.ponderacionLab ?? 50}">
+        </div>
+      </div>
+    ` : ''}
+    ${seccionTeoria}
+    ${seccionLab}
+    <div id="evalWarn"></div>
+    <div class="save-bar">
+      <button class="btn-primary" id="guardarEval" style="width:100%;">Guardar</button>
+    </div>
+  `;
+}
+
+function renderSemana(){
+  const r = getRamo();
+  if(!r.nSemana){
+    return `
+      <div class="topbar">
+        <div class="back" data-back="detail">${ICONS.back}</div>
+        <h2>Horario</h2>
+      </div>
+      <div class="inline-form">
+        <label>¿Cuántas veces a la semana tienes este ramo?</label>
+        <input type="number" min="1" id="nSemInput" placeholder="ej: 3">
+        <button class="btn-primary" id="crearSemTabla">Crear tabla</button>
+      </div>
+    `;
+  }
+  const DIAS = getDias();
+  const rows = r.sesiones.map((row,i)=>`
+    <tr data-row="${i}">
+      <td class="num-cell">${i+1}</td>
+      <td>
+        <select data-field="dia">
+          <option value="">—</option>
+          ${DIAS.map(d=>`<option value="${d}" ${row.dia===d?'selected':''}>${d}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <select data-field="bloque">
+          ${getBloques().map(b=>`<option value="${b.n}" ${String(row.bloque)===String(b.n)?'selected':''}>${b.n}</option>`).join('')}
+        </select>
+      </td>
+      <td><input type="text" data-field="ubicacion" class="${row.ubicacionSuggested?'suggested':''}" value="${escapeHtml(row.ubicacion||'')}" placeholder="ej: ED604" style="width:80px;"></td>
+      <td>
+        <select data-field="tipo">
+          <option value="E" ${row.tipo==='E'?'selected':''}>E</option>
+          <option value="L" ${row.tipo==='L'?'selected':''}>L</option>
+          <option value="T" ${row.tipo==='T'?'selected':''}>T</option>
+        </select>
+      </td>
+    </tr>
+  `).join('');
+
+  return `
+    <div class="topbar">
+      <div class="back" data-back="detail">${ICONS.back}</div>
+      <h2>Horario</h2>
+    </div>
+    <div class="hint">Bloque siempre trae un valor por defecto (revisa la tabla de horarios si necesitas ver el rango). Escribe la parte de texto de la ubicación (ej. "ED") y se sugiere en las filas vacías; el número lo completas tú en cada fila.</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>N</th><th>Día</th><th>Bloque</th><th>Ubicación</th><th>Tipo</th></tr></thead>
+        <tbody id="semBody">${rows}</tbody>
+      </table>
+    </div>
+    <div class="save-bar">
+      <button class="btn-ghost" id="cambiarNSem">Cambiar cantidad</button>
+      <button class="btn-primary" id="guardarSem">Guardar</button>
+    </div>
+  `;
+}
+
+function renderInfo(){
+  const r = getRamo();
+  return `
+    <div class="topbar">
+      <div class="back" data-back="detail">${ICONS.back}</div>
+      <h2>Información del ramo</h2>
+    </div>
+    <div class="inline-form">
+      <label>Nombre del profesor</label>
+      <input type="text" id="profInput" value="${escapeHtml(r.profesor||'')}" placeholder="ej: Juan Pérez">
+      <label>Sección</label>
+      <input type="text" id="seccInput" value="${escapeHtml(r.seccion||'')}" placeholder="ej: A-2">
+      ${tieneLab(r) ? `
+        <label>Sección laboratorio</label>
+        <input type="text" id="seccLabInput" value="${escapeHtml(r.seccionLab||'')}" placeholder="ej: L-1">
+      ` : ''}
+      <label>Correo del profesor</label>
+      <input type="email" id="correoInput" value="${escapeHtml(r.correo||'')}" placeholder="ej: claudio.leal@usach.cl">
+      <button class="btn-primary" id="guardarInfo">Guardar</button>
+    </div>
+  `;
+}
+
+/* oscar reyes -> Oscar Reyes: cada palabra parte con mayúscula */
+function capitalizarNombre(txt){
+  return String(txt||'').replace(/(^|[\s'-])(\S)/g, (m,sep,letra)=> sep + letra.toUpperCase());
+}
+
+/* claudio leal jara -> claudio.leal@usach.cl (se puede editar a mano) */
+function correoDesdeProfesor(nombre){
+  const partes = String(nombre||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[^a-z\s]/g,' ')
+    .trim().split(/\s+/).filter(Boolean);
+  if(!partes.length) return '';
+  return partes.slice(0,2).join('.') + '@usach.cl';
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function parsePrefix1(value){
+  const m = value.trim().match(/^(.*?)(\d+)$/);
+  if(!m) return null;
+  const numStr = m[2];
+  if(parseInt(numStr,10) !== 1) return null;
+  return m[1];
+}
+/* Las filas rellenadas automáticamente se ven como texto normal (sin cursiva).
+   tipoAuto solo sirve para poder renumerarlas si cambias el primer nombre. */
+function autocompleteTipo(arr, startIndex, prefix){
+  for(let i=startIndex+1;i<arr.length;i++){
+    const row = arr[i];
+    const isEmpty = !row.tipo;
+    const isSoft = row.tipoSuggested || row.tipoAuto;
+    if(isEmpty || isSoft){
+      row.tipo = prefix + (i - startIndex + 1);
+      row.tipoSuggested = false;
+      row.tipoAuto = true;
+    }
+  }
+}
+function parseUbicacionPrefix(value){
+  const m = value.trim().match(/^([^\d]*)(\d*)$/);
+  if(!m) return null;
+  if(!m[1]) return null;
+  return m[1];
+}
+function autocompleteUbicacion(r, startIndex, prefix){
+  for(let i=startIndex+1;i<r.sesiones.length;i++){
+    const row = r.sesiones[i];
+    const isEmpty = !row.ubicacion;
+    const isSoft = row.ubicacionSuggested;
+    if(isEmpty || isSoft){
+      row.ubicacion = prefix;
+      row.ubicacionSuggested = true;
+    }
+  }
+}
+function parseNota(raw){
+  if(raw===undefined || raw===null || raw.trim()==='') return '';
+  let v = raw.trim().replace(',', '.');
+  if(/^\d+(\.\d+)?$/.test(v)){
+    let num = parseFloat(v);
+    if(!raw.includes(',') && !raw.includes('.') && num>=10 && num<=70){
+      num = num/10;
+    }
+    return num.toFixed(1);
+  }
+  return raw;
+}
+
+const SWIPE_OPEN = -84;
+
+function attachSwipeToDelete(){
+  let openWrap = null;
+
+  function closeWrap(wrap, animate=true){
+    const card = wrap.querySelector('.ramo-card');
+    card.style.transition = animate ? 'transform .18s ease' : 'none';
+    card.style.transform = 'translateX(0px)';
+    wrap.dataset.open = 'false';
+    if(openWrap === wrap) openWrap = null;
+  }
+  function openWrapFn(wrap){
+    if(openWrap && openWrap !== wrap) closeWrap(openWrap);
+    const card = wrap.querySelector('.ramo-card');
+    card.style.transition = 'transform .18s ease';
+    card.style.transform = `translateX(${SWIPE_OPEN}px)`;
+    wrap.dataset.open = 'true';
+    openWrap = wrap;
+  }
+
+  document.querySelectorAll('.ramo-wrap').forEach(wrap=>{
+    const card = wrap.querySelector('.ramo-card');
+    let startX=0, startY=0, currentX=0, dragging=false, decided=null, moved=false;
+
+    card.addEventListener('pointerdown', e=>{
+      startX = e.clientX; startY = e.clientY;
+      currentX = wrap.dataset.open==='true' ? SWIPE_OPEN : 0;
+      dragging = true; decided=null; moved=false;
+      card.style.transition = 'none';
+      card.setPointerCapture(e.pointerId);
+    });
+
+    card.addEventListener('pointermove', e=>{
+      if(!dragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if(decided===null){
+        if(Math.abs(dx) > 6 || Math.abs(dy) > 6){
+          decided = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+        }
+      }
+      if(decided==='h'){
+        moved = true;
+        let x = currentX + dx;
+        x = Math.max(SWIPE_OPEN, Math.min(0, x));
+        card.style.transform = `translateX(${x}px)`;
+      } else if(decided==='v'){
+        // Desplazamiento vertical de la lista: no es un toque, no abre el ramo
+        moved = true;
+      }
+    });
+
+    function endDrag(e){
+      if(!dragging) return;
+      dragging = false;
+      const distancia = Math.hypot(e.clientX - startX, e.clientY - startY);
+      if(decided==='h'){
+        const dx = e.clientX - startX;
+        const finalX = Math.max(SWIPE_OPEN, Math.min(0, currentX + dx));
+        if(finalX < SWIPE_OPEN/2) openWrapFn(wrap); else closeWrap(wrap);
+      } else if(!moved && distancia < 8){
+        // fue un tap: si estaba abierto, ciérralo; si no, abre el ramo
+        if(wrap.dataset.open==='true'){ closeWrap(wrap); }
+        else { state.ramoId = wrap.dataset.wrap; state.view='detail'; render(); }
+      }
+    }
+    card.addEventListener('pointerup', endDrag);
+    card.addEventListener('pointercancel', endDrag);
+  });
+
+  document.querySelectorAll('[data-delete]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.delete;
+      const ramo = state.ramos.find(r=>r.id===id);
+      if(confirm(`¿Eliminar "${ramo.nombre}"? Esta acción no se puede deshacer.`)){
+        state.ramos = state.ramos.filter(r=>r.id!==id);
+        persist(); render();
+      }
+    };
+  });
+}
+
+function bloqueOcupadoPor(dia, bloque, ramoIdActual, rowIndexActual){
+  for(const rr of state.ramos){
+    const sesiones = rr.sesiones || [];
+    for(let idx=0; idx<sesiones.length; idx++){
+      if(rr.id===ramoIdActual && idx===rowIndexActual) continue;
+      const s = sesiones[idx];
+      if(s.dia && s.bloque && s.dia===dia && String(s.bloque)===String(bloque)){
+        return rr.nombre;
+      }
+    }
+  }
+  return null;
+}
+
+function buildScheduleMap(){
+  const map = {};
+  state.ramos.forEach(r=>{
+    (r.sesiones||[]).forEach(s=>{
+      if(s.dia && s.bloque){
+        const key = s.dia+'-'+s.bloque;
+        if(!map[key]){
+          map[key] = {
+            ramo:r.nombre, ubicacion:s.ubicacion||'-', tipo:s.tipo||'T',
+            profesor:r.profesor||'-',
+            correo:r.correo||'',
+            seccion:(s.tipo==='L' && r.seccionLab ? r.seccionLab : r.seccion) || '-',
+            dia:s.dia, bloque:s.bloque
+          };
+        }
+      }
+    });
+  });
+  return map;
+}
+
+function renderHorario(){
+  const map = buildScheduleMap();
+  const dias = getDias();
+  const bloques = getBloques();
+  let gridHtml = '';
+  for(const bl of bloques){
+    for(const dia of dias){
+      const slot = map[dia+'-'+bl.n];
+      if(slot){
+        // Si el bloque no es de teoría, se marca el tipo junto al nombre (ej: Química - L)
+        const sufijoTipo = (slot.tipo && slot.tipo!=='T') ? ` - ${escapeHtml(slot.tipo)}` : '';
+        gridHtml += `
+          <div class="hor-card" data-dia="${slot.dia}" data-bloque="${slot.bloque}">
+            <div class="hor-ramo">${escapeHtml(slot.ramo)}${sufijoTipo}</div>
+            <div class="hor-sala">${escapeHtml(slot.ubicacion)}</div>
+          </div>`;
+      } else {
+        gridHtml += `<div class="hor-card empty"></div>`;
+      }
+    }
+    const descanso = getDescanso(bl.n);
+    if(descanso){
+      gridHtml += `<div class="hor-almuerzo"><span>${escapeHtml(descanso.nombre||'Descanso')}</span></div>`;
+    }
+  }
+
+  const cols = `grid-template-columns:repeat(${dias.length},1fr);`;
+  return `
+    <header class="header-center">
+      <h1>HORARIO</h1>
+    </header>
+    <div class="hor-dias-header" style="${cols}">
+      ${dias.map(d=>`<div>${DIA_HEADER[d]}</div>`).join('')}
+    </div>
+    <div class="hor-grid" style="${cols}">${gridHtml}</div>
+    <div id="horarioOverlay" class="hor-overlay">
+      <div class="hor-overlay-card">
+        <div class="hor-overlay-close" id="horarioClose">${ICONS.back}</div>
+        <h2 id="hoTitulo"></h2>
+        <div class="hor-line" id="hoHorario"></div>
+        <div class="hor-line"><b>Ubicación:</b> <span id="hoUbicacion"></span></div>
+        <div class="hor-line"><b>Profesor:</b> <span id="hoProfesor"></span></div>
+        <div class="hor-line"><b>Correo:</b> <span id="hoCorreo"></span></div>
+        <div class="hor-line"><b>Sección:</b> <span id="hoSeccion"></span></div>
+        <div class="hor-line"><b>Tipo:</b> <span id="hoTipo"></span></div>
+      </div>
+    </div>
+  `;
+}
+
+function attachHorarioEvents(){
+  const map = buildScheduleMap();
+  document.querySelectorAll('.hor-card:not(.empty)').forEach(card=>{
+    card.onclick = ()=>{
+      const dia = card.dataset.dia, bloque = card.dataset.bloque;
+      const slot = map[dia+'-'+bloque];
+      if(!slot) return;
+      const bInfo = getBloques().find(b=>String(b.n)===String(bloque));
+      const rango = bInfo ? bInfo.rango.replace('–','-') : '';
+      document.getElementById('hoTitulo').textContent = slot.ramo;
+      document.getElementById('hoHorario').textContent = `Horario(${DIA_INICIAL[dia]}${bloque}): ${rango}`;
+      document.getElementById('hoUbicacion').textContent = slot.ubicacion;
+      document.getElementById('hoProfesor').textContent = slot.profesor;
+      const correoEl = document.getElementById('hoCorreo');
+      correoEl.innerHTML = slot.correo
+        ? `<a href="mailto:${escapeHtml(slot.correo)}">${escapeHtml(slot.correo)}</a>`
+        : '-';
+      document.getElementById('hoSeccion').textContent = slot.seccion;
+      document.getElementById('hoTipo').textContent = slot.tipo;
+      document.getElementById('horarioOverlay').classList.add('show');
+    };
+  });
+  const overlay = document.getElementById('horarioOverlay');
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.classList.remove('show'); };
+  document.getElementById('horarioClose').onclick = ()=> overlay.classList.remove('show');
+}
+
+function formatNota(n){
+  return n.toFixed(1).replace('.', ',');
+}
+
+function truncarDecimal(n){
+  const v = parseFloat(n);
+  if(isNaN(v)) return 0;
+  return Math.trunc(v*10)/10;
+}
+function formatPorcentaje(n){
+  const v = truncarDecimal(n);
+  return Number.isInteger(v) ? String(v) : v.toFixed(1);
+}
+
+/* Calcula la nota necesaria en las evaluaciones pendientes para llegar
+   a un promedio ponderado interno de 3,95 (que redondea a 4,0).
+   Devuelve null si ya no quedan evaluaciones pendientes. */
+function calcNotaNecesaria(evaluaciones){
+  const TARGET = 3.95;
+  let sumGraded = 0, weightGraded = 0, weightRemaining = 0;
+  evaluaciones.forEach(e=>{
+    if(e.excluida) return;
+    const w = (parseFloat(e.porcentaje)||0) / 100;
+    const notaNum = parseFloat(String(e.nota).replace(',', '.'));
+    const tieneNota = !isNaN(notaNum) && e.nota !== '' && e.nota !== '-';
+    if(tieneNota){
+      sumGraded += notaNum * w;
+      weightGraded += w;
+    } else {
+      weightRemaining += w;
+    }
+  });
+  if(weightRemaining <= 0) return null;
+  let raw = (TARGET - sumGraded) / weightRemaining;
+  raw = Math.round(raw * 100) / 100;       // evita ruido de punto flotante
+  let final = Math.ceil(raw * 10) / 10;    // trunca a 1 decimal y redondea hacia arriba si no cierra
+  if(final < 1) final = 1.0;
+  return final;
+}
+
+/* ============ VISTA: PROMEDIOS ============ */
+/* Promedio con las notas que lleva: cada nota se pondera por su %, pero
+   renormalizado sobre el peso ya rendido. Ej: control de 15% con 5,3 y
+   examen de 35% con 3,2 -> 5,3*(0,15/0,50) + 3,2*(0,35/0,50). Cuando estén
+   todas las notas coincide exactamente con el promedio final. */
+function promPonderado(arr){
+  let sumW=0, sumWN=0;
+  (arr||[]).forEach(e=>{
+    if(e.excluida) return;
+    const n = parseFloat(String(e.nota).replace(',', '.'));
+    if(isNaN(n) || e.nota==='' || e.nota==='-') return;
+    const w = (parseFloat(e.porcentaje)||0)/100;
+    sumW += w; sumWN += n*w;
+  });
+  return sumW>0 ? (sumWN/sumW) : null;
+}
+
+/* Nota definitiva en el peor caso: las evaluaciones pendientes se cuentan
+   como 1,0. Si aun así llega a 3,95 el ramo ya está aprobado. */
+function promedioAsegurado(evals){
+  let total=0, peso=0;
+  (evals||[]).forEach(e=>{
+    if(e.excluida) return;
+    const w = (parseFloat(e.porcentaje)||0)/100;
+    if(w<=0) return;
+    const n = parseFloat(String(e.nota).replace(',', '.'));
+    const tiene = !isNaN(n) && e.nota!=='' && e.nota!=='-';
+    total += (tiene ? n : 1) * w;
+    peso += w;
+  });
+  return peso>0 ? (total/peso) : null;
+}
+function seccionAprobada(evals){
+  const p = promedioAsegurado(evals);
+  return p!==null && p >= APROBACION;
+}
+function ramoAprobado(r){
+  if(r.separarLab){
+    const t = promedioAsegurado(r.evaluaciones);
+    const l = promedioAsegurado(r.evaluacionesLab);
+    if(t===null && l===null) return false;
+    const pT = parseFloat(r.ponderacionTeoria) || 0;
+    const pL = parseFloat(r.ponderacionLab) || 0;
+    return ((t===null?1:t)*pT + (l===null?1:l)*pL)/100 >= APROBACION;
+  }
+  return seccionAprobada(r.evaluaciones);
+}
+
+function renderPromedio(){
+  state.ramos.forEach(r=>{ r.gruposEval = r.gruposEval || []; aplicarDescartePeorNota(r); });
+  const cards = state.ramos.map(r=>{
+    let metaTxt;
+    if(r.separarLab){
+      const teoProm = promPonderado(r.evaluaciones);
+      const labProm = promPonderado(r.evaluacionesLab);
+      const pT = parseFloat(r.ponderacionTeoria) || 0;
+      const pL = parseFloat(r.ponderacionLab) || 0;
+      const combinado = (teoProm!==null || labProm!==null) ? ((teoProm||0)*pT + (labProm||0)*pL) / 100 : null;
+      metaTxt = `Teoría: ${teoProm!==null?formatNota(teoProm):'-'} | Laboratorio: ${labProm!==null?formatNota(labProm):'-'} | Promedio: ${combinado!==null?formatNota(combinado):'-'}`;
+    } else {
+      const simple = promPonderado(r.evaluaciones);
+      metaTxt = simple!==null ? 'Promedio: '+formatNota(simple) : 'Sin notas aún';
+    }
+    return `
+      <div class="ramo-card" data-prom="${r.id}">
+        <div class="name">${escapeHtml(r.nombre)}</div>
+        <div class="meta">${metaTxt}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <header class="header-center"><h1>PROMEDIOS</h1></header>
+    <main>
+      ${cards || '<div class="hint">Agrega ramos y notas en Editar Ramos para ver tus promedios.</div>'}
+    </main>
+    <div id="promOverlay" class="hor-overlay">
+      <div class="hor-overlay-card">
+        <div class="hor-overlay-close" id="promClose">${ICONS.back}</div>
+        <div id="promDynamic"></div>
+      </div>
+    </div>
+  `;
+}
+
+function buildEvalLinesData(evals){
+  let sumW=0, sumWN=0;
+  const linesHtml = (evals||[]).map(e=>{
+    const w = parseFloat(e.porcentaje) || 0;
+    const notaNum = parseFloat(String(e.nota).replace(',', '.'));
+    const notaValida = !isNaN(notaNum) && e.nota!=='' && e.nota!=='-';
+    if(notaValida && !e.excluida){ sumW += w/100; sumWN += notaNum * (w/100); }
+    const notaTxt = notaValida ? formatNota(notaNum) : '-';
+    const claseExcl = e.excluida ? ' linea-excluida' : '';
+    const wTxt = e.excluida ? '0' : formatPorcentaje(w);
+    return `<div class="hor-line${claseExcl}">${escapeHtml(e.tipo || '-')}(${wTxt}%): ${notaTxt}</div>`;
+  }).join('');
+  const promedio = sumW>0 ? (sumWN/sumW) : null;
+  return {linesHtml, promedio};
+}
+
+/* Línea de cierre de la tarjeta: mientras queden notas pendientes muestra la
+   nota necesaria; cuando ya están todas, el estado final (aprobado/reprobado). */
+function lineaCierre(evals){
+  if(seccionAprobada(evals)){
+    return `<div class="hor-line linea-cierre aprobado" data-confeti="1">Aprobado</div>`;
+  }
+  const necesaria = calcNotaNecesaria(evals);
+  if(necesaria!==null){
+    const txt = necesaria>7 ? 'No alcanza (necesitas más de 7,0)' : formatNota(necesaria);
+    return `<div class="hor-line linea-cierre">Nota necesaria: ${txt}</div>`;
+  }
+  const prom = promPonderado(evals);
+  if(prom===null) return `<div class="hor-line linea-cierre">Sin notas registradas</div>`;
+  const aprobado = prom >= APROBACION;
+  return `<div class="hor-line linea-cierre ${aprobado?'aprobado':'reprobado'}"${aprobado?' data-confeti="1"':''}>${aprobado?'Aprobado':'Reprobado'}</div>`;
+}
+
+/* ============ CELEBRACIONES ============
+   Todas dibujadas a mano en un canvas: no necesitan librerías ni internet.
+   Al tocar "Aprobado" se elige una al azar. */
+
+const COLORES_FIESTA = ['#2F6E4E','#B0692A','#8A7418','#B5473A','#215239','#7BC49A','#E4B34A'];
+
+/* Crea el lienzo sobre el marco del teléfono y corre la animación */
+function animarCelebracion(duracion, init, paso){
+  const cont = document.getElementById('phone');
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:60;';
+  cont.appendChild(canvas);
+  const W = cont.clientWidth, H = cont.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const datos = init(W, H);
+  const inicio = performance.now();
+  (function frame(t){
+    const vida = t - inicio;
+    ctx.clearRect(0,0,W,H);
+    paso(ctx, datos, vida, W, H);
+    if(vida < duracion) requestAnimationFrame(frame);
+    else canvas.remove();
+  })(inicio);
+}
+
+function colorFiesta(){
+  return COLORES_FIESTA[Math.floor(Math.random()*COLORES_FIESTA.length)];
+}
+
+/* --- Confeti: papelitos que saltan desde el centro y caen --- */
+function celebracionConfeti(){
+  animarCelebracion(2600, (W,H)=>{
+    const piezas = [];
+    for(let i=0;i<130;i++){
+      piezas.push({
+        x: W/2 + (Math.random()-0.5)*W*0.5,
+        y: H*0.42 + (Math.random()-0.5)*40,
+        vx: (Math.random()-0.5)*8,
+        vy: -(Math.random()*9+5),
+        w: 5+Math.random()*6, h: 8+Math.random()*7,
+        rot: Math.random()*Math.PI, vr: (Math.random()-0.5)*0.35,
+        color: colorFiesta()
+      });
+    }
+    return piezas;
+  }, (ctx, piezas, vida)=>{
+    piezas.forEach(p=>{
+      p.vy += 0.3; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.globalAlpha = Math.max(0, 1 - vida/2600);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+    });
+  });
+}
+
+/* --- Fuegos artificiales: cohetes que suben y estallan en círculo --- */
+function celebracionFuegos(){
+  const DUR = 3000;
+  animarCelebracion(DUR, (W,H)=>{
+    const cohetes = [];
+    for(let i=0;i<5;i++){
+      cohetes.push({
+        x: W*(0.2+Math.random()*0.6),
+        y: H,
+        objetivo: H*(0.2+Math.random()*0.3),
+        retraso: i*380 + Math.random()*180,
+        vy: -(4.5+Math.random()*2),
+        color: colorFiesta(),
+        estallo: false,
+        chispas: []
+      });
+    }
+    return cohetes;
+  }, (ctx, cohetes, vida)=>{
+    cohetes.forEach(c=>{
+      if(vida < c.retraso) return;
+      if(!c.estallo){
+        c.y += c.vy;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = c.color;
+        ctx.fillRect(c.x-1.5, c.y, 3, 9);
+        if(c.y <= c.objetivo){
+          c.estallo = true;
+          c.tEstallido = vida;
+          const n = 34;
+          for(let i=0;i<n;i++){
+            const ang = (Math.PI*2/n)*i + Math.random()*0.1;
+            const vel = 2.2 + Math.random()*2.6;
+            c.chispas.push({x:c.x, y:c.y, vx:Math.cos(ang)*vel, vy:Math.sin(ang)*vel});
+          }
+        }
+      } else {
+        const t = vida - c.tEstallido;
+        const alpha = Math.max(0, 1 - t/1200);
+        ctx.fillStyle = c.color;
+        c.chispas.forEach(s=>{
+          s.vy += 0.05; s.vx *= 0.985; s.vy *= 0.985;
+          s.x += s.vx; s.y += s.vy;
+          ctx.globalAlpha = alpha;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, 2.4, 0, Math.PI*2);
+          ctx.fill();
+        });
+      }
+    });
+    ctx.globalAlpha = 1;
+  });
+}
+
+/* --- Globos: suben meciéndose con su cordel --- */
+function celebracionGlobos(){
+  const DUR = 3200;
+  animarCelebracion(DUR, (W,H)=>{
+    const globos = [];
+    for(let i=0;i<14;i++){
+      globos.push({
+        x: W*(0.08+Math.random()*0.84),
+        y: H + 40 + Math.random()*H*0.6,
+        r: 13+Math.random()*10,
+        vy: -(1.1+Math.random()*1.1),
+        fase: Math.random()*Math.PI*2,
+        amp: 8+Math.random()*14,
+        color: colorFiesta()
+      });
+    }
+    return globos;
+  }, (ctx, globos, vida)=>{
+    const alpha = Math.max(0, 1 - Math.max(0, vida-2200)/1000);
+    globos.forEach(g=>{
+      g.y += g.vy;
+      const x = g.x + Math.sin(vida/620 + g.fase)*g.amp;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = 'rgba(94,110,99,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, g.y + g.r);
+      ctx.quadraticCurveTo(x + g.amp*0.3, g.y + g.r*2.2, x, g.y + g.r*3.2);
+      ctx.stroke();
+      ctx.fillStyle = g.color;
+      ctx.beginPath();
+      ctx.ellipse(x, g.y, g.r*0.85, g.r, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(x - g.r*0.3, g.y - g.r*0.35, g.r*0.22, g.r*0.3, -0.4, 0, Math.PI*2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  });
+}
+
+/* --- Estrellas: destellos que aparecen y se apagan por toda la pantalla --- */
+function celebracionEstrellas(){
+  const DUR = 2600;
+  const punta = (ctx, x, y, r)=>{
+    ctx.beginPath();
+    for(let i=0;i<8;i++){
+      const ang = (Math.PI/4)*i;
+      const rad = i%2===0 ? r : r*0.38;
+      const px = x + Math.cos(ang)*rad, py = y + Math.sin(ang)*rad;
+      i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+    ctx.fill();
+  };
+  animarCelebracion(DUR, (W,H)=>{
+    const estrellas = [];
+    for(let i=0;i<45;i++){
+      estrellas.push({
+        x: W*(0.05+Math.random()*0.9),
+        y: H*(0.1+Math.random()*0.8),
+        r: 6+Math.random()*12,
+        nace: Math.random()*1500,
+        dura: 500+Math.random()*700,
+        color: colorFiesta()
+      });
+    }
+    return estrellas;
+  }, (ctx, estrellas, vida)=>{
+    estrellas.forEach(e=>{
+      const t = vida - e.nace;
+      if(t < 0 || t > e.dura) return;
+      const p = t/e.dura;
+      ctx.globalAlpha = Math.sin(p*Math.PI);
+      ctx.fillStyle = e.color;
+      punta(ctx, e.x, e.y, e.r*(0.6+0.4*Math.sin(p*Math.PI)));
+    });
+    ctx.globalAlpha = 1;
+  });
+}
+
+const CELEBRACIONES = {
+  confeti: celebracionConfeti,
+  fuegos: celebracionFuegos,
+  globos: celebracionGlobos,
+  estrellas: celebracionEstrellas
+};
+
+/* Se elige al azar entre las celebraciones activadas en Configuración */
+function celebrar(){
+  const activas = celebracionesActivas();
+  const clave = activas[Math.floor(Math.random()*activas.length)];
+  (CELEBRACIONES[clave] || celebracionConfeti)();
+}
+
+function buildPromedioSimpleHTML(r){
+  const evals = r.evaluaciones || [];
+  const {linesHtml, promedio} = buildEvalLinesData(evals);
+  return `
+    <h2>${escapeHtml(r.nombre)}: ${promedio!==null?formatNota(promedio):'-'}</h2>
+    <div>${linesHtml || '<div class="hint">Sin evaluaciones configuradas.</div>'}</div>
+    ${lineaCierre(evals)}
+  `;
+}
+
+function buildPromedioCarouselHTML(r){
+  const evalsT = r.evaluaciones || [];
+  const evalsL = r.evaluacionesLab || [];
+  const {linesHtml: linesT, promedio: promT} = buildEvalLinesData(evalsT);
+  const {linesHtml: linesL, promedio: promL} = buildEvalLinesData(evalsL);
+  const pT = parseFloat(r.ponderacionTeoria) || 0;
+  const pL = parseFloat(r.ponderacionLab) || 0;
+  const combinado = (promT!==null || promL!==null) ? ((promT||0)*pT + (promL||0)*pL) / 100 : null;
+  const completo = calcNotaNecesaria(evalsT)===null && calcNotaNecesaria(evalsL)===null && combinado!==null;
+  const aprobadoFinal = ramoAprobado(r);
+
+  return `
+    <div class="prom-carousel-wrap">
+      <div class="prom-carousel" id="promCarousel">
+        <div class="prom-slide">
+          <h2>Teoría: ${promT!==null?formatNota(promT):'-'}</h2>
+          <div>${linesT || '<div class="hint">Sin evaluaciones configuradas.</div>'}</div>
+          ${lineaCierre(evalsT)}
+        </div>
+        <div class="prom-slide">
+          <h2>Laboratorio: ${promL!==null?formatNota(promL):'-'}</h2>
+          <div>${linesL || '<div class="hint">Sin evaluaciones configuradas.</div>'}</div>
+          ${lineaCierre(evalsL)}
+        </div>
+        <div class="prom-slide">
+          <h2>${escapeHtml(r.nombre)}</h2>
+          <div class="hor-line">Teoría (${pT}%): ${promT!==null?formatNota(promT):'-'}</div>
+          <div class="hor-line">Laboratorio (${pL}%): ${promL!==null?formatNota(promL):'-'}</div>
+          <div class="hor-line" style="margin-top:12px;font-weight:700;color:var(--accent-dark);">Promedio final: ${combinado!==null?formatNota(combinado):'-'}</div>
+          ${aprobadoFinal
+            ? `<div class="hor-line linea-cierre aprobado" data-confeti="1">Aprobado</div>`
+            : (completo ? `<div class="hor-line linea-cierre reprobado">Reprobado</div>` : '')}
+        </div>
+      </div>
+      <div class="prom-dots">
+        <span class="prom-dot active"></span><span class="prom-dot"></span><span class="prom-dot"></span>
+      </div>
+    </div>
+  `;
+}
+
+function attachPromedioEvents(){
+  document.querySelectorAll('[data-prom]').forEach(card=>{
+    card.onclick = ()=>{
+      const r = state.ramos.find(x=>x.id===card.dataset.prom);
+      const dyn = document.getElementById('promDynamic');
+
+      if(r.separarLab){
+        dyn.innerHTML = buildPromedioCarouselHTML(r);
+        const carousel = document.getElementById('promCarousel');
+        const dots = dyn.querySelectorAll('.prom-dot');
+        carousel.addEventListener('scroll', ()=>{
+          const idx = Math.round(carousel.scrollLeft / carousel.clientWidth);
+          dots.forEach((d,i)=> d.classList.toggle('active', i===idx));
+        });
+      } else {
+        dyn.innerHTML = buildPromedioSimpleHTML(r);
+      }
+
+      // El estado "Aprobado" lanza una celebración al azar al tocarlo
+      dyn.querySelectorAll('[data-confeti]').forEach(el=> el.onclick = celebrar);
+      document.getElementById('promOverlay').classList.add('show');
+      // Y si el ramo ya está aprobado, sale sola al abrirlo
+      if(state.config.celebracionAuto && ramoAprobado(r)) celebrar();
+    };
+  });
+  const overlay = document.getElementById('promOverlay');
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.classList.remove('show'); };
+  document.getElementById('promClose').onclick = ()=> overlay.classList.remove('show');
+}
+
+/* ============ LÓGICA: clase más cercana ============ */
+function getSesionesDia(diaNombre){
+  let list = [];
+  state.ramos.forEach(r=>{
+    (r.sesiones||[]).forEach(s=>{
+      if(s.dia===diaNombre && s.bloque){
+        list.push({ramo:r.nombre, sala:s.ubicacion||'-', bloque:parseInt(s.bloque,10), dia:diaNombre});
+      }
+    });
+  });
+  list.sort((a,b)=>a.bloque-b.bloque);
+  return list;
+}
+function nombreDiaOffset(offsetDays){
+  const d = new Date(); d.setDate(d.getDate()+offsetDays);
+  const map = {1:'Lunes',2:'Martes',3:'Miércoles',4:'Jueves',5:'Viernes',6:'Sábado'};
+  const nombre = map[d.getDay()] || null;
+  if(nombre==='Sábado' && !state.config.sabado) return null;
+  return nombre;
+}
+function getListaClasesProximas(maxItems=12){
+  const ahora = new Date();
+  const nowMin = ahora.getHours()*60 + ahora.getMinutes();
+  let resultado = [];
+
+  const diaHoy = nombreDiaOffset(0);
+  if(diaHoy){
+    const sesiones = getSesionesDia(diaHoy);
+    for(let i=0;i<sesiones.length;i++){
+      const s = sesiones[i];
+      const info = getBloquesMin().find(b=>b.n===s.bloque);
+      if(!info) continue;
+      if(nowMin>=info.start && nowMin<=info.end){
+        const elapsed = nowMin - info.start;
+        if(elapsed<40){
+          resultado.push({nombre:s.ramo, sala:s.sala, bloque:s.bloque, dia:diaHoy});
+        }
+        // si elapsed>=40 se salta esta sesión, la siguiente ya pasa a ser la "actual"
+      } else if(nowMin < info.start){
+        resultado.push({nombre:s.ramo, sala:s.sala, bloque:s.bloque, dia:diaHoy});
+      }
+      if(resultado.length>=maxItems) return resultado;
+    }
+  }
+  for(let off=1; off<=14 && resultado.length<maxItems; off++){
+    const dia = nombreDiaOffset(off);
+    if(!dia) continue;
+    const sesiones = getSesionesDia(dia);
+    for(const s of sesiones){
+      resultado.push({nombre:s.ramo, sala:s.sala, bloque:s.bloque, dia:dia});
+      if(resultado.length>=maxItems) break;
+    }
+  }
+  return resultado;
+}
+
+/* ============ LÓGICA: lista de próximas pruebas (para el swipe) ============ */
+function getListaPruebasProximas(maxItems=12){
+  const ahora = new Date();
+  const evals = getAllEvaluacionesGlobal().filter(e=>e.fecha);
+  let resultado = [];
+  for(const e of evals){
+    let limite;
+    if(e.hora){
+      const [h,m] = e.hora.split(':').map(Number);
+      limite = new Date(e.fecha+'T00:00:00');
+      limite.setHours(h, m+40, 0, 0);
+    } else {
+      limite = new Date(e.fecha+'T20:00:00');
+    }
+    if(ahora <= limite){
+      resultado.push(e);
+      if(resultado.length>=maxItems) break;
+    }
+  }
+  return resultado;
+}
+
+/* ============ VISTA: INICIO ============ */
+function renderMiniCalendario(){
+  const hoy = new Date();
+  const year = hoy.getFullYear(), month = hoy.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const startOffset = (firstDay.getDay()+6) % 7;
+
+  const evalsByDay = {};
+  getAllEvaluacionesGlobal().filter(e=>e.fecha).forEach(e=>{
+    const d = new Date(e.fecha+'T00:00:00');
+    if(d.getFullYear()===year && d.getMonth()===month){
+      const day = d.getDate();
+      if(!evalsByDay[day]) evalsByDay[day]=[];
+      evalsByDay[day].push(e);
+    }
+  });
+
+  let cells = '';
+  for(let i=0;i<startOffset;i++) cells += `<div class="cal-day empty"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const dayEvals = evalsByDay[day];
+    const esHoy = day===hoy.getDate();
+    let cls = 'cal-day static';
+    if(dayEvals && dayEvals.length){
+      cls += diaCumplido(dayEvals) ? ' cal-day-green' : ' cal-day-orange';
+    }
+    if(esHoy) cls += ' cal-day-today';
+    cells += `<div class="${cls}">${esHoy?'<span class="cal-hoy-mark"></span>':''}<span class="cal-num">${day}</span></div>`;
+  }
+
+  return `
+    <div class="cal-month-card">
+      <div class="cal-month-header" style="justify-content:center;">
+        <h2>${MESES[month]} ${year}</h2>
+      </div>
+      <div class="cal-weekdays">
+        <div>L</div><div>Ma</div><div>Mi</div><div>J</div><div>V</div><div>S</div><div>D</div>
+      </div>
+      <div class="cal-divider"></div>
+      <div class="cal-grid">${cells}</div>
+    </div>
+  `;
+}
+
+function renderInicio(){
+  const listaClases = getListaClasesProximas();
+  const listaPruebas = getListaPruebasProximas();
+  if(state.inicioClaseIdx > Math.max(listaClases.length-1,0)) state.inicioClaseIdx = 0;
+  if(state.inicioPruebaIdx > Math.max(listaPruebas.length-1,0)) state.inicioPruebaIdx = 0;
+  const clase = listaClases[state.inicioClaseIdx] || null;
+  const prueba = listaPruebas[state.inicioPruebaIdx] || null;
+  const bloqueLabel = clase ? `${DIA_INICIAL[clase.dia]}${clase.bloque}` : '';
+
+  return `
+    <header class="header-center" style="position:relative;">
+      <div class="gear-btn" id="gearBtn">${ICONS.settings}</div>
+      <h1>INICIO</h1>
+    </header>
+
+    <div class="inicio-tercio" id="tercioClase">
+      <div class="inicio-etiqueta">Próxima clase${listaClases.length>1?` <span class="inicio-dots">${state.inicioClaseIdx+1}/${listaClases.length}</span>`:''}</div>
+      ${clase ? `
+        <div class="inicio-ramo-nombre">${escapeHtml(clase.nombre)}</div>
+        <div class="inicio-sala">${escapeHtml(clase.sala)}</div>
+        <div class="inicio-bloque">${bloqueLabel}</div>
+      ` : `<div class="hint">No tienes clases programadas.</div>`}
+    </div>
+
+    <div class="inicio-divider"></div>
+
+    <div class="inicio-tercio" id="tercioPrueba">
+      <div class="inicio-etiqueta">Próxima evaluación${listaPruebas.length>1?` <span class="inicio-dots">${state.inicioPruebaIdx+1}/${listaPruebas.length}</span>`:''}</div>
+      ${prueba ? `
+        <div class="inicio-prueba-ramo">${escapeHtml(prueba.ramo)}</div>
+        <div class="inicio-prueba-fecha">${formatFechaCorta(prueba.fecha)}${prueba.hora ? ' - '+escapeHtml(prueba.hora) : ''}</div>
+        <div class="inicio-prueba-tipo">${escapeHtml(prueba.tipo)}${prueba.porcentaje ? ` <span class="inicio-prueba-pond">- ${formatPorcentaje(prueba.porcentaje)}%</span>` : ''}</div>
+        ${prueba.sala && prueba.sala!=='-' ? `<div class="inicio-prueba-sala">${escapeHtml(prueba.sala)}</div>` : ''}
+      ` : `<div class="hint">No hay próximas evaluaciones.</div>`}
+    </div>
+
+    <div class="inicio-divider"></div>
+
+    <div class="inicio-tercio" style="padding-top:16px;">
+      ${renderMiniCalendario()}
+    </div>
+
+    <div id="settingsOverlay" class="hor-overlay">
+      <div class="hor-overlay-card">
+        <div class="hor-overlay-close" id="settingsClose">${ICONS.back}</div>
+        <h2>Configuración</h2>
+        <button class="btn-primary btn-icono" id="exportBtn">${ICONS.guardar}<span>Guardar información<small>Por si cambias de teléfono</small></span></button>
+        <div style="height:10px;"></div>
+        <button class="btn-ghost btn-icono" id="importBtn" style="width:100%;">${ICONS.recuperar}<span>Recuperar información<small>Desde un archivo guardado</small></span></button>
+        <input type="file" id="importFile" accept="application/json" style="display:none;">
+        <div style="height:10px;"></div>
+        <div class="cfg-sec">
+          <button class="btn-ghost btn-icono" id="importPdfBtn" style="width:100%;">${ICONS.pdf}<span>Subir horario<small>Rellena información automáticamente, sube tu PDF</small></span></button>
+          <input type="file" id="importPdfFile" accept="application/pdf" style="display:none;">
+        </div>
+
+        <div class="cfg-sec">
+          <div class="switch-row" style="margin-bottom:0;">
+            <div class="switch-label">
+              <div class="switch-title">Personalizar horario</div>
+              <div class="switch-sub">${state.config.bloques.length} bloques${state.config.sabado?' · con sábado':''}</div>
+            </div>
+            <div class="switch-toggle" id="toggleCfgPanel" data-on="${state.configOpen?'1':'0'}"></div>
+          </div>
+          ${state.configOpen ? renderConfigHorario() : ''}
+        </div>
+
+        <div class="cfg-sec">
+          <div class="switch-row" style="margin-bottom:0;">
+            <div class="switch-label">
+              <div class="switch-title">Celebración al aprobar</div>
+              <div class="switch-sub">Se lanza sola al abrir un ramo aprobado</div>
+            </div>
+            <div class="switch-toggle" id="toggleCelebAuto" data-on="${state.config.celebracionAuto?'1':'0'}"></div>
+          </div>
+          <div class="switch-sub" style="margin-top:10px;">Toca las que quieras; si eliges varias sale una al azar</div>
+          ${renderCelebracionChips()}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+const CELEBRACION_NOMBRES = {
+  confeti:'Confeti', fuegos:'Fuegos artificiales',
+  globos:'Globos', estrellas:'Estrellas'
+};
+function celebracionesActivas(){
+  const c = (state.config.celebraciones||[]).filter(k=> CELEBRACION_NOMBRES[k]);
+  return c.length ? c : CONFIG_DEFAULT.celebraciones.slice();
+}
+function renderCelebracionChips(){
+  const activas = celebracionesActivas();
+  const todas = activas.length === Object.keys(CELEBRACION_NOMBRES).length;
+  const chips = Object.keys(CELEBRACION_NOMBRES).map(k=>
+    `<div class="celeb-chip" data-celeb="${k}" data-on="${activas.includes(k)?'1':'0'}">${CELEBRACION_NOMBRES[k]}</div>`
+  ).join('');
+  return `<div class="celeb-chips">${chips}<div class="celeb-chip" data-celeb="todas" data-on="${todas?'1':'0'}">Aleatorio</div></div>`;
+}
+function attachCelebracionEvents(){
+  const auto = document.getElementById('toggleCelebAuto');
+  if(auto) auto.onclick = ()=>{
+    state.config.celebracionAuto = !state.config.celebracionAuto;
+    persistConfig(); render();
+  };
+  document.querySelectorAll('[data-celeb]').forEach(chip=>{
+    chip.onclick = ()=>{
+      const k = chip.dataset.celeb;
+      if(k==='todas'){
+        state.config.celebraciones = Object.keys(CELEBRACION_NOMBRES);
+      } else {
+        const activas = celebracionesActivas();
+        const nuevas = activas.includes(k) ? activas.filter(x=>x!==k) : activas.concat([k]);
+        if(!nuevas.length){ toast('Deja al menos una celebración'); return; }
+        state.config.celebraciones = nuevas;
+      }
+      persistConfig(); render();
+    };
+  });
+}
+
+/* ============ IMPORTAR HORARIO DESDE PDF ============
+   Lee un PDF de "HORARIO DE CLASES" y rellena ramos, horario e información.
+   El archivo se procesa completo en el teléfono y se descarta al terminar:
+   nunca se sube ni se guarda. */
+
+const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+function cargarPdfJs(){
+  return new Promise((resolve, reject)=>{
+    if(window.pdfjsLib) return resolve(window.pdfjsLib);
+    const tag = document.createElement('script');
+    tag.src = PDFJS_URL;
+    tag.onload = ()=>{
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+      resolve(window.pdfjsLib);
+    };
+    tag.onerror = ()=> reject(new Error('sin-conexion'));
+    document.head.appendChild(tag);
+  });
+}
+
+const PDF_DIA_LETRA = {L:'Lunes', M:'Martes', W:'Miércoles', J:'Jueves', V:'Viernes', S:'Sábado'};
+const PDF_DIA_HEADER = {
+  'LUNES':'Lunes','MARTES':'Martes','MIÉRCOLES':'Miércoles','MIERCOLES':'Miércoles',
+  'JUEVES':'Jueves','VIERNES':'Viernes','SÁBADO':'Sábado','SABADO':'Sábado'
+};
+const RE_PDF_CELDA  = /(\d{4,6}-\d)-([A-Z]+-\d+)/;
+const RE_PDF_CODIGO = /^\d{4,6}-\d$/;
+const RE_PDF_COORD  = /^[A-Z]+-\d+$/;
+const RE_PDF_HORA   = /^\d{1,2}:\d{2}$/;
+
+/* Extrae los fragmentos de texto con su posición, descartando las marcas de
+   agua ("HORARIO SUJETO A MODIFICACIONES", el RUT): van en cuerpo grande y
+   sus letras se entremezclan con las del texto real. */
+async function leerFragmentos(file){
+  const pdfjs = await cargarPdfJs();
+  const buffer = await file.arrayBuffer();
+  const doc = await pdfjs.getDocument({data:buffer}).promise;
+  const page = await doc.getPage(1);
+  const viewport = page.getViewport({scale:1});
+  const contenido = await page.getTextContent();
+
+  const items = [];
+  for(const it of contenido.items){
+    const txt = (it.str||'').trim();
+    if(!txt) continue;
+    const m = pdfjs.Util.transform(viewport.transform, it.transform);
+    const alto = Math.hypot(m[2], m[3]);
+    if(alto > 14) continue;                       // marca de agua
+    items.push({texto:txt, x:m[4], top:m[5], ancho:it.width||0});
+  }
+  await doc.destroy();
+  return items;
+}
+
+function agruparFilas(items, tol){
+  const filas = [];
+  for(const it of items.slice().sort((a,b)=> a.top-b.top || a.x-b.x)){
+    const f = filas.find(f=> Math.abs(f.top - it.top) <= tol);
+    if(f) f.items.push(it);
+    else filas.push({top:it.top, items:[it]});
+  }
+  return filas;
+}
+
+function parsearHorarioPdf(items){
+  // Cabecera de la grilla (fila con LUNES, MARTES, ...)
+  const cabDias = items.filter(i=> PDF_DIA_HEADER[i.texto.toUpperCase()]);
+  const cabCodigo = items.find(i=> i.texto.toUpperCase()==='CODIGO');
+  if(!cabDias.length || !cabCodigo) throw new Error('formato');
+
+  const yGrilla = Math.min(...cabDias.map(i=>i.top));
+  const columnas = cabDias
+    .filter(i=> Math.abs(i.top - yGrilla) < 4)
+    .map(i=> ({dia:PDF_DIA_HEADER[i.texto.toUpperCase()], cx:i.x + i.ancho/2}))
+    .sort((a,b)=> a.cx-b.cx);
+
+  // --- Tabla de asignaturas ---
+  const asignaturas = [];
+  const filasTabla = agruparFilas(
+    items.filter(i=> i.top > cabCodigo.top + 6 && i.top < yGrilla - 6), 4);
+  for(const fila of filasTabla){
+    const ws = fila.items.slice().sort((a,b)=> a.x-b.x);
+    let codigo=null, coord=null, tipo=null, horario=null;
+    const nombre = [];
+    for(const w of ws){
+      const t = w.texto, x = w.x;
+      if(x < 48) continue;
+      else if(x < 95 && RE_PDF_CODIGO.test(t)) codigo = t;
+      else if(x < 440) nombre.push(t);
+      else if(RE_PDF_COORD.test(t)) coord = t;
+      else if(x < 500 && t.length===1) tipo = t;
+      else if(x < 530) continue;
+      else horario = t;
+    }
+    if(codigo && horario){
+      asignaturas.push({codigo, nombre:nombre.join(' '), coord, tipo:tipo||'T', horario});
+    }
+  }
+  if(!asignaturas.length) throw new Error('formato');
+
+  // --- Filas de bloque y sus horas ---
+  const bloquesY = {};
+  items.forEach(i=>{
+    if(i.top > yGrilla && i.x < 48 && /^\d+$/.test(i.texto)) bloquesY[+i.texto] = i.top;
+  });
+  const cercano = (top)=>{
+    let mejor=null, dist=Infinity;
+    for(const n in bloquesY){
+      const d = Math.abs(bloquesY[n]-top);
+      if(d < dist){ dist=d; mejor=+n; }
+    }
+    return {n:mejor, dist};
+  };
+
+  const horasPdf = {};
+  for(const fila of agruparFilas(items.filter(i=> i.top>yGrilla && i.x>48 && i.x<115), 4)){
+    const horas = fila.items.slice().sort((a,b)=>a.x-b.x)
+      .map(i=>i.texto).join(' ').match(/\d{1,2}:\d{2}/g) || [];
+    const c = cercano(fila.top);
+    if(horas.length>=2 && c.n && c.dist<12){
+      horasPdf[c.n] = {inicio:horas[0], fin:horas[1]};
+    }
+  }
+
+  // --- Celdas de la grilla: código-coord + sala ---
+  const buckets = {};
+  for(const i of items){
+    if(i.top <= yGrilla || i.x < 170) continue;
+    const c = cercano(i.top);
+    if(!c.n || c.dist > 16) continue;
+    const cx = i.x + i.ancho/2;
+    let dia = columnas[0].dia, mejor = Infinity;
+    for(const col of columnas){
+      const d = Math.abs(col.cx - cx);
+      if(d < mejor){ mejor = d; dia = col.dia; }
+    }
+    const clave = dia+'-'+c.n;
+    buckets[clave] = (buckets[clave] ? buckets[clave]+' ' : '') + i.texto;
+  }
+
+  const celdas = {};
+  for(const clave in buckets){
+    const texto = buckets[clave];
+    const m = texto.match(RE_PDF_CELDA);
+    if(!m) continue;
+    const sala = texto.match(/Sala:\s*([A-Za-zÑ]{1,5}\d{2,4})/);
+    celdas[clave] = {codigo:m[1], coord:m[2], sala: sala ? sala[1] : ''};
+  }
+
+  return {asignaturas, celdas, horasPdf, dias:columnas.map(c=>c.dia)};
+}
+
+/* Unifica por código: un ramo con varias sesiones, aunque el PDF lo liste
+   dos veces (una fila de teoría y otra de laboratorio). */
+function construirRamosDesdePdf(datos){
+  const porCodigo = {};
+  for(const a of datos.asignaturas){
+    if(!porCodigo[a.codigo]){
+      porCodigo[a.codigo] = {nombre:a.nombre, seccion:'', seccionLab:'', sesiones:[]};
+    }
+    const r = porCodigo[a.codigo];
+    if(a.tipo==='T' && !r.seccion) r.seccion = a.coord || '';
+    if(a.tipo==='L' && !r.seccionLab) r.seccionLab = a.coord || '';
+
+    const pares = a.horario.match(/[A-Z]\d/g) || [];
+    for(const par of pares){
+      const dia = PDF_DIA_LETRA[par[0]];
+      if(!dia) continue;
+      const bloque = parseInt(par[1], 10);
+      const celda = datos.celdas[dia+'-'+bloque];
+      const coincide = celda && celda.codigo===a.codigo && celda.coord===a.coord;
+      r.sesiones.push({
+        dia, bloque:String(bloque), tipo:a.tipo,
+        ubicacion: coincide ? celda.sala : ''
+      });
+    }
+  }
+
+  return Object.keys(porCodigo).map(cod=>{
+    const r = porCodigo[cod];
+    if(!r.seccion && r.seccionLab) r.seccion = r.seccionLab;
+    const orden = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    r.sesiones.sort((a,b)=> orden.indexOf(a.dia)-orden.indexOf(b.dia) || a.bloque-b.bloque);
+    return {
+      id:uid(), nombre:r.nombre, evaluaciones:[], gruposEval:[],
+      nSemana:r.sesiones.length, sesiones:r.sesiones,
+      profesor:'', correo:'', seccion:r.seccion, seccionLab:r.seccionLab,
+      separarLab:false, evaluacionesLab:[], gruposEvalLab:[],
+      ponderacionTeoria:50, ponderacionLab:50
+    };
+  });
+}
+
+async function importarHorarioPdf(file){
+  toast('Leyendo el PDF…');
+  let nuevos, datos;
+  try{
+    datos = parsearHorarioPdf(await leerFragmentos(file));
+    nuevos = construirRamosDesdePdf(datos);
+  }catch(err){
+    toast(err.message==='sin-conexion'
+      ? 'Necesitas conexión la primera vez que importas un PDF'
+      : 'No pude leer este horario');
+    return;
+  }
+  if(!nuevos.length){ toast('No encontré ramos en el PDF'); return; }
+
+  const avisos = [];
+
+  // Sábado: se activa solo si el PDF trae clases ese día
+  const usaSabado = nuevos.some(r=> r.sesiones.some(s=> s.dia==='Sábado'));
+  if(usaSabado && !state.config.sabado){
+    state.config.sabado = true;
+    avisos.push('se activó el sábado');
+  }
+
+  // Bloques: si el PDF usa más de los configurados, se amplía con sus horas
+  let maxBloque = 0;
+  nuevos.forEach(r=> r.sesiones.forEach(s=> {
+    maxBloque = Math.max(maxBloque, parseInt(s.bloque,10));
+  }));
+  if(maxBloque > state.config.bloques.length){
+    const antes = state.config.bloques.length;
+    for(let n = antes+1; n <= maxBloque; n++){
+      const h = datos.horasPdf[n];
+      state.config.bloques.push(h ? {inicio:h.inicio, fin:h.fin} : {inicio:'00:00', fin:'00:00'});
+    }
+    avisos.push(`se agregaron bloques hasta el ${maxBloque}`);
+  }
+  persistConfig();
+
+  // Los ramos se agregan sin tocar los que ya existen
+  state.ramos = state.ramos.concat(nuevos);
+  persist();
+
+  const repetidos = nuevos.filter(n=>
+    state.ramos.filter(r=> r.nombre===n.nombre).length > 1).length;
+  if(repetidos) avisos.push(`${repetidos} ya existían, revisa si quieres borrar alguno`);
+
+  state.settingsOpen = false;
+  state.view = 'list';
+  render();
+  toast(`${nuevos.length} ramos importados` + (avisos.length ? ' · '+avisos.join(' · ') : ''));
+}
+
+function attachConfigHorarioEvents(){
+  const panel = document.getElementById('toggleCfgPanel');
+  if(panel) panel.onclick = ()=>{ state.configOpen = !state.configOpen; render(); };
+  if(!state.configOpen) return;
+
+  const guardar = ()=>{ persistConfig(); render(); };
+
+  document.querySelectorAll('[data-cfgini]').forEach(inp=>{
+    inp.onchange = ()=>{
+      state.config.bloques[+inp.dataset.cfgini].inicio = inp.value || '00:00';
+      guardar();
+    };
+  });
+  document.querySelectorAll('[data-cfgfin]').forEach(inp=>{
+    inp.onchange = ()=>{
+      state.config.bloques[+inp.dataset.cfgfin].fin = inp.value || '00:00';
+      guardar();
+    };
+  });
+
+  document.querySelectorAll('[data-cfgdel]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const i = +btn.dataset.cfgdel;
+      if(state.config.bloques.length<=1){ toast('Debe quedar al menos un bloque'); return; }
+      const n = i+1;
+      const huerfanas = contarSesionesEnBloque(n);
+      if(!confirm(`¿Eliminar el bloque ${n}?`)) return;
+      state.config.bloques.splice(i,1);
+      state.config.descansos = (state.config.descansos||[])
+        .filter(d=> Number(d.despues)!==n)
+        .map(d=> Number(d.despues)>n ? {...d, despues:Number(d.despues)-1} : d);
+      persistConfig();
+      if(huerfanas) toast(`${huerfanas} clase(s) quedaron sin bloque; revísalas en Editar ramos`);
+      render();
+    };
+  });
+
+  const add = document.getElementById('cfgAddBloque');
+  if(add) add.onclick = ()=>{
+    const ultimo = state.config.bloques[state.config.bloques.length-1];
+    const finMin = toMin(ultimo.fin);
+    const dur = Math.max(toMin(ultimo.fin) - toMin(ultimo.inicio), 30);
+    const ini = finMin + 30, fin = ini + dur;
+    const fmt = m => `${String(Math.floor((m%1440)/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+    state.config.bloques.push({inicio:fmt(ini), fin:fmt(fin)});
+    guardar();
+  };
+
+  document.querySelectorAll('[data-cfgdesc]').forEach(t=>{
+    t.onclick = ()=>{
+      const n = Number(t.dataset.cfgdesc);
+      state.config.descansos = state.config.descansos || [];
+      if(getDescanso(n)){
+        state.config.descansos = state.config.descansos.filter(d=> Number(d.despues)!==n);
+      } else {
+        state.config.descansos.push({despues:n, nombre:'Descanso'});
+      }
+      guardar();
+    };
+  });
+  document.querySelectorAll('[data-cfgdescnombre]').forEach(inp=>{
+    inp.onblur = ()=>{
+      const d = getDescanso(Number(inp.dataset.cfgdescnombre));
+      if(d){ d.nombre = inp.value.trim() || 'Descanso'; guardar(); }
+    };
+  });
+
+  const sab = document.getElementById('toggleSabado');
+  if(sab) sab.onclick = ()=>{
+    if(state.config.sabado){
+      const enSabado = state.ramos.reduce((acc,r)=>
+        acc + (r.sesiones||[]).filter(s=>s.dia==='Sábado').length, 0);
+      if(enSabado) toast(`${enSabado} clase(s) del sábado dejarán de verse en la grilla`);
+    }
+    state.config.sabado = !state.config.sabado;
+    guardar();
+  };
+
+  const reset = document.getElementById('cfgReset');
+  if(reset) reset.onclick = ()=>{
+    if(!confirm('¿Volver a los 6 bloques por defecto?')) return;
+    state.config = JSON.parse(JSON.stringify(CONFIG_DEFAULT));
+    guardar();
+  };
+}
+
+function contarSesionesEnBloque(n){
+  return state.ramos.reduce((acc,r)=>
+    acc + (r.sesiones||[]).filter(s=> Number(s.bloque)>=n).length, 0);
+}
+
+function renderConfigHorario(){
+  const filas = state.config.bloques.map((b,i)=>{
+    const n = i+1;
+    const desc = getDescanso(n);
+    return `
+      <div class="cfg-bloque">
+        <span class="cfg-n">${n}</span>
+        <input type="time" value="${hhmm(b.inicio)}" data-cfgini="${i}">
+        <span class="cfg-sep">–</span>
+        <input type="time" value="${hhmm(b.fin)}" data-cfgfin="${i}">
+        <div class="cfg-x" data-cfgdel="${i}">✕</div>
+      </div>
+      <div class="cfg-desc ${desc?'':'cfg-desc-off'}">
+        ${desc
+          ? `<input type="text" value="${escapeHtml(desc.nombre||'')}" data-cfgdescnombre="${n}" placeholder="Nombre del descanso">`
+          : `<span class="cfg-desc-label">Descanso después del ${n}</span>`}
+        <div class="switch-toggle" data-cfgdesc="${n}" data-on="${desc?'1':'0'}"></div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="cfg-lista">${filas}</div>
+    <button class="btn-ghost" id="cfgAddBloque" style="width:100%;">+ Agregar bloque</button>
+    <div style="height:8px;"></div>
+    <div class="switch-row" style="margin-bottom:10px;">
+      <div class="switch-label">
+        <div class="switch-title">Mostrar sábado</div>
+        <div class="switch-sub">Se activa solo si importas un horario con clases ese día</div>
+      </div>
+      <div class="switch-toggle" id="toggleSabado" data-on="${state.config.sabado?'1':'0'}"></div>
+    </div>
+    <button class="btn-ghost" id="cfgReset" style="width:100%;">Restablecer valores por defecto</button>
+  `;
+}
+
+function attachSwipeTercio(el, tipo){
+  if(!el) return;
+  let startX=0, startY=0;
+  el.addEventListener('pointerdown', e=>{ startX=e.clientX; startY=e.clientY; });
+  el.addEventListener('pointerup', e=>{
+    const dx = e.clientX-startX, dy = e.clientY-startY;
+    if(Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    const dir = dx<0 ? 1 : -1;
+    if(tipo==='clase'){
+      const total = getListaClasesProximas().length;
+      state.inicioClaseIdx = Math.min(Math.max(state.inicioClaseIdx+dir, 0), Math.max(total-1,0));
+    } else {
+      const total = getListaPruebasProximas().length;
+      state.inicioPruebaIdx = Math.min(Math.max(state.inicioPruebaIdx+dir, 0), Math.max(total-1,0));
+    }
+    render();
+  });
+}
+
+function attachInicioEvents(){
+  attachSwipeTercio(document.getElementById('tercioClase'), 'clase');
+  attachSwipeTercio(document.getElementById('tercioPrueba'), 'prueba');
+  const gearBtn = document.getElementById('gearBtn');
+  const overlay = document.getElementById('settingsOverlay');
+  const cerrarSettings = ()=>{ state.settingsOpen=false; overlay.classList.remove('show'); };
+  // El panel se re-dibuja al editar, así que hay que reabrirlo tras cada render
+  if(state.settingsOpen) overlay.classList.add('show');
+  gearBtn.onclick = ()=>{ state.settingsOpen=true; overlay.classList.add('show'); };
+  overlay.onclick = (e)=>{ if(e.target===overlay) cerrarSettings(); };
+  document.getElementById('settingsClose').onclick = cerrarSettings;
+
+  attachConfigHorarioEvents();
+  attachCelebracionEvents();
+
+  document.getElementById('exportBtn').onclick = ()=>{
+    const dataStr = JSON.stringify({ramos:state.ramos, config:state.config}, null, 2);
+    const blob = new Blob([dataStr], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'ramos_backup.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Información guardada');
+  };
+
+  const pdfInput = document.getElementById('importPdfFile');
+  document.getElementById('importPdfBtn').onclick = ()=> pdfInput.click();
+  pdfInput.onchange = (e)=>{
+    const file = e.target.files[0];
+    pdfInput.value = '';
+    if(file) importarHorarioPdf(file);
+  };
+
+  const fileInput = document.getElementById('importFile');
+  document.getElementById('importBtn').onclick = ()=> fileInput.click();
+  fileInput.onchange = (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      try{
+        const parsed = JSON.parse(ev.target.result);
+        // Respaldos antiguos eran solo el arreglo de ramos
+        if(Array.isArray(parsed)){
+          state.ramos = parsed;
+        } else if(parsed && Array.isArray(parsed.ramos)){
+          state.ramos = parsed.ramos;
+          if(parsed.config && Array.isArray(parsed.config.bloques) && parsed.config.bloques.length){
+            state.config = {
+              bloques: parsed.config.bloques,
+              descansos: parsed.config.descansos || [],
+              sabado: !!parsed.config.sabado,
+              celebraciones: (Array.isArray(parsed.config.celebraciones) && parsed.config.celebraciones.length)
+                ? parsed.config.celebraciones
+                : celebracionesActivas(),
+              celebracionAuto: parsed.config.celebracionAuto !== false
+            };
+            persistConfig();
+          }
+        } else throw new Error('formato inválido');
+        persist();
+        toast('Información recuperada');
+        overlay.classList.remove('show');
+        render();
+      } catch(err){
+        toast('El archivo no es válido');
+      }
+    };
+    reader.readAsText(file);
+    fileInput.value = '';
+  };
+}
+function getAllEvaluacionesGlobal(){
+  let list = [];
+  state.ramos.forEach(r=>{
+    (r.evaluaciones||[]).forEach(e=>{
+      if(e.tipo && e.tipo.trim()!==''){
+        list.push({
+          ramo:r.nombre, tipo:e.tipo, sala:e.sala||'-', porcentaje:e.porcentaje||'',
+          fecha:e.fecha||'', hora:e.hora||'', nota:e.nota||'-'
+        });
+      }
+    });
+  });
+  list.sort((a,b)=>{
+    if(!a.fecha && !b.fecha) return 0;
+    if(!a.fecha) return 1;
+    if(!b.fecha) return -1;
+    return a.fecha.localeCompare(b.fecha);
+  });
+  return list;
+}
+function formatFechaCorta(iso){
+  if(!iso) return '-';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y.slice(2)}`;
+}
+function esPasada(iso){
+  if(!iso) return false;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const fecha = new Date(iso+'T00:00:00');
+  return fecha <= hoy;
+}
+
+/* Una evaluación se da por rendida 1h20 después de su hora de inicio.
+   Si no se anotó hora, recién a las 23:59 de ese día. */
+const DUR_PRUEBA_MIN = 80;
+function finEvaluacion(e){
+  if(!e || !e.fecha) return null;
+  const d = new Date(e.fecha+'T00:00:00');
+  if(e.hora){
+    const [h,m] = e.hora.split(':').map(Number);
+    d.setHours(h||0, (m||0)+DUR_PRUEBA_MIN, 0, 0);
+  } else {
+    d.setHours(23,59,59,999);
+  }
+  return d;
+}
+function evaluacionCumplida(e){
+  const fin = finEvaluacion(e);
+  return fin ? new Date() >= fin : false;
+}
+/* El día pasa a verde solo cuando terminó la ÚLTIMA prueba de ese día. */
+function diaCumplido(evals){
+  const fines = (evals||[]).map(finEvaluacion).filter(Boolean);
+  if(!fines.length) return false;
+  return new Date() >= new Date(Math.max(...fines.map(f=>f.getTime())));
+}
+
+function tablaEvaluaciones(evals){
+  if(!evals.length){
+    return `<div class="hint" style="margin:12px 18px 0;">No hay evaluaciones para mostrar.</div>`;
+  }
+  const rows = evals.map((e,i)=>`
+    <tr>
+      <td class="num-cell">${i+1}</td>
+      <td>${escapeHtml(e.ramo)}</td>
+      <td>${escapeHtml(e.tipo)}</td>
+      <td><span class="cal-fecha-cell ${evaluacionCumplida(e)?'pasada':'pendiente'}" data-hora="${escapeHtml(e.hora||'')}">${formatFechaCorta(e.fecha)}</span></td>
+      <td>${escapeHtml(e.hora||'-')}</td>
+      <td>${escapeHtml(e.nota||'-')}</td>
+      <td>${e.porcentaje ? formatPorcentaje(e.porcentaje)+'%' : '-'}</td>
+      <td>${escapeHtml(e.sala)}</td>
+    </tr>
+  `).join('');
+  return `
+    <div class="table-wrap table-zebra">
+      <table>
+        <thead><tr><th>N</th><th>Ramo</th><th>Prueba</th><th>Fecha</th><th>Hora</th><th>Nota</th><th>%</th><th>Sala</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function tablaEvaluacionesVertical(evals){
+  if(!evals.length){
+    return `<div class="hint" style="margin:12px 0 0;">No hay evaluaciones programadas este día.</div>`;
+  }
+  const fila = (label, celdas) => `<tr><th>${label}</th>${celdas}</tr>`;
+
+  const filaN       = fila('N', evals.map((e,i)=>`<td>${i+1}</td>`).join(''));
+  const filaRamo     = fila('Ramo', evals.map(e=>`<td>${escapeHtml(e.ramo)}</td>`).join(''));
+  const filaPrueba   = fila('Prueba', evals.map(e=>`<td>${escapeHtml(e.tipo)}</td>`).join(''));
+  const filaFecha    = fila('Fecha', evals.map(e=>`<td><span class="cal-fecha-cell ${evaluacionCumplida(e)?'pasada':'pendiente'}" data-hora="${escapeHtml(e.hora||'')}">${formatFechaCorta(e.fecha)}</span></td>`).join(''));
+  const filaHora     = fila('Hora', evals.map(e=>`<td>${escapeHtml(e.hora||'-')}</td>`).join(''));
+  const filaNota     = fila('Nota', evals.map(e=>`<td>${escapeHtml(e.nota||'-')}</td>`).join(''));
+  const filaPorc     = fila('%', evals.map(e=>`<td>${e.porcentaje ? formatPorcentaje(e.porcentaje)+'%' : '-'}</td>`).join(''));
+  const filaSala     = fila('Sala', evals.map(e=>`<td>${escapeHtml(e.sala)}</td>`).join(''));
+
+  return `
+    <div class="vert-table">
+      <table>
+        <tbody>${filaN}${filaRamo}${filaPrueba}${filaFecha}${filaHora}${filaNota}${filaPorc}${filaSala}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ============ VISTA: CALENDARIO (contenedor con las 2 sub-vistas) ============ */
+function renderCalendarioSection(){
+  if(state.calYear===null){
+    const hoy = new Date();
+    state.calYear = hoy.getFullYear();
+    state.calMonth = hoy.getMonth();
+  }
+  return `
+    <header class="header-center"><h1>EVALUACIONES</h1></header>
+    <div class="cal-tabs">
+      <div class="cal-tab ${state.calSubview==='lista'?'active':''}" data-calsub="lista">Lista</div>
+      <div class="cal-tab ${state.calSubview==='calendario'?'active':''}" data-calsub="calendario">Calendario</div>
+    </div>
+    <div id="calContent">
+      ${state.calSubview==='lista' ? tablaEvaluaciones(getAllEvaluacionesGlobal()) : renderCalendarioMes()}
+    </div>
+    <div id="diaOverlay" class="hor-overlay">
+      <div class="hor-overlay-card">
+        <div class="hor-overlay-close" id="diaClose">${ICONS.back}</div>
+        <h2 id="diaTitulo"></h2>
+        <div id="diaContenido"></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCalendarioMes(){
+  const year = state.calYear, month = state.calMonth;
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const startOffset = (firstDay.getDay()+6) % 7; // Lunes=0 ... Domingo=6
+
+  const evalsByDay = {};
+  getAllEvaluacionesGlobal().filter(e=>e.fecha).forEach(e=>{
+    const d = new Date(e.fecha+'T00:00:00');
+    if(d.getFullYear()===year && d.getMonth()===month){
+      const day = d.getDate();
+      if(!evalsByDay[day]) evalsByDay[day]=[];
+      evalsByDay[day].push(e);
+    }
+  });
+
+  const hoyReal = new Date();
+  let cells = '';
+  for(let i=0;i<startOffset;i++) cells += `<div class="cal-day empty"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const dayEvals = evalsByDay[day];
+    const isHoy = year===hoyReal.getFullYear() && month===hoyReal.getMonth() && day===hoyReal.getDate();
+    let cls = 'cal-day';
+    if(dayEvals && dayEvals.length){
+      cls += diaCumplido(dayEvals) ? ' cal-day-green' : ' cal-day-orange';
+    }
+    if(isHoy) cls += ' cal-day-today';
+    cells += `<div class="${cls}" data-day="${day}">${isHoy?'<span class="cal-hoy-mark"></span>':''}<span class="cal-num">${day}</span></div>`;
+  }
+
+  return `
+    <div class="cal-month-card">
+      <div class="cal-month-header">
+        <div class="cal-arrow" id="calPrev">${ICONS.back}</div>
+        <h2>${MESES[month]} ${year}</h2>
+        <div class="cal-arrow" id="calNext">${ICONS.chev}</div>
+      </div>
+      <div class="cal-weekdays">
+        <div>L</div><div>Ma</div><div>Mi</div><div>J</div><div>V</div><div>S</div><div>D</div>
+      </div>
+      <div class="cal-divider"></div>
+      <div class="cal-grid">${cells}</div>
+    </div>
+  `;
+}
+
+function attachCalendarioEvents(){
+  document.querySelectorAll('.cal-tab').forEach(tab=>{
+    tab.onclick = ()=>{
+      const sub = tab.dataset.calsub;
+      if(sub==='calendario'){
+        const hoy = new Date();
+        state.calYear = hoy.getFullYear();
+        state.calMonth = hoy.getMonth();
+      }
+      state.calSubview = sub;
+      render();
+    };
+  });
+
+  if(state.calSubview==='lista'){
+    document.querySelectorAll('.cal-fecha-cell').forEach(cell=>{
+      cell.onclick = ()=>{
+        const hora = cell.dataset.hora;
+        toast(hora ? `Hora: ${hora}` : 'Sin hora registrada');
+      };
+    });
+  } else {
+    document.getElementById('calPrev').onclick = ()=>{
+      state.calMonth--; if(state.calMonth<0){ state.calMonth=11; state.calYear--; }
+      render();
+    };
+    document.getElementById('calNext').onclick = ()=>{
+      state.calMonth++; if(state.calMonth>11){ state.calMonth=0; state.calYear++; }
+      render();
+    };
+    document.querySelectorAll('.cal-day:not(.empty)').forEach(cell=>{
+      cell.onclick = ()=>{
+        const day = parseInt(cell.dataset.day,10);
+        const evals = getAllEvaluacionesGlobal().filter(e=>{
+          if(!e.fecha) return false;
+          const d = new Date(e.fecha+'T00:00:00');
+          return d.getFullYear()===state.calYear && d.getMonth()===state.calMonth && d.getDate()===day;
+        });
+        document.getElementById('diaTitulo').textContent = `${day} de ${MESES[state.calMonth]}`;
+        document.getElementById('diaContenido').innerHTML = tablaEvaluacionesVertical(evals);
+        document.querySelectorAll('#diaContenido .cal-fecha-cell').forEach(cell=>{
+          cell.onclick = ()=>{
+            const hora = cell.dataset.hora;
+            toast(hora ? `Hora: ${hora}` : 'Sin hora registrada');
+          };
+        });
+        document.getElementById('diaOverlay').classList.add('show');
+      };
+    });
+  }
+
+  const overlay = document.getElementById('diaOverlay');
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.classList.remove('show'); };
+  document.getElementById('diaClose').onclick = ()=> overlay.classList.remove('show');
+}
+
+function wireSeccionEventos(r, target){
+  const set = getEvalSet(r, target);
+
+  document.querySelectorAll(`[data-clearhora][data-target="${target}"]`).forEach(btn=>{
+    btn.onclick = ()=>{
+      const row = set.arr.find(e=>e.id===btn.dataset.clearhora);
+      if(row){ row.hora=''; persist(); render(); }
+    };
+  });
+
+  // Campos de cualquier fila (individual o dentro de un grupo)
+  document.querySelectorAll(`[data-rowfield][data-target="${target}"]`).forEach(input=>{
+    const field = input.dataset.rowfield;
+    input.addEventListener('focus', ()=> input.select());
+    input.addEventListener('blur', ()=>{
+      const row = set.arr.find(e=>e.id===input.dataset.rowid);
+      if(!row) return;
+      if(field==='tipo'){
+        row.tipo = input.value;
+        row.tipoSuggested = false;
+        row.tipoAuto = false;
+        const prefix = parsePrefix1(input.value);
+        if(prefix!==null){
+          const grp = getGroupOfRow(set.grupos, row.id);
+          if(grp){
+            const filas = grp.rowIds.map(id=>set.arr.find(e=>e.id===id)).filter(Boolean);
+            const idx = filas.indexOf(row);
+            autocompleteTipo(filas, idx, prefix);
+          }
+        }
+      } else if(field==='nota'){
+        row.nota = parseNota(input.value) || (input.value.trim()==='' ? '-' : input.value);
+      } else if(field==='sala'){
+        row.sala = input.value.trim()==='' ? '-' : input.value;
+      } else if(field==='porcentaje'){
+        row.porcentaje = input.value.trim()==='' ? '' : truncarDecimal(input.value);
+      } else if(field==='fecha'){
+        row.fecha = input.value;
+      } else if(field==='hora'){
+        row.hora = input.value;
+      }
+      persist(); render();
+    });
+  });
+
+  // Eliminar una fila de la tabla de evaluaciones sueltas
+  document.querySelectorAll(`[data-inddel][data-target="${target}"]`).forEach(btn=>{
+    btn.onclick = ()=>{
+      if(!confirm('¿Eliminar esta evaluación?')) return;
+      set.arr = set.arr.filter(e=> e.id !== btn.dataset.inddel);
+      if(target==='lab'){ r.evaluacionesLab = set.arr; } else { r.evaluaciones = set.arr; }
+      persist(); render();
+    };
+  });
+
+  // Botones agregar
+  const nuevaFilaSuelta = ()=>{
+    set.arr.push({id:uid(), tipo:'', nota:'', porcentaje:'', fecha:'', hora:'', sala:'', excluida:false});
+    if(target==='lab'){ r.evaluacionesLab = set.arr; } else { r.evaluaciones = set.arr; }
+    persist(); render();
+  };
+  const crearIndBtn = document.querySelector(`[data-crearindividuales="${target}"]`);
+  if(crearIndBtn) crearIndBtn.onclick = nuevaFilaSuelta;
+  const addIndBtn = document.querySelector(`[data-addindividual="${target}"]`);
+  if(addIndBtn) addIndBtn.onclick = nuevaFilaSuelta;
+
+  const addGrupoBtn = document.querySelector(`[data-addgrupo="${target}"]`);
+  if(addGrupoBtn){
+    addGrupoBtn.onclick = ()=>{
+      const nextNum = set.grupos.length+1;
+      const grupo = {id:uid(), nombre:'Grupo '+nextNum, rowIds:[], repartirActivo:true, descartarPeor:false, porcentajeTotal:0};
+      set.grupos.push(grupo);
+      // El grupo nace con una fila lista para escribir
+      agregarEvalAGrupo(set, grupo);
+      if(target==='lab'){ r.gruposEvalLab = set.grupos; r.evaluacionesLab = set.arr; }
+      else { r.gruposEval = set.grupos; r.evaluaciones = set.arr; }
+      persist(); render();
+    };
+  }
+
+  // Nombre y % del grupo
+  document.querySelectorAll(`[data-gruponombre][data-target="${target}"]`).forEach(input=>{
+    input.addEventListener('blur', ()=>{
+      const grupo = set.grupos.find(g=>g.id===input.dataset.gruponombre);
+      if(grupo){ grupo.nombre = input.value.trim() || grupo.nombre; persist(); render(); }
+    });
+  });
+  document.querySelectorAll(`[data-grupopeso][data-target="${target}"]`).forEach(input=>{
+    input.addEventListener('blur', ()=>{
+      const grupo = set.grupos.find(g=>g.id===input.dataset.grupopeso);
+      if(grupo){ grupo.porcentajeTotal = truncarDecimal(input.value)||0; persist(); render(); }
+    });
+  });
+
+  // Switch "distribuir % en partes iguales"
+  document.querySelectorAll(`[data-grupotoggledist][data-target="${target}"]`).forEach(t=>{
+    t.onclick = ()=>{
+      const grupo = set.grupos.find(g=>g.id===t.dataset.grupotoggledist);
+      if(!grupo) return;
+      grupo.repartirActivo = !grupo.repartirActivo;
+      if(!grupo.repartirActivo && grupo.descartarPeor){
+        grupo.descartarPeor = false;
+        toast('"Descartar peor nota" se desactivó: requiere reparto en partes iguales');
+      }
+      persist(); render();
+    };
+  });
+
+  // Switch "descartar peor nota" (bloqueado si no hay reparto igual activo)
+  document.querySelectorAll(`[data-grupotoggledescartar][data-target="${target}"]`).forEach(t=>{
+    t.onclick = ()=>{
+      const grupo = set.grupos.find(g=>g.id===t.dataset.grupotoggledescartar);
+      if(!grupo) return;
+      if(!grupo.repartirActivo){
+        toast('Activa "Distribuir % en partes iguales" para poder descartar la peor nota');
+        return;
+      }
+      grupo.descartarPeor = !grupo.descartarPeor;
+      persist(); render();
+    };
+  });
+
+  // Eliminar grupo (y sus evaluaciones)
+  document.querySelectorAll(`[data-grupodel][data-target="${target}"]`).forEach(btn=>{
+    btn.onclick = ()=>{
+      const grupo = set.grupos.find(g=>g.id===btn.dataset.grupodel);
+      if(!grupo) return;
+      if(!confirm('¿Eliminar este grupo y todas sus evaluaciones?')) return;
+      set.arr = set.arr.filter(e=> !grupo.rowIds.includes(e.id));
+      set.grupos = set.grupos.filter(g=> g.id !== grupo.id);
+      if(target==='lab'){ r.evaluacionesLab = set.arr; r.gruposEvalLab = set.grupos; }
+      else { r.evaluaciones = set.arr; r.gruposEval = set.grupos; }
+      persist(); render();
+    };
+  });
+
+  // Agregar evaluación a un grupo (con auto-numeración)
+  document.querySelectorAll(`[data-addevalgrupo][data-target="${target}"]`).forEach(btn=>{
+    btn.onclick = ()=>{
+      const grupo = set.grupos.find(g=>g.id===btn.dataset.addevalgrupo);
+      if(!grupo) return;
+      agregarEvalAGrupo(set, grupo);
+      if(target==='lab'){ r.evaluacionesLab = set.arr; } else { r.evaluaciones = set.arr; }
+      persist(); render();
+    };
+  });
+}
+
+function attachEvents(){
+  if(state.view==='list'){
+    document.getElementById('addRamoBtn').onclick = ()=>{
+      const nombre = prompt('Nombre del ramo:');
+      if(nombre && nombre.trim()){
+        state.ramos.push({id:uid(), nombre:nombre.trim(), evaluaciones:[], gruposEval:[], nSemana:0, sesiones:[], profesor:'', correo:'', seccion:'', separarLab:false, evaluacionesLab:[], gruposEvalLab:[], ponderacionTeoria:50, ponderacionLab:50});
+        persist(); render();
+      }
+    };
+    attachSwipeToDelete();
+  }
+
+  if(state.view==='detail'){
+    document.querySelector('[data-back]').onclick = ()=>{ state.view='list'; render(); };
+    document.getElementById('renameRamoBtn').onclick = ()=>{
+      const r = getRamo();
+      const nuevo = prompt('Nuevo nombre del ramo:', r.nombre);
+      if(nuevo && nuevo.trim()){
+        r.nombre = nuevo.trim();
+        persist(); render();
+      }
+    };
+    document.querySelectorAll('[data-go]').forEach(el=>{
+      el.onclick = ()=>{ state.view = el.dataset.go; render(); };
+    });
+  }
+
+  if(state.view==='evaluaciones'){
+    document.querySelector('[data-back]').onclick = ()=>{ state.view='detail'; render(); };
+    const r = getRamo();
+
+    const toggleLab = document.getElementById('toggleSepararLab');
+    if(toggleLab){
+      toggleLab.onclick = ()=>{
+        r.separarLab = !r.separarLab;
+        if(r.separarLab){
+          r.ponderacionTeoria = r.ponderacionTeoria ?? 50;
+          r.ponderacionLab = r.ponderacionLab ?? 50;
+          r.evaluacionesLab = r.evaluacionesLab || [];
+          r.gruposEvalLab = r.gruposEvalLab || [];
+        }
+        persist(); render();
+      };
+    }
+
+    const pondT = document.getElementById('pondTeoriaInput');
+    const pondL = document.getElementById('pondLabInput');
+    if(pondT && pondL){
+      pondT.addEventListener('input', ()=>{
+        let v = parseFloat(pondT.value); if(isNaN(v)) v=0; v=Math.max(0,Math.min(100,v));
+        r.ponderacionTeoria = v; r.ponderacionLab = 100-v;
+        pondL.value = r.ponderacionLab;
+        persist();
+      });
+      pondL.addEventListener('input', ()=>{
+        let v = parseFloat(pondL.value); if(isNaN(v)) v=0; v=Math.max(0,Math.min(100,v));
+        r.ponderacionLab = v; r.ponderacionTeoria = 100-v;
+        pondT.value = r.ponderacionTeoria;
+        persist();
+      });
+    }
+
+    wireSeccionEventos(r, 'teoria');
+    if(r.separarLab) wireSeccionEventos(r, 'lab');
+
+    const guardarBtn = document.getElementById('guardarEval');
+    if(guardarBtn){
+      guardarBtn.onclick = ()=>{
+        let msgs = [];
+        if(r.evaluaciones && r.evaluaciones.length){
+          const suma = r.evaluaciones.reduce((s,row)=> row.excluida ? s : s + (parseFloat(row.porcentaje)||0), 0);
+          if(Math.round(suma) !== 100) msgs.push(`Teoría: los porcentajes suman ${formatPorcentaje(suma)}% (deben sumar 100%).`);
+        }
+        if(r.separarLab && r.evaluacionesLab && r.evaluacionesLab.length){
+          const sumaLab = r.evaluacionesLab.reduce((s,row)=> row.excluida ? s : s + (parseFloat(row.porcentaje)||0), 0);
+          if(Math.round(sumaLab) !== 100) msgs.push(`Laboratorio: los porcentajes suman ${formatPorcentaje(sumaLab)}% (deben sumar 100%).`);
+        }
+        const warnDiv = document.getElementById('evalWarn');
+        if(msgs.length){
+          if(warnDiv) warnDiv.innerHTML = `<div class="warn">${msgs.join('<br>')}</div>`;
+        } else {
+          if(warnDiv) warnDiv.innerHTML = '';
+          persist(); toast('Evaluaciones guardadas'); state.view='detail'; render();
+        }
+      };
+    }
+  }
+
+  if(state.view==='semana'){
+    document.querySelector('[data-back]').onclick = ()=>{ state.view='detail'; render(); };
+    const r = getRamo();
+    if(!r.nSemana){
+      document.getElementById('crearSemTabla').onclick = ()=>{
+        const n = parseInt(document.getElementById('nSemInput').value,10);
+        if(!n || n<1){ toast('Ingresa un número válido'); return; }
+        r.nSemana = n;
+        r.sesiones = Array.from({length:n}, ()=>({dia:'',bloque:'1',ubicacion:'',tipo:'T'}));
+        persist(); render();
+      };
+      return;
+    }
+    document.querySelectorAll('#semBody tr').forEach(tr=>{
+      const i = parseInt(tr.dataset.row,10);
+      tr.querySelectorAll('input,select').forEach(input=>{
+        const field = input.dataset.field;
+        if(input.tagName==='INPUT'){
+          input.addEventListener('focus', ()=> input.select());
+        }
+        input.addEventListener('blur', ()=>{
+          const row = r.sesiones[i];
+          if(field==='ubicacion'){
+            row.ubicacion = input.value;
+            row.ubicacionSuggested = false;
+            const prefix = parseUbicacionPrefix(input.value);
+            if(prefix) autocompleteUbicacion(r, i, prefix);
+          } else if(field==='bloque'){
+            const nuevoBloque = input.value || '1';
+            const conflicto = row.dia ? bloqueOcupadoPor(row.dia, nuevoBloque, r.id, i) : null;
+            if(conflicto){
+              toast(`Ese bloque ya está ocupado por ${conflicto}`);
+              render();
+              return;
+            }
+            row.bloque = nuevoBloque;
+          } else if(field==='dia'){
+            const nuevoDia = input.value;
+            const conflicto = nuevoDia ? bloqueOcupadoPor(nuevoDia, row.bloque, r.id, i) : null;
+            if(conflicto){
+              toast(`Ese bloque ya está ocupado por ${conflicto}`);
+              render();
+              return;
+            }
+            row.dia = nuevoDia;
+          } else if(field==='tipo'){
+            row.tipo = input.value;
+          }
+          persist(); render();
+        });
+        if(input.tagName==='SELECT'){
+          input.addEventListener('change', ()=> input.blur());
+        }
+      });
+    });
+    document.getElementById('cambiarNSem').onclick = ()=>{
+      const n = parseInt(prompt('Nueva cantidad a la semana:', r.nSemana),10);
+      if(!n || n<1) return;
+      const nuevo = Array.from({length:n}, (_,i)=> r.sesiones[i] || {dia:'',bloque:'1',ubicacion:'',tipo:'T'});
+      r.nSemana = n; r.sesiones = nuevo; persist(); render();
+    };
+    document.getElementById('guardarSem').onclick = ()=>{
+      persist(); toast('Horario guardado'); state.view='detail'; render();
+    };
+  }
+
+  if(state.view==='info'){
+    document.querySelector('[data-back]').onclick = ()=>{ state.view='detail'; render(); };
+    const rInfo = getRamo();
+    const profInput = document.getElementById('profInput');
+    const correoInput = document.getElementById('correoInput');
+    // Se sugiere el correo a partir del nombre, mientras no lo hayas editado tú
+    if(!correoInput.value && profInput.value){
+      correoInput.value = correoDesdeProfesor(profInput.value);
+    }
+    profInput.addEventListener('input', ()=>{
+      const pos = profInput.selectionStart;
+      const capitalizado = capitalizarNombre(profInput.value);
+      if(capitalizado !== profInput.value){
+        profInput.value = capitalizado;
+        profInput.setSelectionRange(pos, pos);
+      }
+      if(!rInfo.correoManual) correoInput.value = correoDesdeProfesor(profInput.value);
+    });
+    correoInput.addEventListener('input', ()=>{
+      rInfo.correoManual = correoInput.value.trim() !== correoDesdeProfesor(profInput.value);
+    });
+    document.getElementById('guardarInfo').onclick = ()=>{
+      const r = getRamo();
+      r.profesor = capitalizarNombre(profInput.value.trim());
+      r.seccion = document.getElementById('seccInput').value.trim();
+      const seccLab = document.getElementById('seccLabInput');
+      if(seccLab) r.seccionLab = seccLab.value.trim();
+      r.correo = correoInput.value.trim();
+      persist(); toast('Información guardada'); state.view='detail'; render();
+    };
+  }
+}
+
+renderNavOnce();
+render();
+</script>
+</body>
+</html>
