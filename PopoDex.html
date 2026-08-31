@@ -312,19 +312,27 @@ select:focus,input:focus{border-color:var(--accent);}
       </div>
       <div class="sheet-bd">
         <div class="f-group">
-          <label class="f-lab">Generación</label>
-          <select id="f-gen">
-            <option value="">Todas</option>
-            <option value="1">1 — Kanto (1-151)</option>
-            <option value="2">2 — Johto (152-251)</option>
-            <option value="3">3 — Hoenn (252-386)</option>
-            <option value="4">4 — Sinnoh (387-493)</option>
-            <option value="5">5 — Teselia (494-649)</option>
-            <option value="6">6 — Kalos (650-721)</option>
-            <option value="7">7 — Alola (722-809)</option>
-            <option value="8">8 — Galar (810-905)</option>
-            <option value="9">9 — Paldea (906-1025)</option>
-          </select>
+          <label class="f-lab">Generación <span id="gen-hint" style="text-transform:none;letter-spacing:0;">(todas)</span></label>
+          <div class="chips" id="f-gens">
+            <button class="pill" data-gen="1">1 · Kanto</button>
+            <button class="pill" data-gen="2">2 · Johto</button>
+            <button class="pill" data-gen="3">3 · Hoenn</button>
+            <button class="pill" data-gen="4">4 · Sinnoh</button>
+            <button class="pill" data-gen="5">5 · Teselia</button>
+            <button class="pill" data-gen="6">6 · Kalos</button>
+            <button class="pill" data-gen="7">7 · Alola</button>
+            <button class="pill" data-gen="8">8 · Galar</button>
+            <button class="pill" data-gen="9">9 · Paldea</button>
+          </div>
+        </div>
+
+        <div class="f-group">
+          <label class="f-lab">Rareza</label>
+          <div class="chips">
+            <button class="pill" data-rank="legendary">Legendario</button>
+            <button class="pill" data-rank="mythical">Singular</button>
+            <button class="pill" data-rank="common">Común</button>
+          </div>
         </div>
 
         <div class="f-group">
@@ -478,7 +486,7 @@ const MAX_ID = 1025;
 /* ================= ESTADO ================= */
 let allMons = [];          // {id,name,types,stats,total,moveMethods}
 let detailCache = {};      // id -> datos completos (moves, abilities...)
-let filters = {gen:"",sort:"",mins:{},types:[],cats:[],moves:[]};
+let filters = {gens:[],sort:"",mins:{},types:[],cats:[],moves:[],ranks:[]};
 let dataReady = false;
 
 /* ================= NAVEGACIÓN ================= */
@@ -516,6 +524,7 @@ const GQL_SOURCES = [
         id name
         pokemontypes { type { name } }
         pokemonstats { base_stat stat { name } }
+        pokemonspecy { is_legendary is_mythical }
         pokemonmoves(distinct_on: move_learn_method_id, order_by:{move_learn_method_id:asc}) {
           movelearnmethod { name }
         }
@@ -524,9 +533,11 @@ const GQL_SOURCES = [
     parse: d => d.pokemon.map(p=>{
       const stats={}; let total=0;
       p.pokemonstats.forEach(s=>{ stats[s.stat.name]=s.base_stat; total+=s.base_stat; });
+      const sp = p.pokemonspecy||{};
       return {id:p.id, name:p.name,
         types:p.pokemontypes.map(t=>t.type.name),
         stats, total,
+        rank: sp.is_legendary?'legendary' : sp.is_mythical?'mythical' : 'common',
         methods:p.pokemonmoves.map(m=>m.movelearnmethod.name)};
     })
   },
@@ -537,6 +548,7 @@ const GQL_SOURCES = [
         id name
         pokemon_v2_pokemontypes { pokemon_v2_type { name } }
         pokemon_v2_pokemonstats { base_stat pokemon_v2_stat { name } }
+        pokemon_v2_pokemonspecy { is_legendary is_mythical }
         pokemon_v2_pokemonmoves(distinct_on: move_learn_method_id, order_by:{move_learn_method_id:asc}) {
           pokemon_v2_movelearnmethod { name }
         }
@@ -545,9 +557,11 @@ const GQL_SOURCES = [
     parse: d => d.pokemon_v2_pokemon.map(p=>{
       const stats={}; let total=0;
       p.pokemon_v2_pokemonstats.forEach(s=>{ stats[s.pokemon_v2_stat.name]=s.base_stat; total+=s.base_stat; });
+      const sp = p.pokemon_v2_pokemonspecy||{};
       return {id:p.id, name:p.name,
         types:p.pokemon_v2_pokemontypes.map(t=>t.pokemon_v2_type.name),
         stats, total,
+        rank: sp.is_legendary?'legendary' : sp.is_mythical?'mythical' : 'common',
         methods:p.pokemon_v2_pokemonmoves.map(m=>m.pokemon_v2_movelearnmethod.name)};
     })
   }
@@ -593,10 +607,14 @@ async function loadAll(){
 
 /* ================= RENDER GRID ================= */
 function passesFilters(m){
-  if(filters.gen){
-    const [a,b]=GEN_RANGE[filters.gen];
-    if(m.id<a||m.id>b) return false;
+  if(filters.gens.length){
+    const inAny = filters.gens.some(g=>{
+      const [a,b]=GEN_RANGE[g];
+      return m.id>=a && m.id<=b;
+    });
+    if(!inAny) return false;
   }
+  if(filters.ranks.length && !filters.ranks.includes(m.rank||'common')) return false;
   for(const k in filters.mins){
     const v = filters.mins[k];
     const val = k==='total'? m.total : (m.stats[k]??0);
@@ -653,12 +671,16 @@ function buildTypeChips(){
     });
   });
 }
-document.querySelectorAll('[data-cat],[data-mv]').forEach(p=>{
+document.querySelectorAll('[data-cat],[data-mv],[data-rank]').forEach(p=>{
   p.addEventListener('click',()=>p.classList.toggle('on'));
+});
+document.querySelectorAll('[data-gen]').forEach(p=>{
+  p.addEventListener('click',()=>{ p.classList.toggle('on'); updateGenHint(); });
 });
 
 function applyFilters(){
-  filters.gen = document.getElementById('f-gen').value;
+  filters.gens = [...document.querySelectorAll('[data-gen].on')].map(c=>c.dataset.gen);
+  filters.ranks = [...document.querySelectorAll('[data-rank].on')].map(c=>c.dataset.rank);
   filters.sort = document.getElementById('f-sort').value;
   filters.mins = {};
   ['hp','attack','defense','special-attack','special-defense','speed','total'].forEach(k=>{
@@ -669,8 +691,9 @@ function applyFilters(){
   filters.cats  = [...document.querySelectorAll('[data-cat].on')].map(c=>c.dataset.cat);
   filters.moves = [...document.querySelectorAll('[data-mv].on')].map(c=>c.dataset.mv);
 
-  const n = (filters.gen?1:0)+(filters.sort?1:0)+Object.keys(filters.mins).length+
-            filters.types.length+filters.cats.length+filters.moves.length;
+  const n = filters.gens.length+filters.ranks.length+(filters.sort?1:0)+
+            Object.keys(filters.mins).length+filters.types.length+
+            filters.cats.length+filters.moves.length;
   const badge = document.getElementById('f-count');
   badge.style.display = n? 'flex':'none';
   badge.textContent = n;
@@ -682,11 +705,17 @@ function applyFilters(){
 }
 
 function clearFilters(){
-  document.getElementById('f-gen').value='';
   document.getElementById('f-sort').value='';
   document.querySelectorAll('.stat-inputs input').forEach(i=>i.value='');
-  document.querySelectorAll('#f-types .chip.on,[data-cat].on,[data-mv].on').forEach(c=>c.classList.remove('on'));
+  document.querySelectorAll('#f-types .chip.on,[data-cat].on,[data-mv].on,[data-gen].on,[data-rank].on')
+    .forEach(c=>c.classList.remove('on'));
+  updateGenHint();
   applyFilters();
+}
+
+function updateGenHint(){
+  const on=[...document.querySelectorAll('[data-gen].on')].map(c=>c.dataset.gen);
+  document.getElementById('gen-hint').textContent = on.length? `(${on.join(', ')})` : '(todas)';
 }
 
 /* ================= DETALLE ================= */
