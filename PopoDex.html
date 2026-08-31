@@ -477,6 +477,42 @@ select:focus,input:focus{border-color:var(--accent);}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .campo-x{font-family:var(--mono);font-size:13px;color:var(--dim);flex-shrink:0;}
 .campo img{width:22px;height:22px;flex-shrink:0;image-rendering:pixelated;}
+
+/* ---------- COBERTURA ---------- */
+.cob-bloque{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:13px 14px;margin-bottom:14px;
+}
+.cob-hd{display:flex;align-items:center;gap:9px;margin-bottom:11px;}
+.cob-tit{font-size:13px;font-weight:600;margin:0;flex:1;}
+.cob-hd select{width:auto;flex:0 1 auto;max-width:52%;font-size:11px;padding:6px 8px;}
+.cob-cifra{display:flex;align-items:baseline;gap:7px;}
+.cob-cifra b{font-size:26px;font-family:var(--mono);line-height:1;}
+.cob-cifra span{font-family:var(--mono);font-size:10.5px;color:var(--muted);}
+.cob-barra{
+  height:7px;background:var(--bg-screen);border:1px solid var(--border);
+  border-radius:4px;overflow:hidden;margin:10px 0 8px;display:flex;
+}
+.cob-barra i{display:block;height:100%;}
+.cob-leyenda{display:flex;gap:12px;font-family:var(--mono);font-size:9.5px;color:var(--muted);}
+.cob-leyenda span{display:flex;align-items:center;gap:4px;}
+.pt{width:8px;height:8px;border-radius:2px;display:inline-block;}
+.cob-tipos{display:flex;flex-wrap:wrap;gap:4px;margin-top:11px;}
+.combo{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px 12px;margin-bottom:7px;
+}
+.combo.malo{border-color:#f0c4d0;}
+.combo-top{display:flex;align-items:center;gap:7px;}
+.combo-tipos{display:flex;gap:3px;flex:1;flex-wrap:wrap;}
+.mult{
+  font-family:var(--mono);font-size:10.5px;font-weight:700;padding:3px 7px;
+  border-radius:2px;color:#fff;flex-shrink:0;
+}
+.m4{background:#1F6B57;} .m2{background:#2E7D6B;} .m1{background:#8A8296;}
+.mh{background:#C8683A;} .mq{background:#B34A3A;} .m0{background:#3D3A4A;}
+.combo-via{font-family:var(--mono);font-size:9px;color:#2E7D6B;margin-top:5px;}
+.combo-mons{font-size:11px;color:var(--muted);margin-top:7px;line-height:1.55;}
 .soon svg{width:38px;height:38px;stroke:var(--dim);fill:none;stroke-width:1.5;margin-bottom:14px;}
 .soon h3{font-size:15px;margin:0 0 6px;}
 .soon p{font-size:12px;color:var(--muted);margin:0;line-height:1.5;}
@@ -657,6 +693,24 @@ select:focus,input:focus{border-color:var(--accent);}
       <div class="sheet-ft">
         <button class="btn btn-s" onclick="closeOverlay('ov-confirmar')">Cancelar</button>
         <button class="btn" id="cf-ok" style="background:var(--alert);color:#fff;border-color:var(--alert);">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COBERTURA ============ -->
+  <div class="overlay" id="ov-cobertura">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="cob-sub">—</div>
+          <h2 class="sheet-title" style="font-size:17px;">Cobertura de ataque</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-cobertura')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd">
+        <div class="pick-tabs" id="cob-tabs"></div>
+        <div id="cob-lista"></div>
       </div>
     </div>
   </div>
@@ -2102,7 +2156,22 @@ function renderEquipo(){
         </div>`;
       }).join('')}
     </div>
+    <div class="cob-bloque">
+      <div class="cob-hd">
+        <h3 class="cob-tit">Cobertura de ataque</h3>
+        <select id="cob-dex" onchange="cambiarDexCobertura(this.value)">
+          ${dexDisponibles(eq.juego).map(d=>
+            `<option value="${d}" ${d===coberturaDex?'selected':''}>${DEX_ES[d]||d}</option>`).join('')}
+        </select>
+      </div>
+      <div id="cob-caja"><div class="hint">Calculando...</div></div>
+    </div>
     <button class="btn-borrar" onclick="borrarEquipo()">Eliminar este equipo</button>`;
+
+  const opciones = dexDisponibles(eq.juego);
+  if(!coberturaDex || !opciones.includes(coberturaDex)) coberturaDex = opciones[0];
+  document.getElementById('cob-dex').value = coberturaDex;
+  calcularCobertura();
 }
 
 function cambiarJuego(slug){
@@ -2746,6 +2815,256 @@ function aviso(txt){
   t.classList.add('show');
   clearTimeout(avisoTimer);
   avisoTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+/* ================= COBERTURA DE ATAQUE ================= */
+
+/* Tipos que existen en cada generación */
+function tiposValidos(gen){
+  if(gen===1) return TYPES.filter(t=>!['dark','steel','fairy'].includes(t));
+  if(gen<6)   return TYPES.filter(t=>t!=='fairy');
+  return TYPES;
+}
+
+/* Tabla de efectividad ajustada al juego */
+function tablaPara(gen){
+  const t = JSON.parse(JSON.stringify(CHART));
+  if(gen<6){
+    /* Antes de la 6.ª, Acero resistía Fantasma y Siniestro */
+    t.ghost.steel = .5; t.dark.steel = .5;
+    /* Y el tipo Hada no existía */
+    delete t.dragon.fairy; delete t.poison.fairy; delete t.steel.fairy;
+    delete t.fighting.fairy; delete t.bug.fairy; delete t.dark.fairy;
+  }
+  if(gen===1){
+    t.bug.poison = 2;          // Bicho era superefectivo contra Veneno
+    t.poison.bug = 2;          // y Veneno contra Bicho
+    delete t.ice.fire;         // Fuego no resistía Hielo
+    t.ghost.psychic = 0;       // fallo conocido: Fantasma no afectaba a Psíquico
+    delete t.poison.steel; delete t.psychic.dark;
+  }
+  return t;
+}
+
+function efectividadCon(tabla, atacante, defensores){
+  return defensores.reduce((m,d)=>m*(tabla[atacante]?.[d] ?? 1), 1);
+}
+
+/* Pokédex disponibles según el juego */
+const DEX_POR_JUEGO = {
+  red:['kanto'], blue:['kanto'], yellow:['kanto'],
+  gold:['original-johto'], silver:['original-johto'], crystal:['original-johto'],
+  ruby:['hoenn'], sapphire:['hoenn'], emerald:['hoenn'],
+  firered:['kanto'], leafgreen:['kanto']
+};
+const DEX_POR_GEN = {
+  1:['kanto'], 2:['original-johto'], 3:['hoenn'],
+  4:['original-sinnoh','extended-sinnoh','updated-johto'],
+  5:['original-unova','updated-unova'],
+  6:['kalos-central','kalos-coastal','kalos-mountain','updated-hoenn'],
+  7:['original-alola','updated-alola'],
+  8:['galar','isle-of-armor','crown-tundra'],
+  9:['paldea']
+};
+const DEX_ES = {
+  national:'Nacional', kanto:'Kanto', 'original-johto':'Johto', hoenn:'Hoenn',
+  'original-sinnoh':'Sinnoh', 'extended-sinnoh':'Sinnoh ampliada', 'updated-johto':'Johto (HGSS)',
+  'original-unova':'Teselia', 'updated-unova':'Teselia (N2/B2)',
+  'kalos-central':'Kalos centro', 'kalos-coastal':'Kalos costa', 'kalos-mountain':'Kalos montaña',
+  'updated-hoenn':'Hoenn (ROZA)', 'original-alola':'Alola', 'updated-alola':'Alola (US/UL)',
+  galar:'Galar', 'isle-of-armor':'Isla de la Armadura', 'crown-tundra':'Nieves de la Corona',
+  paldea:'Paldea'
+};
+
+function dexDisponibles(juego){
+  const propias = DEX_POR_JUEGO[juego] || DEX_POR_GEN[genDeJuego(juego)] || [];
+  return [...propias, 'national'];
+}
+
+/* Especies que componen una pokédex */
+async function especiesDeDex(slug){
+  const ck = 'dex:'+slug;
+  const guardado = Cache.get(ck);
+  if(guardado) return guardado;
+  const data = await fetchJSON(`${API}/pokedex/${slug}`);
+  const ids = data.pokemon_entries
+    .map(e=>Number(e.pokemon_species.url.split('/').filter(Boolean).pop()))
+    .filter(id=>id<=MAX_ID);
+  Cache.set(ck, ids);
+  return ids;
+}
+
+/* Datos completos de los movimientos de un pokémon */
+async function movsDe(pid){
+  const ck = 'mv:'+pid;
+  let d = Cache.get(ck);
+  if(!d){
+    d = await gql(`{
+      pokemonmove(where:{pokemon_id:{_eq:${pid}}},
+                  distinct_on:[move_id, move_learn_method_id],
+                  order_by:[{move_id:asc},{move_learn_method_id:asc}]) {
+        level movelearnmethod { name }
+        move { name power accuracy pp type { name } movedamageclass { name }
+               movenames(where:{language_id:{_eq:${ES}}}) { name } }
+      }
+    }`);
+    Cache.set(ck, d);
+  }
+  return d;
+}
+
+let coberturaDex = null;
+let coberturaDatos = null;
+let coberturaTab = 'mal';
+
+async function calcularCobertura(){
+  const eq = equipos[equipoAbierto];
+  if(!eq) return;
+  const gen = genDeJuego(eq.juego);
+  const tabla = tablaPara(gen);
+  const validos = tiposValidos(gen);
+
+  const caja = document.getElementById('cob-caja');
+  if(caja) caja.innerHTML = '<div class="hint">Calculando...</div>';
+
+  /* Tipos de ataque del equipo, con quién los aporta */
+  const porTipo = {};
+  for(const miembro of eq.miembros){
+    let info;
+    try{ info = await movsDe(miembro.pid); }catch(e){ continue; }
+    const mon = allMons.find(x=>x.id===miembro.pid) || {};
+    miembro.movimientos.filter(Boolean).forEach(slug=>{
+      const fila = info.pokemonmove.find(r=>r.move.name===slug);
+      if(!fila) return;
+      const mv = fila.move;
+      if(!mv.power || mv.power<=0) return;                 // solo movimientos de daño
+      const tipo = mv.type?.name;
+      if(!tipo || !validos.includes(tipo)) return;
+      const nombre = mv.movenames[0]?.name || slug.replace(/-/g,' ');
+      if(!porTipo[tipo]) porTipo[tipo] = [];
+      porTipo[tipo].push({mov:nombre, de:miembro.apodo || mon.es || mon.name, pot:mv.power});
+    });
+  }
+  const tiposAtaque = Object.keys(porTipo);
+
+  /* Combinaciones presentes en la pokédex elegida */
+  let ids;
+  try{ ids = await especiesDeDex(coberturaDex); }
+  catch(e){ if(caja) caja.innerHTML='<div class="hint">No se pudo cargar esa pokédex.</div>'; return; }
+
+  const combos = {};
+  ids.forEach(id=>{
+    const mon = allMons.find(x=>x.id===id);
+    if(!mon || !mon.types.length) return;
+    if(!mon.types.every(t=>validos.includes(t))) return;
+    const clave = [...mon.types].sort().join('/');
+    if(!combos[clave]) combos[clave] = {tipos:mon.types, mons:[]};
+    combos[clave].mons.push(mon.es || mon.name);
+  });
+
+  const filas = Object.values(combos).map(c=>{
+    let mejor = 0, via = [];
+    tiposAtaque.forEach(t=>{
+      const e = efectividadCon(tabla, t, c.tipos);
+      if(e>mejor){ mejor = e; via = [{tipo:t, quienes:porTipo[t]}]; }
+      else if(e===mejor && e>=2){ via.push({tipo:t, quienes:porTipo[t]}); }
+    });
+    return {...c, mult:mejor, via};
+  });
+  filas.sort((a,b)=> a.mult-b.mult || a.tipos.join().localeCompare(b.tipos.join()));
+
+  coberturaDatos = {filas, porTipo, tiposAtaque};
+  pintarCobertura();
+}
+
+function claseMult(m){
+  if(m>=4) return 'm4'; if(m>=2) return 'm2'; if(m>=1) return 'm1';
+  if(m>=.5) return 'mh'; if(m>0) return 'mq'; return 'm0';
+}
+
+function pintarCobertura(){
+  const caja = document.getElementById('cob-caja');
+  if(!caja || !coberturaDatos) return;
+  const {filas, porTipo, tiposAtaque} = coberturaDatos;
+
+  if(!tiposAtaque.length){
+    caja.innerHTML = '<div class="hint">El equipo no tiene movimientos de daño asignados todavía.</div>';
+    return;
+  }
+  if(!filas.length){
+    caja.innerHTML = '<div class="hint">Sin datos de esa pokédex.</div>';
+    return;
+  }
+
+  const x4 = filas.filter(f=>f.mult>=4).length;
+  const x2 = filas.filter(f=>f.mult>=2 && f.mult<4).length;
+  const sin = filas.filter(f=>f.mult<2).length;
+  const pc = Math.round((x4+x2)/filas.length*100);
+
+  caja.innerHTML = `
+    <div class="cob-cifra"><b>${x4+x2}</b><span>de ${filas.length} combinaciones · ${pc} %</span></div>
+    <div class="cob-barra">
+      <i style="width:${x4/filas.length*100}%;background:#1F6B57"></i>
+      <i style="width:${x2/filas.length*100}%;background:#2E7D6B"></i>
+      <i style="width:${sin/filas.length*100}%;background:#D9B8C4"></i>
+    </div>
+    <div class="cob-leyenda">
+      <span><i class="pt" style="background:#1F6B57"></i>x4: ${x4}</span>
+      <span><i class="pt" style="background:#2E7D6B"></i>x2: ${x2}</span>
+      <span><i class="pt" style="background:#D9B8C4"></i>sin cubrir: ${sin}</span>
+    </div>
+    <div class="cob-tipos">${tiposAtaque.map(t=>{
+      const n = porTipo[t].length;
+      return `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}${n>1?' ×'+n:''}</span>`;
+    }).join('')}</div>
+    <button class="btn btn-s" style="width:100%;margin-top:11px;" onclick="abrirCobertura()">
+      Ver detalle</button>`;
+}
+
+function abrirCobertura(){
+  if(!coberturaDatos) return;
+  coberturaTab = 'mal';
+  pintarDetalleCobertura();
+  openOverlay('ov-cobertura');
+}
+
+function setCobTab(t){ coberturaTab = t; pintarDetalleCobertura(); }
+
+function pintarDetalleCobertura(){
+  const {filas} = coberturaDatos;
+  const cubiertas = filas.filter(f=>f.mult>=2);
+  const sin = filas.filter(f=>f.mult<2);
+  const lista = coberturaTab==='mal' ? sin : [...cubiertas].sort((a,b)=>b.mult-a.mult);
+
+  document.getElementById('cob-sub').textContent = DEX_ES[coberturaDex] || coberturaDex;
+  document.getElementById('cob-tabs').innerHTML = `
+    <button class="pick-tab ${coberturaTab==='mal'?'on':''}" onclick="setCobTab('mal')">Sin cubrir (${sin.length})</button>
+    <button class="pick-tab ${coberturaTab==='bien'?'on':''}" onclick="setCobTab('bien')">Cubiertas (${cubiertas.length})</button>`;
+
+  const cont = document.getElementById('cob-lista');
+  if(!lista.length){
+    cont.innerHTML = `<div class="hint" style="padding:24px 12px;text-align:center;">${
+      coberturaTab==='mal'
+        ? 'Sin agujeros: el equipo llega a x2 contra todas las combinaciones de esta pokédex.'
+        : 'Ninguna combinación alcanza x2.'}</div>`;
+    return;
+  }
+  cont.innerHTML = lista.map(f=>`
+    <div class="combo ${f.mult<2?'malo':''}">
+      <div class="combo-top">
+        <span class="combo-tipos">${f.tipos.map(t=>
+          `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
+        <span class="mult ${claseMult(f.mult)}">x${f.mult}</span>
+      </div>
+      ${f.mult>=2 && f.via.length ? `<div class="combo-via">${
+        f.via.map(v=>v.quienes.map(q=>`${q.mov} (${q.de})`).join(', ')).join(' · ')}</div>` : ''}
+      <div class="combo-mons">${f.mons.join(' · ')}</div>
+    </div>`).join('');
+}
+
+function cambiarDexCobertura(slug){
+  coberturaDex = slug;
+  calcularCobertura();
 }
 
 /* ================= CONTROL DE CACHÉ ================= */
