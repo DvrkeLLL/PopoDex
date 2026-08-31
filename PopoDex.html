@@ -254,6 +254,74 @@ select:focus,input:focus{border-color:var(--accent);}
 .nav-i.active .nav-dot{background:var(--accent);}
 .soon{padding:70px 24px;text-align:center;}
 
+/* ---------- DAÑO ---------- */
+.tabs-hdr{display:flex;gap:5px;margin-top:11px;}
+.tab-h{
+  flex:1;font-family:var(--mono);font-size:9.5px;padding:9px 4px;border:1px solid var(--border);
+  border-bottom:none;border-radius:var(--r) var(--r) 0 0;background:var(--bg-panel);cursor:pointer;
+  color:var(--muted);text-transform:uppercase;text-align:center;
+}
+.tab-h.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+.grupo{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:13px 14px;margin-bottom:12px;
+}
+.grupo h3{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;color:var(--muted);
+  text-transform:uppercase;margin:0 0 10px;
+}
+.dn-fila{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+.dn-fila label{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:52px;
+  flex-shrink:0;text-transform:uppercase;}
+.dn-fila .n{width:56px !important;flex:0 0 56px;text-align:center;padding:8px 4px !important;}
+.dn-dato{font-family:var(--mono);font-size:9.5px;color:var(--muted);}
+.dn-mon{display:flex;align-items:center;gap:10px;}
+.dn-mon img{width:52px;height:52px;image-rendering:pixelated;flex-shrink:0;}
+.dn-mon-nom{font-size:13.5px;font-weight:600;text-transform:capitalize;}
+.res{
+  background:var(--bg-panel);border:1px solid var(--accent);border-radius:var(--r);
+  padding:15px;margin-bottom:12px;
+}
+.res.nulo{border-color:var(--alert);}
+.res-cifra{display:flex;align-items:baseline;gap:8px;}
+.res-cifra b{font-size:29px;font-family:var(--mono);line-height:1;}
+.res-cifra span{font-family:var(--mono);font-size:11.5px;color:var(--muted);}
+.res-pc{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent);margin-top:5px;}
+.res-barra{
+  height:9px;background:var(--bg-screen);border:1px solid var(--border);border-radius:5px;
+  overflow:hidden;margin:10px 0 9px;position:relative;
+}
+.res-barra i{position:absolute;top:0;bottom:0;left:0;background:var(--accent);opacity:.32;}
+.res-barra u{position:absolute;top:0;bottom:0;left:0;background:var(--accent);}
+.res-det{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.75;}
+.res-det b{color:var(--text);}
+.ko{
+  font-family:var(--mono);font-size:10.5px;font-weight:700;margin-top:8px;
+  padding:6px 9px;border-radius:var(--r);display:inline-block;
+}
+.ko.si{background:#E4F3ED;color:#2E7D6B;}
+.ko.no{background:var(--bg-screen);color:var(--muted);}
+.rank{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:11px 12px;margin-bottom:7px;
+}
+.rank.top{border-color:var(--accent);}
+.rank-top{display:flex;align-items:center;gap:8px;}
+.rank-pos{font-family:var(--mono);font-size:10px;color:var(--dim);width:16px;flex-shrink:0;}
+.rank-img{width:34px;height:34px;image-rendering:pixelated;flex-shrink:0;}
+.rank-main{flex:1;min-width:0;}
+.rank-mon{font-size:12.5px;font-weight:600;text-transform:capitalize;}
+.rank-mov{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:2px;}
+.rank-pc{font-family:var(--mono);font-size:13px;font-weight:700;text-align:right;flex-shrink:0;}
+.rank-barra{height:5px;background:var(--bg-screen);border-radius:3px;overflow:hidden;margin-top:8px;}
+.rank-barra i{display:block;height:100%;background:var(--accent);}
+.rank-etq{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap;align-items:center;}
+.etq{font-family:var(--mono);font-size:8.5px;padding:2px 6px;border-radius:2px;
+  background:var(--bg-screen);color:var(--muted);}
+.etq.sup{background:#E4F3ED;color:#2E7D6B;font-weight:700;}
+.etq.stab{background:#E4F3ED;color:#2E7D6B;}
+.etq.mal{background:#FDEEF3;color:var(--alert);}
+
 /* ---------- EQUIPO ---------- */
 .eq-card{
   background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
@@ -628,9 +696,21 @@ select:focus,input:focus{border-color:var(--accent);}
     <div class="pad" id="eq-body"></div>
   </div>
 
-  <div class="screen" id="s-dano"><div class="hdr"><h1 class="hdr-title">Daño</h1></div>
-    <div class="soon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></svg>
-    <h3>Próximo apartado</h3><p>Calculadora de daño con EVs, IVs, nivel y reglas por juego.</p></div></div>
+  <div class="screen" id="s-dano">
+    <div class="hdr">
+      <div class="hdr-row">
+        <div>
+          <p class="hdr-sub" id="dn-sub">Calculadora</p>
+          <h1 class="hdr-title">Daño</h1>
+        </div>
+      </div>
+      <div class="tabs-hdr">
+        <button class="tab-h on" id="tb-calc" onclick="setPanelDanio('calc')">Daño teórico</button>
+        <button class="tab-h" id="tb-mejor" onclick="setPanelDanio('mejor')">Mejor atacante</button>
+      </div>
+    </div>
+    <div class="pad" id="dn-body"></div>
+  </div>
 
   <div class="screen" id="s-info"><div class="hdr"><h1 class="hdr-title">Info útil</h1></div>
     <div class="soon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/></svg>
@@ -1287,6 +1367,8 @@ function goTo(id){
   document.getElementById('s-'+id).classList.add('active');
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.toggle('active', n.dataset.go===id));
   document.querySelector('.screen.active').scrollTop = 0;
+  if(id==='equipo' && equipoAbierto===null) renderEquipos();
+  if(id==='dano') renderDanio();
 }
 document.querySelectorAll('[data-go]').forEach(el=>{
   el.addEventListener('click',()=>goTo(el.dataset.go));
@@ -3331,6 +3413,412 @@ function pintarDetalleCobertura(){
 function cambiarDexCobertura(slug){
   coberturaDex = slug;
   calcularCobertura();
+}
+
+/* ================= DAÑO ================= */
+
+/* Habilidades con efecto sobre el daño (por su nombre interno) */
+const HAB_EFECTO = {
+  blaze:{pot:(t,bajo)=>t==='fire'&&bajo?1.5:1},
+  overgrow:{pot:(t,bajo)=>t==='grass'&&bajo?1.5:1},
+  torrent:{pot:(t,bajo)=>t==='water'&&bajo?1.5:1},
+  swarm:{pot:(t,bajo)=>t==='bug'&&bajo?1.5:1},
+  adaptability:{stab:2},
+  'huge-power':{ataque:2, soloFisico:true},
+  'pure-power':{ataque:2, soloFisico:true},
+  levitate:{inmune:['ground']},
+  'flash-fire':{inmune:['fire']},
+  'water-absorb':{inmune:['water']},
+  'dry-skin':{inmune:['water']},
+  'storm-drain':{inmune:['water']},
+  'volt-absorb':{inmune:['electric']},
+  'lightning-rod':{inmune:['electric']},
+  'motor-drive':{inmune:['electric']},
+  'sap-sipper':{inmune:['grass']},
+  'thick-fat':{recibe:t=>['fire','ice'].includes(t)?0.5:1},
+  heatproof:{recibe:t=>t==='fire'?0.5:1},
+  'solid-rock':{recibeSup:0.75},
+  filter:{recibeSup:0.75},
+  'prism-armor':{recibeSup:0.75},
+  intimidate:{bajaAtaque:true},
+  'wonder-guard':{soloSuper:true}
+};
+
+/* Fórmula de daño. Devuelve el rango mínimo y máximo. */
+function calcularDanio(o){
+  const {gen, atkMon, defMon, mov, atk, def} = o;
+  const tb = tablaPara(gen);
+  const hA = HAB_EFECTO[atk.hab] || {};
+  const hD = HAB_EFECTO[def.hab] || {};
+
+  const tipoMov = mov.tipo;
+  const tiposDef = tiposEnGen(defMon, gen);
+  const tiposAtk = tiposEnGen(atkMon, gen);
+
+  /* Hasta la 3.ª generación, la categoría la decide el tipo del movimiento */
+  const cat = gen<=3 ? (TCAT[tipoMov]||'physical') : mov.clase;
+  if(cat==='status' || !mov.pot) return {nulo:'Ese movimiento no hace daño directo'};
+
+  if(hD.inmune && hD.inmune.includes(tipoMov))
+    return {nulo:`Su habilidad lo hace inmune a ${TES[tipoMov]}`};
+
+  const ef = tiposDef.reduce((m,t)=>m*(tb[tipoMov]?.[t] ?? 1), 1);
+  if(ef===0) return {nulo:`${tiposDef.map(t=>TES[t]).join('/')} es inmune a ${TES[tipoMov]}`};
+  if(hD.soloSuper && ef<=1) return {nulo:'Su habilidad bloquea todo lo que no sea superefectivo'};
+
+  const claveA = cat==='physical' ? 'attack' : 'special-attack';
+  const claveD = cat==='physical' ? 'defense' : 'special-defense';
+
+  let ataque = calcularStat(claveA, atkMon.stats[claveA]||0, atk.iv, atk.ev, atk.nivel, gen, atk.nat);
+  const defensa = calcularStat(claveD, defMon.stats[claveD]||0, def.iv, def.ev, def.nivel, gen, def.nat);
+  const psDef  = calcularStat('hp', defMon.stats.hp||0, def.iv, def.ev, def.nivel, gen, def.nat);
+
+  if(hA.ataque && (!hA.soloFisico || cat==='physical')) ataque = Math.floor(ataque*hA.ataque);
+  let intimida=false;
+  if(hD.bajaAtaque && cat==='physical'){ ataque = Math.floor(ataque*2/3); intimida=true; }
+
+  let potencia = mov.pot;
+  if(hA.pot) potencia = Math.floor(potencia * hA.pot(tipoMov, atk.bajo));
+
+  const base = Math.floor(Math.floor(Math.floor(2*atk.nivel/5+2)*potencia*ataque/defensa)/50)+2;
+
+  const stab = tiposAtk.includes(tipoMov) ? (hA.stab||1.5) : 1;
+  let mod = stab*ef, reduce=false;
+  if(hD.recibe){ const r=hD.recibe(tipoMov); if(r!==1){ mod*=r; reduce=true; } }
+  if(hD.recibeSup && ef>1){ mod*=hD.recibeSup; reduce=true; }
+
+  /* En 1.ª generación el azar iba de 217 a 255 sobre 255 */
+  const rMin = gen===1 ? 217/255 : 0.85;
+  const max = Math.max(1, Math.floor(base*mod));
+  const min = Math.max(1, Math.floor(Math.floor(base*mod)*rMin));
+
+  return {min, max, psDef, ef, stab, cat, ataque, defensa, potencia, intimida, reduce,
+          pcMin:min/psDef*100, pcMax:max/psDef*100,
+          golpes:Math.ceil(psDef/max), golpesMax:Math.ceil(psDef/min)};
+}
+
+/* ---------- Estado de la pantalla ---------- */
+let dnPanel = 'calc';
+let dnEquipo = 0, dnMiembro = 0, dnMov = 0;
+let dnRival = null;
+let dnRivalCfg = {nivel:50, iv:31, ev:0, nat:'hardy', hab:''};
+let dnHabsRival = [];
+let dnMovsCache = {};
+
+function setPanelDanio(p){
+  dnPanel = p;
+  document.getElementById('tb-calc').classList.toggle('on', p==='calc');
+  document.getElementById('tb-mejor').classList.toggle('on', p==='mejor');
+  renderDanio();
+}
+
+async function movsAsignados(miembro, juego){
+  const ck = miembro.pid+':'+juego;
+  if(dnMovsCache[ck]) return dnMovsCache[ck];
+  const gen = genDeJuego(juego);
+  await cargarCambiosMov();
+  let info;
+  try{ info = await movsDe(miembro.pid, GRUPO_VERSION[juego]||''); }catch(e){ return []; }
+  const lista = miembro.movimientos.filter(Boolean).map(slug=>{
+    const fila = info.pokemonmove.find(r=>r.move.name===slug);
+    if(!fila) return null;
+    const mv = fila.move;
+    const v = valoresMov(slug, gen, {pot:mv.power, prec:mv.accuracy, pp:mv.pp,
+                                     tipo:mv.type?.name||'normal'});
+    return {slug, es:mv.movenames[0]?.name || slug.replace(/-/g,' '),
+            tipo:v.tipo, pot:v.pot, prec:v.prec,
+            clase:mv.movedamageclass?.name || 'status'};
+  }).filter(Boolean);
+  dnMovsCache[ck] = lista;
+  return lista;
+}
+
+async function habilidadesDe(pid){
+  const ck='hab:'+pid;
+  let d = Cache.get(ck);
+  if(!d){
+    d = await gql(`{ pokemon(where:{id:{_eq:${pid}}}) {
+      pokemonabilities(order_by:{slot:asc}) { is_hidden
+        ability { name abilitynames(where:{language_id:{_eq:${ES}}}) { name } } } } }`);
+    Cache.set(ck,d);
+  }
+  return d.pokemon[0].pokemonabilities.map(a=>({
+    slug:a.ability.name,
+    es:(a.ability.abilitynames[0]?.name || a.ability.name.replace(/-/g,' '))+(a.is_hidden?' (oculta)':'')
+  }));
+}
+
+async function renderDanio(){
+  const body = document.getElementById('dn-body');
+  if(!equipos.length){
+    body.innerHTML = `<div class="eq-vacio">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></svg>
+      <p>Necesitas al menos un equipo.<br>Créalo en el apartado Equipo.</p></div>
+      <button class="btn btn-p" style="width:100%;margin-top:8px;"
+        onclick="goTo('equipo')">Ir a Equipo</button>`;
+    return;
+  }
+  if(dnEquipo>=equipos.length) dnEquipo = 0;
+  const eq = equipos[dnEquipo];
+  document.getElementById('dn-sub').textContent = `${eq.nombre} · ${nombreDeJuego(eq.juego)}`;
+
+  if(!eq.miembros.length){
+    body.innerHTML = `${selectorEquipo()}
+      <div class="eq-vacio"><p>Este equipo está vacío.<br>Agrega pokémon desde la Pokédex.</p></div>`;
+    return;
+  }
+  if(dnMiembro>=eq.miembros.length) dnMiembro = 0;
+  if(!dnRival) dnRival = eq.miembros[0].pid;
+
+  body.innerHTML = selectorEquipo() + '<div class="hint">Calculando...</div>';
+  if(dnPanel==='calc') await panelCalculo();
+  else await panelMejor();
+}
+
+function selectorEquipo(){
+  if(equipos.length<2) return '';
+  return `<div class="dn-fila" style="margin-bottom:12px;">
+    <label>Equipo</label>
+    <select onchange="dnEquipo=Number(this.value);dnMiembro=0;renderDanio()">
+      ${equipos.map((e,i)=>`<option value="${i}" ${i===dnEquipo?'selected':''}>${e.nombre}</option>`).join('')}
+    </select></div>`;
+}
+
+/* ---------- Pestaña 1: daño teórico ---------- */
+async function panelCalculo(){
+  const eq = equipos[dnEquipo];
+  const gen = genDeJuego(eq.juego);
+  const miembro = eq.miembros[dnMiembro];
+  const atkMon = allMons.find(x=>x.id===miembro.pid);
+  const defMon = allMons.find(x=>x.id===dnRival);
+  const movs = await movsAsignados(miembro, eq.juego);
+
+  if(!dnHabsRival.length || dnHabsRival.pid!==dnRival){
+    try{ dnHabsRival = await habilidadesDe(dnRival); dnHabsRival.pid = dnRival; }
+    catch(e){ dnHabsRival = []; }
+    if(!dnRivalCfg.hab && dnHabsRival.length) dnRivalCfg.hab = dnHabsRival[0].slug;
+  }
+
+  let resHTML = '<div class="hint">Este pokémon no tiene movimientos asignados. Ponlos en el apartado Equipo.</div>';
+  if(movs.length){
+    if(dnMov>=movs.length) dnMov = 0;
+    const r = calcularDanio({
+      gen, atkMon, defMon, mov:movs[dnMov],
+      atk:{nivel:miembro.nivel, iv:miembro.ivs.attack, ev:miembro.evs.attack,
+           nat:miembro.naturaleza, hab:miembro.habilidad, bajo:false},
+      def:{nivel:dnRivalCfg.nivel, iv:dnRivalCfg.iv, ev:dnRivalCfg.ev,
+           nat:dnRivalCfg.nat, hab:dnRivalCfg.hab}
+    });
+    /* El ataque correcto según la categoría */
+    if(!r.nulo){
+      const cat = gen<=3 ? (TCAT[movs[dnMov].tipo]||'physical') : movs[dnMov].clase;
+      const cl = cat==='physical' ? 'attack' : 'special-attack';
+      const r2 = calcularDanio({
+        gen, atkMon, defMon, mov:movs[dnMov],
+        atk:{nivel:miembro.nivel, iv:miembro.ivs[cl], ev:miembro.evs[cl],
+             nat:miembro.naturaleza, hab:miembro.habilidad, bajo:false},
+        def:{nivel:dnRivalCfg.nivel, iv:dnRivalCfg.iv, ev:dnRivalCfg.ev,
+             nat:dnRivalCfg.nat, hab:dnRivalCfg.hab}
+      });
+      resHTML = pintarResultado(r2, gen);
+    }else{
+      resHTML = `<div class="res nulo"><div class="res-cifra"><b>0</b><span>sin efecto</span></div>
+        <div class="res-det" style="margin-top:8px;">${r.nulo}</div></div>`;
+    }
+  }
+
+  document.getElementById('dn-body').innerHTML = selectorEquipo() + `
+    <div class="grupo">
+      <h3>Atacante</h3>
+      <div class="dn-mon">
+        <img src="${SPRITE(miembro.pid)}" alt="">
+        <div style="flex:1;min-width:0;">
+          <div class="dn-mon-nom">${miembro.apodo || atkMon.es}</div>
+          <div class="dn-dato">Nv. ${miembro.nivel} · ${
+            (NATURALEZAS.find(n=>n.slug===miembro.naturaleza)||{es:'—'}).es}</div>
+          <div class="tipos" style="margin-top:5px;">${tiposEnGen(atkMon,gen).map(t=>
+            `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</div>
+        </div>
+      </div>
+      <div class="dn-fila" style="margin-top:11px;">
+        <label>Quién</label>
+        <select onchange="dnMiembro=Number(this.value);dnMov=0;renderDanio()">
+          ${eq.miembros.map((m,i)=>{
+            const mo=allMons.find(x=>x.id===m.pid)||{};
+            return `<option value="${i}" ${i===dnMiembro?'selected':''}>${m.apodo||mo.es}</option>`;
+          }).join('')}
+        </select>
+      </div>
+      ${movs.length?`<div class="dn-fila">
+        <label>Mov.</label>
+        <select onchange="dnMov=Number(this.value);renderDanio()">
+          ${movs.map((m,i)=>`<option value="${i}" ${i===dnMov?'selected':''}>${m.es} · ${m.pot||'—'}</option>`).join('')}
+        </select></div>`:''}
+    </div>
+
+    <div class="grupo">
+      <h3>Defensor</h3>
+      <div class="dn-mon">
+        <img src="${SPRITE(dnRival)}" alt="">
+        <div style="flex:1;min-width:0;">
+          <div class="dn-mon-nom">${defMon?defMon.es:'—'}</div>
+          <div class="tipos" style="margin-top:5px;">${defMon?tiposEnGen(defMon,gen).map(t=>
+            `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join(''):''}</div>
+        </div>
+      </div>
+      <button class="btn btn-s" style="width:100%;margin-top:10px;" onclick="elegirRival()">
+        Cambiar rival</button>
+      <div class="dn-fila" style="margin-top:10px;">
+        <label>Nivel</label>
+        <input class="n" type="number" min="1" max="100" value="${dnRivalCfg.nivel}"
+               onchange="setRival('nivel',this.value)">
+        <label style="width:auto;">IV / EV</label>
+        <input class="n" type="number" min="0" max="31" value="${dnRivalCfg.iv}"
+               onchange="setRival('iv',this.value)">
+        <input class="n" type="number" min="0" max="252" value="${dnRivalCfg.ev}"
+               onchange="setRival('ev',this.value)">
+      </div>
+      ${gen>=3?`<div class="dn-fila">
+        <label>Natur.</label>
+        <select onchange="setRival('nat',this.value)">
+          ${NATURALEZAS.map(n=>`<option value="${n.slug}" ${n.slug===dnRivalCfg.nat?'selected':''}>${n.es}</option>`).join('')}
+        </select></div>
+      <div class="dn-fila">
+        <label>Habil.</label>
+        <select onchange="setRival('hab',this.value)">
+          ${dnHabsRival.map(h=>`<option value="${h.slug}" ${h.slug===dnRivalCfg.hab?'selected':''}>${h.es}</option>`).join('')}
+        </select></div>`:''}
+    </div>
+
+    ${resHTML}`;
+}
+
+function pintarResultado(r, gen){
+  const efTxt = r.ef>=4?'x4 superefectivo': r.ef>=2?'x2 superefectivo':
+                r.ef===1?'neutro': r.ef>=0.5?'x0.5 poco eficaz':'x0.25 poco eficaz';
+  return `
+    <div class="res">
+      <div class="res-cifra"><b>${r.min}–${r.max}</b><span>de ${r.psDef} PS</span></div>
+      <div class="res-pc">${r.pcMin.toFixed(1)} % – ${r.pcMax.toFixed(1)} %</div>
+      <div class="res-barra">
+        <i style="width:${Math.min(r.pcMax,100)}%"></i>
+        <u style="width:${Math.min(r.pcMin,100)}%"></u>
+      </div>
+      <div class="res-det">
+        Categoría: <b>${r.cat==='physical'?'Físico':'Especial'}</b>${gen<=3?' (por el tipo del movimiento)':''}<br>
+        Efectividad: <b>${efTxt}</b><br>
+        ${r.stab>1?`Bonificación por tipo: <b>x${r.stab}</b><br>`:''}
+        Ataque <b>${r.ataque}</b> contra defensa <b>${r.defensa}</b>
+        ${r.intimida?'<br>Intimidación reduce el ataque':''}
+        ${r.reduce?'<br>La habilidad del rival reduce el daño':''}
+      </div>
+      <div class="ko ${r.golpes<=2?'si':'no'}">
+        ${r.golpes===r.golpesMax?`Derriba en ${r.golpes} golpe${r.golpes>1?'s':''}`
+          :`Derriba en ${r.golpes}–${r.golpesMax} golpes`}
+      </div>
+    </div>`;
+}
+
+function setRival(campo, v){
+  if(campo==='nivel') v=Math.max(1,Math.min(100,Number(v)||1));
+  if(campo==='iv')    v=Math.max(0,Math.min(31,Number(v)||0));
+  if(campo==='ev')    v=Math.max(0,Math.min(252,Number(v)||0));
+  dnRivalCfg[campo]=v;
+  renderDanio();
+}
+
+function elegirRival(){
+  abrirSelector({
+    titulo:'Elegir rival', sub:'Contra quién calcular', buscar:true,
+    actual:String(dnRival),
+    opciones: allMons.filter(existeEnJuego).map(m=>({
+      valor:String(m.id), nombre:m.es||m.name, img:SPRITE(m.id),
+      detalle: tiposDe(m).map(t=>TES[t]).join(' / ')
+    })),
+    alElegir: v=>{ dnRival=Number(v); dnHabsRival=[]; dnRivalCfg.hab=''; renderDanio(); }
+  });
+}
+
+/* ---------- Pestaña 2: mejor atacante ---------- */
+async function panelMejor(){
+  const eq = equipos[dnEquipo];
+  const gen = genDeJuego(eq.juego);
+  const defMon = allMons.find(x=>x.id===dnRival);
+
+  if(!dnHabsRival.length || dnHabsRival.pid!==dnRival){
+    try{ dnHabsRival = await habilidadesDe(dnRival); dnHabsRival.pid = dnRival; }
+    catch(e){ dnHabsRival = []; }
+    if(!dnRivalCfg.hab && dnHabsRival.length) dnRivalCfg.hab = dnHabsRival[0].slug;
+  }
+
+  const filas=[];
+  for(let i=0;i<eq.miembros.length;i++){
+    const miembro = eq.miembros[i];
+    const atkMon = allMons.find(x=>x.id===miembro.pid);
+    if(!atkMon) continue;
+    const movs = await movsAsignados(miembro, eq.juego);
+    movs.forEach(mv=>{
+      const cat = gen<=3 ? (TCAT[mv.tipo]||'physical') : mv.clase;
+      const cl = cat==='physical' ? 'attack' : 'special-attack';
+      const r = calcularDanio({
+        gen, atkMon, defMon, mov:mv,
+        atk:{nivel:miembro.nivel, iv:miembro.ivs[cl], ev:miembro.evs[cl],
+             nat:miembro.naturaleza, hab:miembro.habilidad, bajo:false},
+        def:{nivel:dnRivalCfg.nivel, iv:dnRivalCfg.iv, ev:dnRivalCfg.ev,
+             nat:dnRivalCfg.nat, hab:dnRivalCfg.hab}
+      });
+      if(r.nulo) return;
+      filas.push({...r, nombre:miembro.apodo||atkMon.es, pid:miembro.pid, mv});
+    });
+  }
+  filas.sort((a,b)=>b.max-a.max);
+
+  document.getElementById('dn-body').innerHTML = selectorEquipo() + `
+    <div class="grupo">
+      <h3>Rival</h3>
+      <div class="dn-mon">
+        <img src="${SPRITE(dnRival)}" alt="">
+        <div style="flex:1;min-width:0;">
+          <div class="dn-mon-nom">${defMon?defMon.es:'—'}</div>
+          <div class="tipos" style="margin-top:5px;">${defMon?tiposEnGen(defMon,gen).map(t=>
+            `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join(''):''}</div>
+        </div>
+      </div>
+      <button class="btn btn-s" style="width:100%;margin-top:10px;" onclick="elegirRival()">
+        Cambiar rival</button>
+      <div class="dn-fila" style="margin-top:10px;">
+        <label>Nivel</label>
+        <input class="n" type="number" min="1" max="100" value="${dnRivalCfg.nivel}"
+               onchange="setRival('nivel',this.value)">
+        <label style="width:auto;">IV / EV</label>
+        <input class="n" type="number" min="0" max="31" value="${dnRivalCfg.iv}"
+               onchange="setRival('iv',this.value)">
+        <input class="n" type="number" min="0" max="252" value="${dnRivalCfg.ev}"
+               onchange="setRival('ev',this.value)">
+      </div>
+    </div>
+    ${!filas.length
+      ? '<div class="hint">Ningún movimiento del equipo hace daño a este rival.</div>'
+      : filas.slice(0,12).map((f,i)=>`
+        <div class="rank ${i===0?'top':''}">
+          <div class="rank-top">
+            <span class="rank-pos">${i+1}</span>
+            <img class="rank-img" src="${SPRITE(f.pid)}" alt="">
+            <span class="rank-main">
+              <span class="rank-mon">${f.nombre}</span>
+              <span class="rank-mov">${f.mv.es} · ${f.cat==='physical'?'Físico':'Especial'}</span>
+            </span>
+            <span class="rank-pc">${f.pcMax.toFixed(0)} %</span>
+          </div>
+          <div class="rank-barra"><i style="width:${Math.min(f.pcMax,100)}%"></i></div>
+          <div class="rank-etq">
+            <span class="tchip" style="background:${TCOLOR[f.mv.tipo]}">${TES[f.mv.tipo]}</span>
+            ${f.ef>1?`<span class="etq sup">x${f.ef}</span>`:f.ef<1?`<span class="etq mal">x${f.ef}</span>`:''}
+            ${f.stab>1?'<span class="etq stab">STAB</span>':''}
+            <span class="etq">${f.min}–${f.max} de ${f.psDef}</span>
+            <span class="etq">${f.golpes} golpe${f.golpes>1?'s':''}</span>
+          </div>
+        </div>`).join('')}`;
 }
 
 /* ================= CONTROL DE CACHÉ ================= */
