@@ -42,7 +42,22 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
   font-family:var(--mono);font-size:9px;min-width:16px;height:16px;border-radius:8px;
   display:flex;align-items:center;justify-content:center;padding:0 4px;
 }
-.gen-jump{display:flex;gap:4px;margin-top:10px;}
+.buscador{
+  display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--bg-panel);
+  border:1px solid var(--border);border-radius:var(--r);padding:0 10px;
+}
+.buscador:focus-within{border-color:var(--accent);}
+.buscador svg{width:16px;height:16px;stroke:var(--dim);fill:none;stroke-width:2;
+  stroke-linecap:round;flex-shrink:0;}
+.buscador input{
+  flex:1;border:none;background:none;padding:10px 0;font-family:var(--mono);
+  font-size:16px;color:var(--text);outline:none;min-width:0;
+}
+.buscador button{
+  background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;
+  padding:0 2px;flex-shrink:0;line-height:1;
+}
+.gen-jump{display:flex;gap:4px;margin-top:9px;}
 .gen-jump button{
   flex:1;font-family:var(--mono);font-size:11px;font-weight:700;padding:6px 0;
   border:1px solid color-mix(in srgb, var(--gc) 35%, transparent);
@@ -70,6 +85,16 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
 .mini{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);padding:8px 4px;text-align:center;cursor:pointer;}
 .mini img{width:46px;height:46px;image-rendering:pixelated;}
 .mini div{font-family:var(--mono);font-size:8.5px;color:var(--muted);}
+.copia{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:13px 14px;
+}
+.copia-txt{font-size:11.5px;color:var(--muted);line-height:1.55;margin:0 0 11px;}
+.copia-btns{display:flex;gap:8px;}
+.copia-info{font-family:var(--mono);font-size:9.5px;color:var(--muted);
+  margin-top:9px;line-height:1.5;}
+.copia-info.ok{color:#2E7D6B;}
+.copia-info.err{color:var(--alert);}
 .cache-box{
   display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:24px;
   background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;
@@ -729,6 +754,18 @@ select:focus,input:focus{border-color:var(--accent);}
       <p class="section-label">Iniciales</p>
       <div class="mini-grid" id="starters"></div>
 
+      <p class="section-label" style="margin-top:24px;">Copia de seguridad</p>
+      <div class="copia">
+        <p class="copia-txt">Guarda tus equipos y ajustes en un archivo para
+          pasarlos a otro dispositivo o navegador. No necesitas cuenta.</p>
+        <div class="copia-btns">
+          <button class="btn btn-p" onclick="descargarCopia()">Descargar copia</button>
+          <button class="btn btn-s" onclick="document.getElementById('archivo-copia').click()">Restaurar</button>
+        </div>
+        <input type="file" id="archivo-copia" accept="application/json,.json" style="display:none;">
+        <div class="copia-info" id="copia-info"></div>
+      </div>
+
       <div class="cache-box">
         <div>
           <div class="cache-t">Datos guardados</div>
@@ -753,6 +790,11 @@ select:focus,input:focus{border-color:var(--accent);}
           <svg viewBox="0 0 24 24"><path d="M4 7h16M7 12h10M10 17h4"/></svg>
           <span class="badge-count" id="f-count" style="display:none;">0</span>
         </button>
+      </div>
+      <div class="buscador">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        <input type="text" id="dex-busca" placeholder="Buscar por nombre o número..." autocomplete="off">
+        <button id="dex-limpiar" onclick="limpiarBusqueda()" style="display:none;">✕</button>
       </div>
       <div class="gen-jump" id="gen-jump">
         <button data-jump="1" style="--gc:#D64541">1</button>
@@ -1192,7 +1234,7 @@ let allMons = [];          // {id,name,es,types,stats,total,rank,methods}
 let currentList = [];      // lo que se muestra en la grilla (ya filtrado y ordenado)
 let openMonId = null;      // pokémon abierto en el panel de detalle
 let detailCache = {};      // id -> datos completos (moves, abilities...)
-let filters = {gens:[],sort:"",mins:{},types:[],cats:[],moves:[],ranks:[]};
+let filters = {gens:[],sort:"",mins:{},types:[],cats:[],moves:[],ranks:[],texto:""};
 let dataReady = false;
 
 /* ================= JUEGO ACTUAL ================= */
@@ -1612,7 +1654,14 @@ async function loadAll(){
 }
 
 /* ================= RENDER GRID ================= */
+const normTxt = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+
 function passesFilters(m){
+  if(filters.texto){
+    const t = filters.texto;
+    if(!(normTxt(m.es).includes(t) || m.name.includes(t) || String(m.id)===t
+         || String(m.id).padStart(3,'0')===t)) return false;
+  }
   if(filters.gens.length){
     const inAny = filters.gens.some(g=>{
       const [a,b]=GEN_RANGE[g];
@@ -1774,6 +1823,16 @@ function buildTypeChips(){
 document.querySelectorAll('[data-cat],[data-mv],[data-rank]').forEach(p=>{
   p.addEventListener('click',()=>p.classList.toggle('on'));
 });
+document.getElementById('archivo-copia').addEventListener('change',e=>{
+  const f = e.target.files[0];
+  if(f) leerCopia(f);
+  e.target.value = '';
+});
+document.getElementById('dex-busca').addEventListener('input',e=>{
+  filters.texto = normTxt(e.target.value.trim());
+  document.getElementById('dex-limpiar').style.display = e.target.value ? 'block' : 'none';
+  render();
+});
 document.querySelectorAll('[data-sort]').forEach(b=>{
   b.addEventListener('click',()=>{
     document.querySelectorAll('[data-sort]').forEach(x=>x.classList.remove('on'));
@@ -1844,6 +1903,13 @@ function methodsNote(map){
   map.forEach(ms=>ms.forEach(m=>all.add(m)));
   if(all.has('*')) return ' (sin datos de método)';
   return '';
+}
+
+function limpiarBusqueda(){
+  document.getElementById('dex-busca').value='';
+  document.getElementById('dex-limpiar').style.display='none';
+  filters.texto='';
+  render();
 }
 
 function clearFilters(){
@@ -4215,6 +4281,117 @@ function elegirEquipoPanel(i){
   closeOverlay('ov-equipos');
   const cb = equiposCallback;
   if(cb) cb(i);
+}
+
+/* ================= COPIA DE SEGURIDAD ================= */
+const COPIA_VER = 1;
+
+function armarCopia(){
+  return {
+    app:'PopoDex',
+    version:COPIA_VER,
+    fecha:new Date().toISOString(),
+    equipos: equipos,
+    juego: juegoActual
+  };
+}
+
+function descargarCopia(){
+  try{
+    const datos = armarCopia();
+    const blob = new Blob([JSON.stringify(datos,null,2)],{type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const f = new Date();
+    const sello = `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}-${String(f.getDate()).padStart(2,'0')}`;
+    a.href = url;
+    a.download = `popodex-${sello}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    const n = datos.equipos.reduce((t,e)=>t+e.miembros.length,0);
+    infoCopia(`Copia descargada · ${datos.equipos.length} equipo${datos.equipos.length===1?'':'s'}, ${n} pokémon`, 'ok');
+    aviso('Copia descargada');
+  }catch(e){ infoCopia('No se pudo generar el archivo.','err'); }
+}
+
+function infoCopia(txt, clase){
+  const el = document.getElementById('copia-info');
+  if(!el) return;
+  el.textContent = txt;
+  el.className = 'copia-info' + (clase?' '+clase:'');
+}
+
+function leerCopia(archivo){
+  const lector = new FileReader();
+  lector.onload = ()=>{
+    let datos;
+    try{ datos = JSON.parse(lector.result); }
+    catch(e){ return infoCopia('El archivo no es una copia válida.','err'); }
+    if(!datos || datos.app!=='PopoDex' || !Array.isArray(datos.equipos))
+      return infoCopia('El archivo no parece una copia de PopoDex.','err');
+
+    const nuevos = datos.equipos.filter(e=>e && typeof e.nombre==='string' && Array.isArray(e.miembros));
+    if(!nuevos.length) return infoCopia('La copia no contiene equipos.','err');
+    const n = nuevos.reduce((t,e)=>t+e.miembros.length,0);
+    const f = datos.fecha ? new Date(datos.fecha).toLocaleDateString('es') : 'sin fecha';
+
+    confirmarCopia(nuevos, datos.juego, n, f);
+  };
+  lector.onerror = ()=>infoCopia('No se pudo leer el archivo.','err');
+  lector.readAsText(archivo);
+}
+
+function confirmarCopia(nuevos, juego, n, fecha){
+  document.getElementById('cf-titulo').textContent = 'Restaurar copia';
+  document.getElementById('cf-texto').innerHTML =
+    `Copia del ${fecha} con <b>${nuevos.length} equipo${nuevos.length===1?'':'s'}</b> y ${n} pokémon.` +
+    (equipos.length ? `<br><br>Ya tienes ${equipos.length} equipo${equipos.length===1?'':'s'} guardado${equipos.length===1?'':'s'}. ¿Qué prefieres?` : '');
+  const ok = document.getElementById('cf-ok');
+  ok.textContent = equipos.length ? 'Añadir' : 'Restaurar';
+  ok.style.background = 'var(--accent)';
+  ok.style.borderColor = 'var(--accent)';
+  ok.onclick = ()=>{
+    closeOverlay('ov-confirmar');
+    equipos = equipos.concat(nuevos);
+    aplicarCopia(juego, nuevos.length, 'añadidos');
+  };
+
+  const pie = ok.parentElement;
+  let extra = document.getElementById('cf-reemplazar');
+  if(extra) extra.remove();
+  if(equipos.length){
+    extra = document.createElement('button');
+    extra.id = 'cf-reemplazar';
+    extra.className = 'btn';
+    extra.style.cssText = 'background:transparent;color:var(--alert);border-color:#f0c4d0;';
+    extra.textContent = 'Reemplazar';
+    extra.onclick = ()=>{
+      closeOverlay('ov-confirmar');
+      equipos = nuevos;
+      aplicarCopia(juego, nuevos.length, 'restaurados');
+    };
+    pie.appendChild(extra);
+  }
+  openOverlay('ov-confirmar');
+}
+
+function aplicarCopia(juego, cuantos, verbo){
+  guardarEquipos();
+  if(juego!==undefined){
+    juegoActual = juego || '';
+    guardarJuego();
+    pintarCampoJuego();
+    if(juegoActual) cargarTiposPasados().then(render); else render();
+  }
+  renderEquipos();
+  equipoAbierto = null;
+  dnMovsCache = {};
+  infoCopia(`${cuantos} equipo${cuantos===1?'':'s'} ${verbo}.`, 'ok');
+  aviso('Copia restaurada');
+  const extra = document.getElementById('cf-reemplazar');
+  if(extra) extra.remove();
 }
 
 /* ================= CONTROL DE CACHÉ ================= */
