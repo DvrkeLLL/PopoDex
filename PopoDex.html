@@ -305,7 +305,19 @@ select:focus,input:focus{border-color:var(--accent);}
 .mi-cab{display:flex;gap:8px;padding:0 11px 6px;font-family:var(--mono);font-size:8.5px;
   color:var(--dim);text-transform:uppercase;letter-spacing:.06em;}
 .mi-cab .a{flex:1;} .mi-cab .b{width:30px;text-align:right;}
-.mi-cuenta{font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 0 8px;}
+.mi-cuenta{font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 0 8px;line-height:1.5;}
+.sm-cab{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);background:var(--bg-screen);padding:6px 9px;margin:10px 0 0;
+  border-radius:0 var(--r) var(--r) 0;
+}
+.sm-fila{
+  display:flex;align-items:center;gap:8px;padding:8px 9px;cursor:pointer;
+  border-bottom:1px solid var(--border);
+}
+.sm-fila:active,.sm-fila.on{background:var(--bg-screen);}
+.sm-main{flex:1;min-width:0;}
+.sm-nom{font-size:12.5px;font-weight:500;}
 .tabla-tipo{display:flex;flex-direction:column;gap:9px;}
 .tt-fila{display:flex;gap:6px;align-items:flex-start;}
 .tt-mult{font-family:var(--mono);font-size:10px;font-weight:700;min-width:40px;
@@ -754,6 +766,11 @@ select:focus,input:focus{border-color:var(--accent);}
 .campo-x{font-family:var(--mono);font-size:13px;color:var(--dim);flex-shrink:0;}
 .campo img{width:22px;height:22px;flex-shrink:0;image-rendering:pixelated;}
 .juego-campo{background:var(--bg-panel);width:100%;padding:12px 13px;}
+.jm{width:30px;height:30px;image-rendering:pixelated;flex-shrink:0;}
+.juegos button{display:flex;align-items:center;gap:5px;justify-content:flex-start;}
+.juegos button .jm{width:26px;height:26px;}
+.juegos button span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;text-align:left;}
 
 /* ---------- COBERTURA ---------- */
 .cob-bloque{
@@ -1101,6 +1118,38 @@ select:focus,input:focus{border-color:var(--accent);}
     </div>
   </div>
 
+  <!-- ============ CATÁLOGO DE MOVIMIENTOS ============ -->
+  <div class="overlay" id="ov-selmov">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="sm-sub">—</div>
+          <h2 class="sheet-title" style="font-size:17px;">Elegir movimiento</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-selmov')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd">
+        <div class="buscador" style="margin:0 0 10px;">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+          <input type="text" id="sm-busca" placeholder="Buscar por nombre..." autocomplete="off">
+        </div>
+        <button class="campo" id="sm-juego" style="width:100%;margin-bottom:10px;"
+          onclick="elegirJuegoSelMov()"></button>
+        <div class="grid3" id="sm-clases" style="margin-bottom:10px;">
+          <button class="pill" data-sc="special">Especial</button>
+          <button class="pill" data-sc="physical">Físico</button>
+          <button class="pill" data-sc="status">Estado</button>
+        </div>
+        <p class="mi-cuenta" id="sm-cuenta"></p>
+        <div id="sm-lista"></div>
+      </div>
+      <div class="sheet-ft">
+        <button class="btn btn-s" onclick="quitarFiltroMov()">Sin filtrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ SELECTOR GENÉRICO ============ -->
   <div class="overlay" id="ov-elegir">
     <div class="sheet">
@@ -1233,9 +1282,8 @@ select:focus,input:focus{border-color:var(--accent);}
 
         <div class="f-group">
           <label class="f-lab">Movimiento</label>
-          <input type="text" id="f-move" list="move-list" placeholder="Buscar movimiento..." autocomplete="off">
-          <datalist id="move-list"></datalist>
-          <div id="move-state" class="mv-state">Cargando lista de movimientos...</div>
+          <button class="campo" id="f-move-campo" style="width:100%;" onclick="abrirSelMov()"></button>
+          <div id="move-state" class="mv-state"></div>
           <label class="f-lab" style="margin-top:11px;">Que lo aprenda por</label>
           <div class="chips">
             <button class="pill" data-mv="level-up">Nivel</button>
@@ -1680,7 +1728,7 @@ document.querySelectorAll('.overlay').forEach(ov=>{
 });
 document.getElementById('btn-filters').addEventListener('click',()=>{
   openOverlay('ov-filters');
-  loadMoveList();
+  pintarCampoMov();
 });
 
 /* ================= CARGA DE DATOS ================= */
@@ -1886,53 +1934,159 @@ function render(){
   actualizarSaltos();
 }
 
-/* ================= MOVIMIENTOS (filtro) ================= */
-let MOVES = [];          // {slug, es, en}
-let movesLoaded = false;
+/* ================= MOVIMIENTOS (filtro de la Pokédex) ================= */
+let movElegido = null;      // {slug, es, tipo, clase, pot}
+let smJuego = '';
+let smTexto = '';
+let smClases = [];
+let smLista = [], smDibujados = 0;
+const LOTE_SM = 60;
 
-async function loadMoveList(){
-  if(movesLoaded) return;
-  const state = document.getElementById('move-state');
-  const guardado = Cache.get('movimientos');
-  if(guardado && guardado.length){
-    MOVES = guardado; movesLoaded = true;
-    document.getElementById('move-list').innerHTML =
-      MOVES.map(m=>`<option value="${m.es}">${m.en}</option>`).join('');
-    state.textContent = `${MOVES.length} movimientos disponibles`;
-    state.className = 'mv-state';
-    return;
-  }
-  const q = `{ move(order_by:{id:asc}) { name movenames(where:{language_id:{_eq:${ES}}}) { name } } }`;
-  try{
-    const j = {data: await gql(q)};
-    MOVES = j.data.move.map(m=>({
-      slug:m.name,
-      es:(m.movenames[0]?.name) || m.name.replace(/-/g,' '),
-      en:m.name.replace(/-/g,' ')
-    }));
-  }catch(e){
-    try{
-      const list = await fetchJSON(`${API}/move?limit=1000`);
-      MOVES = list.results.map(m=>({slug:m.name, es:m.name.replace(/-/g,' '), en:m.name.replace(/-/g,' ')}));
-    }catch(err){
-      state.textContent='No se pudo cargar la lista de movimientos.'; state.className='mv-state err'; return;
-    }
-  }
-  movesLoaded = true;
-  Cache.set('movimientos', MOVES);
-  document.getElementById('move-list').innerHTML =
-    MOVES.map(m=>`<option value="${m.es}">${m.en}</option>`).join('');
-  state.textContent = `${MOVES.length} movimientos disponibles`;
-  state.className = 'mv-state';
+/* Orden pedido: por tipo alfabético y, dentro de cada tipo,
+   primero los especiales de mayor a menor potencia, luego los
+   físicos igual, y al final los de estado. */
+function ordenarCatalogo(lista, gen){
+  const orden = TYPES.slice().sort((a,b)=>(TES[a]||a).localeCompare(TES[b]||b));
+  const pos = {}; orden.forEach((t,i)=>pos[t]=i);
+  const cat = m => (gen<=3 && m.clase!=='status') ? (TCAT[m.tipo]||m.clase) : m.clase;
+  const rango = c => c==='special' ? 0 : c==='physical' ? 1 : 2;
+  return lista.slice().sort((a,b)=>
+    (pos[a.tipo]??99) - (pos[b.tipo]??99) ||
+    rango(cat(a)) - rango(cat(b)) ||
+    (b.pot||0) - (a.pot||0) ||
+    a.es.localeCompare(b.es));
 }
 
-function findMove(text){
-  const t = text.trim().toLowerCase();
-  if(!t) return null;
-  const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  return MOVES.find(m=>norm(m.es)===norm(t) || norm(m.en)===norm(t) || m.slug===norm(t).replace(/ /g,'-'))
-      || MOVES.find(m=>norm(m.es).startsWith(norm(t)) || norm(m.en).startsWith(norm(t)))
-      || null;
+function pintarCampoMov(){
+  const el = document.getElementById('f-move-campo');
+  if(!el) return;
+  if(!movElegido){
+    el.innerHTML = `<span class="campo-main">
+      <span class="campo-val sin">Cualquiera</span>
+      <span class="campo-sub">Elegir un movimiento concreto</span>
+      </span><span class="campo-x">›</span>`;
+  }else{
+    const m = movElegido;
+    el.innerHTML = `<span class="campo-main">
+      <span class="campo-val">${m.es}</span>
+      <span class="campo-sub">${TES[m.tipo]} · ${CLASE_ES[m.clase]}${m.pot?' · Pot '+m.pot:''}</span>
+      </span><span class="campo-x">›</span>`;
+  }
+}
+
+async function abrirSelMov(){
+  openOverlay('ov-selmov');
+  const cont = document.getElementById('sm-lista');
+  cont.innerHTML = '<div class="hint">Cargando catálogo...</div>';
+  try{
+    await cargarCatalogoMovs();
+    await cargarCambiosMov();
+  }catch(e){
+    cont.innerHTML = `<div class="hint">No se pudo cargar.<br>${e.message||''}</div>`;
+    return;
+  }
+  if(!smJuego && juegoActual) smJuego = juegoActual;
+  document.getElementById('sm-busca').value = smTexto;
+  document.querySelectorAll('[data-sc]').forEach(b=>
+    b.classList.toggle('on', smClases.includes(b.dataset.sc)));
+  pintarJuegoSelMov();
+  filtrarSelMov();
+}
+
+function pintarJuegoSelMov(){
+  const el = document.getElementById('sm-juego');
+  const g = smJuego ? genDeJuego(smJuego) : 9;
+  document.getElementById('sm-sub').textContent = smJuego ? nombreDeJuego(smJuego) : 'Todos los juegos';
+  el.innerHTML = `
+    ${smJuego?`<img class="jm" src="${spriteJuego(smJuego)}" alt="">`:''}
+    <span class="campo-main">
+      <span class="campo-val ${smJuego?'':'sin'}">${smJuego?nombreDeJuego(smJuego):'Todos los juegos'}</span>
+      <span class="campo-sub">${smJuego?g+'.ª generación · valores de la época':'Sin filtrar por época'}</span>
+    </span><span class="campo-x">›</span>`;
+}
+
+function elegirJuegoSelMov(){
+  abrirSelector({
+    titulo:'Juego', sub:'Solo movimientos que ya existían', buscar:true, actual:smJuego,
+    opciones: [{valor:'', nombre:'Todos los juegos', detalle:'Sin filtrar por época'}]
+      .concat(JUEGOS.map(j=>({valor:j.slug, nombre:j.es, img:spriteJuego(j.slug),
+        detalle:`${j.gen}.ª generación`}))),
+    alElegir: v=>{ smJuego = v; pintarJuegoSelMov(); filtrarSelMov(); }
+  });
+}
+
+function filtrarSelMov(){
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const t = norm(smTexto.trim());
+  const gen = smJuego ? genDeJuego(smJuego) : 9;
+
+  let lista = movInfo.filter(m=>{
+    if(m.gen > gen) return false;
+    if(t && !(norm(m.es).includes(t) || m.slug.includes(t))) return false;
+    if(smClases.length){
+      const c = (gen<=3 && m.clase!=='status') ? (TCAT[m.tipo]||m.clase) : m.clase;
+      if(!smClases.includes(c)) return false;
+    }
+    return true;
+  });
+  smLista = ordenarCatalogo(lista, gen);
+
+  document.getElementById('sm-cuenta').textContent =
+    `${smLista.length} movimiento${smLista.length===1?'':'s'} · por tipo, luego especiales, físicos y estado`;
+  smDibujados = 0;
+  document.getElementById('sm-lista').innerHTML = '';
+  masSelMov();
+}
+
+function masSelMov(){
+  const cont = document.getElementById('sm-lista');
+  if(!cont) return;
+  if(!smLista.length){ cont.innerHTML='<div class="hint" style="padding:16px;">Sin resultados.</div>'; return; }
+  if(smDibujados >= smLista.length) return;
+
+  const gen = smJuego ? genDeJuego(smJuego) : 9;
+  const hasta = Math.min(smDibujados + LOTE_SM, smLista.length);
+  let html = '';
+  for(let i=smDibujados; i<hasta; i++){
+    const m = smLista[i];
+    const prev = i>0 ? smLista[i-1] : null;
+    if(!prev || prev.tipo!==m.tipo){
+      html += `<div class="sm-cab" style="border-left:3px solid ${TCOLOR[m.tipo]}">${TES[m.tipo]}</div>`;
+    }
+    const v = smJuego ? valoresMov(m.slug, gen, {pot:m.pot,prec:m.prec,pp:m.pp,tipo:m.tipo})
+                      : {pot:m.pot,prec:m.prec,pp:m.pp,cambiado:false};
+    const c = (gen<=3 && m.clase!=='status') ? (TCAT[m.tipo]||m.clase) : m.clase;
+    html += `
+      <div class="sm-fila ${movElegido&&movElegido.slug===m.slug?'on':''}"
+           onclick="elegirFiltroMov('${m.slug}')">
+        <div class="sm-main">
+          <div class="sm-nom">${m.es}</div>
+          <div class="mv-cls" style="color:${CLASE_COL[c]};font-size:8.5px;">${CLASE_ES[c]}</div>
+        </div>
+        <span class="mi-n ${v.cambiado?'hist':''}">${v.pot ?? '—'}</span>
+        <span class="mi-n ${v.cambiado?'hist':''}">${v.prec ?? '—'}</span>
+      </div>`;
+  }
+  cont.insertAdjacentHTML('beforeend', html);
+  smDibujados = hasta;
+}
+
+function elegirFiltroMov(slug){
+  const m = movInfo.find(x=>x.slug===slug);
+  if(!m) return;
+  const gen = smJuego ? genDeJuego(smJuego) : 9;
+  const c = (gen<=3 && m.clase!=='status') ? (TCAT[m.tipo]||m.clase) : m.clase;
+  movElegido = {slug:m.slug, es:m.es, tipo:m.tipo, clase:c, pot:m.pot};
+  closeOverlay('ov-selmov');
+  pintarCampoMov();
+}
+
+function quitarFiltroMov(){
+  movElegido = null;
+  closeOverlay('ov-selmov');
+  pintarCampoMov();
+  const st = document.getElementById('move-state');
+  if(st){ st.textContent=''; st.className='mv-state'; }
 }
 
 /* Devuelve un Map id -> [métodos] de quiénes aprenden ese movimiento */
@@ -1954,7 +2108,6 @@ async function whoLearns(slug){
     });
     return map;
   }catch(e){
-    /* Respaldo REST: sin distinguir el método */
     const data = await fetchJSON(`${API}/move/${slug}`);
     const map = new Map();
     data.learned_by_pokemon.forEach(p=>{
@@ -1965,7 +2118,7 @@ async function whoLearns(slug){
   }
 }
 
-/* ================= FILTROS ================= */
+/* ================= FILTROS ================= *//* ================= FILTROS ================= */
 function buildTypeChips(){
   document.getElementById('f-types').innerHTML = TYPES.map(t=>
     `<button class="chip" data-type="${t}" style="background:${TCOLOR[t]}">${TES[t]}</button>`
@@ -2015,33 +2168,33 @@ async function applyFilters(){
   filters.cats  = [...document.querySelectorAll('[data-cat].on')].map(c=>c.dataset.cat);
   filters.moves = [...document.querySelectorAll('[data-mv].on')].map(c=>c.dataset.mv);
 
-  /* Movimiento buscado */
+  /* Movimiento elegido en el catálogo */
   filters.moveIds = null;
   const state = document.getElementById('move-state');
-  const txt = document.getElementById('f-move').value.trim();
   let moveOn = 0;
-  if(txt){
-    const mv = findMove(txt);
-    if(!mv){
-      state.textContent = `No se encontró "${txt}"`; state.className='mv-state err';
-    }else{
-      state.textContent = `Buscando quién aprende ${mv.es}...`; state.className='mv-state';
-      try{
-        const map = await whoLearns(mv.slug);
-        const ids = new Set();
-        map.forEach((methods,id)=>{
-          if(!filters.moves.length || methods.includes('*') || filters.moves.some(f=>methods.includes(f)))
-            ids.add(id);
-        });
-        filters.moveIds = ids;
-        moveOn = 1 + filters.moves.length;
-        const nota = methodsNote(map);
-        state.textContent = `${mv.es}: ${ids.size} pokémon${nota}`;
-        state.className='mv-state ok';
-      }catch(e){
-        state.textContent='No se pudo consultar ese movimiento.'; state.className='mv-state err';
-      }
+  if(movElegido){
+    state.textContent = `Buscando quién aprende ${movElegido.es}...`;
+    state.className = 'mv-state';
+    try{
+      const map = await whoLearns(movElegido.slug);
+      const ids = new Set();
+      map.forEach((metodos,id)=>{
+        if(!filters.moves.length || metodos.includes('*') || filters.moves.some(f=>metodos.includes(f)))
+          ids.add(id);
+      });
+      filters.moveIds = ids;
+      moveOn = 1 + filters.moves.length;
+      const sinMetodo = [...map.values()].some(ms=>ms.includes('*'));
+      state.textContent = `${movElegido.es}: ${ids.size} pokémon` +
+        (sinMetodo ? ' (sin datos de método)' : '');
+      state.className = 'mv-state ok';
+    }catch(e){
+      state.textContent = 'No se pudo consultar ese movimiento.';
+      state.className = 'mv-state err';
     }
+  }else{
+    state.textContent = '';
+    state.className = 'mv-state';
   }
 
   const n = filters.gens.length+filters.ranks.length+(filters.sort?1:0)+
@@ -2057,28 +2210,15 @@ async function applyFilters(){
   document.getElementById('s-pokedex').scrollTop = 0;
 }
 
-function methodsNote(map){
-  const all = new Set();
-  map.forEach(ms=>ms.forEach(m=>all.add(m)));
-  if(all.has('*')) return ' (sin datos de método)';
-  return '';
-}
-
-function limpiarBusqueda(){
-  document.getElementById('dex-busca').value='';
-  document.getElementById('dex-limpiar').style.display='none';
-  filters.texto='';
-  render();
-}
-
 function clearFilters(){
   document.querySelectorAll('[data-sort]').forEach((b,i)=>b.classList.toggle('on', i===0));
-  document.getElementById('f-move').value='';
+  movElegido = null;
+  pintarCampoMov();
   document.querySelectorAll('.stat-inputs input').forEach(i=>i.value='');
   document.querySelectorAll('#f-types .chip.on,[data-cat].on,[data-mv].on,[data-gen].on,[data-rank].on')
     .forEach(c=>c.classList.remove('on'));
   const st=document.getElementById('move-state');
-  st.textContent = movesLoaded? `${MOVES.length} movimientos disponibles` : '';
+  st.textContent = '';
   st.className='mv-state';
   updateGenHint();
   applyFilters();
@@ -2570,6 +2710,21 @@ const JUEGOS = [
   {slug:'legends-arceus',es:'Leyendas Arceus',gen:8},
   {slug:'scarlet',es:'Escarlata',gen:9},{slug:'violet',es:'Púrpura',gen:9}
 ];
+/* Pokémon que representa a cada juego, para acompañar al nombre */
+const MASCOTA = {
+  red:6, blue:9, yellow:25,
+  gold:250, silver:249, crystal:245,
+  ruby:383, sapphire:382, emerald:384, firered:6, leafgreen:3,
+  diamond:483, pearl:484, platinum:487, heartgold:250, soulsilver:249,
+  black:643, white:644, 'black-2':646, 'white-2':646,
+  x:716, y:717, 'omega-ruby':383, 'alpha-sapphire':382,
+  sun:791, moon:792, 'ultra-sun':800, 'ultra-moon':800,
+  'lets-go-pikachu':25, 'lets-go-eevee':133,
+  sword:888, shield:889, 'brilliant-diamond':483, 'shining-pearl':484,
+  'legends-arceus':493, scarlet:1007, violet:1008
+};
+const spriteJuego = slug => MASCOTA[slug] ? SPRITE(MASCOTA[slug]) : '';
+
 const genDeJuego = slug => (JUEGOS.find(j=>j.slug===slug)||{gen:3}).gen;
 const nombreDeJuego = slug => (JUEGOS.find(j=>j.slug===slug)||{es:slug}).es;
 
@@ -2715,7 +2870,10 @@ function pintarCrearGens(){
 }
 function pintarCrearJuegos(){
   document.getElementById('crear-juegos').innerHTML = JUEGOS.filter(j=>j.gen===crearGen).map(j=>
-    `<button class="${j.slug===crearJuego?'on':''}" onclick="setCrearJuego('${j.slug}')">${j.es}</button>`).join('');
+    `<button class="${j.slug===crearJuego?'on':''}" onclick="setCrearJuego('${j.slug}')">
+       <img class="jm" src="${spriteJuego(j.slug)}" alt="" loading="lazy">
+       <span>${j.es}</span>
+     </button>`).join('');
 }
 function setCrearGen(g){
   crearGen = g;
@@ -2757,7 +2915,7 @@ function renderEquipo(){
 
   document.getElementById('eq-body').innerHTML = `
     <button class="campo" style="width:100%;margin-bottom:12px;" onclick="elegirJuegoEquipo()">
-      <span class="pt" style="background:${GEN_COLOR[gen]};width:10px;height:10px;"></span>
+      <img class="jm" src="${spriteJuego(eq.juego)}" alt="">
       <span class="campo-main"><span class="campo-val">${nombreDeJuego(eq.juego)}</span>
       <span class="campo-sub">${gen}.ª generación</span></span>
       <span class="campo-x">›</span></button>
@@ -2797,7 +2955,8 @@ function elegirJuegoEquipo(){
   abrirSelector({
     titulo:'Juego del equipo', sub:'Define IVs/EVs, movimientos y efectividades', buscar:true,
     actual: equipos[equipoAbierto].juego,
-    opciones: JUEGOS.map(j=>({valor:j.slug, nombre:j.es, detalle:`${j.gen}.ª generación`})),
+    opciones: JUEGOS.map(j=>({valor:j.slug, nombre:j.es, img:spriteJuego(j.slug),
+      detalle:`${j.gen}.ª generación`})),
     alElegir: v=>cambiarJuego(v)
   });
 }
@@ -3370,7 +3529,7 @@ function pintarCampoJuego(){
   }else{
     const g = genDeJuego(juegoActual);
     el.innerHTML = `
-      <span class="pt" style="background:${GEN_COLOR[g]};width:10px;height:10px;"></span>
+      <img class="jm" src="${spriteJuego(juegoActual)}" alt="">
       <span class="campo-main">
         <span class="campo-val">${nombreDeJuego(juegoActual)}</span>
         <span class="campo-sub">${g}.ª generación · tipos y movimientos de la época</span>
@@ -3390,7 +3549,10 @@ function pintarJuegoGens(){
 }
 function pintarJuegoLista(){
   document.getElementById('juego-lista').innerHTML = JUEGOS.filter(j=>j.gen===juegoGenTmp).map(j=>
-    `<button class="${j.slug===juegoActual?'on':''}" onclick="fijarJuego('${j.slug}')">${j.es}</button>`).join('');
+    `<button class="${j.slug===juegoActual?'on':''}" onclick="fijarJuego('${j.slug}')">
+       <img class="jm" src="${spriteJuego(j.slug)}" alt="" loading="lazy">
+       <span>${j.es}</span>
+     </button>`).join('');
 }
 function setJuegoGen(g){ juegoGenTmp = g; pintarJuegoGens(); pintarJuegoLista(); }
 
@@ -4099,6 +4261,7 @@ async function renderDanio(){
           <span class="campo-sub">Habilidad</span></span><span class="campo-x">›</span></button>
       </div>`:''}
       <button class="campo" style="width:100%;margin-top:7px;" onclick="elegirJuegoDanio()">
+        <img class="jm" src="${spriteJuego(juegoDanio())}" alt="">
         <span class="campo-main"><span class="campo-val">${nombreDeJuego(juegoDanio())}</span>
         <span class="campo-sub">${gen}.ª generación · rige el cálculo</span>
         </span><span class="campo-x">›</span></button>
@@ -4163,7 +4326,8 @@ function elegirJuegoDanio(){
   abrirSelector({
     titulo:'Juego', sub:'Rige tipos, categorías y efectividades', buscar:true,
     actual:juegoDanio(),
-    opciones: JUEGOS.map(j=>({valor:j.slug, nombre:j.es, detalle:`${j.gen}.ª generación`})),
+    opciones: JUEGOS.map(j=>({valor:j.slug, nombre:j.es, img:spriteJuego(j.slug),
+      detalle:`${j.gen}.ª generación`})),
     alElegir: v=>{ dnJuego=v; dnMovsCache={}; dnMovsAtk=[]; dnTop=0; dnIdxMov={}; renderDanio(); }
   });
 }
@@ -4802,7 +4966,8 @@ function elegirJuegoMovs(){
   abrirSelector({
     titulo:'Juego', sub:'Solo movimientos que ya existían', buscar:true, actual:mfGen,
     opciones: [{valor:'', nombre:'Todos los juegos', detalle:'Sin filtrar por época'}]
-      .concat(JUEGOS.map(j=>({valor:j.slug, nombre:j.es, detalle:`${j.gen}.ª generación`}))),
+      .concat(JUEGOS.map(j=>({valor:j.slug, nombre:j.es, img:spriteJuego(j.slug),
+        detalle:`${j.gen}.ª generación`}))),
     alElegir: v=>{ mfGen = v; panelMovimientos(); }
   });
 }
@@ -4959,6 +5124,7 @@ function panelTipos(){
 
   document.getElementById('info-body').innerHTML = `
     <button class="campo" style="width:100%;margin-bottom:12px;" onclick="elegirJuegoTipos()">
+      ${tipoJuego?`<img class="jm" src="${spriteJuego(tipoJuego)}" alt="">`:''}
       <span class="campo-main"><span class="campo-val">${tipoJuego?nombreDeJuego(tipoJuego):'Tabla actual'}</span>
       <span class="campo-sub">${gen}.ª generación · ${validos.length} tipos</span></span>
       <span class="campo-x">›</span></button>
@@ -4981,7 +5147,8 @@ function elegirJuegoTipos(){
   abrirSelector({
     titulo:'Juego', sub:'La tabla cambió con los años', buscar:true, actual:tipoJuego,
     opciones: [{valor:'', nombre:'Tabla actual', detalle:'La de los juegos recientes'}]
-      .concat(JUEGOS.map(j=>({valor:j.slug, nombre:j.es, detalle:`${j.gen}.ª generación`}))),
+      .concat(JUEGOS.map(j=>({valor:j.slug, nombre:j.es, img:spriteJuego(j.slug),
+        detalle:`${j.gen}.ª generación`}))),
     alElegir: v=>{ tipoJuego = v; panelTipos(); }
   });
 }
@@ -5275,6 +5442,22 @@ if(juegoActual) cargarTiposPasados().then(render);
 document.getElementById('in-nombre').addEventListener('input', validarCrear);
 document.getElementById('pick-busca').addEventListener('input', pintarPick);
 document.getElementById('el-busca').addEventListener('input', pintarSelector);
+document.getElementById('sm-busca').addEventListener('input', e=>{
+  smTexto = e.target.value; filtrarSelMov();
+});
+document.querySelectorAll('[data-sc]').forEach(b=>b.addEventListener('click',()=>{
+  const c = b.dataset.sc;
+  smClases = smClases.includes(c) ? smClases.filter(x=>x!==c) : [...smClases, c];
+  b.classList.toggle('on');
+  filtrarSelMov();
+}));
+(function(){
+  const caja = document.querySelector('#ov-selmov .sheet-bd');
+  if(caja) caja.addEventListener('scroll', ()=>{
+    if(caja.scrollTop + caja.clientHeight >= caja.scrollHeight - 220) masSelMov();
+  }, {passive:true});
+})();
+pintarCampoMov();
 cargarEquipos();
 renderEquipos();
 loadHome();
