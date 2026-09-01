@@ -1,405 +1,465 @@
 /* ============================================================
    PopoDex — traducciones.js
    ------------------------------------------------------------
-   Los nombres de movimientos, habilidades, grupos huevo, tipos
-   y juegos se piden traducidos directamente a PokeAPI (español,
-   language_id 7). Este archivo cubre lo que PokeAPI NO traduce:
-   las localizaciones.
+   Movimientos, habilidades, grupos huevo, tipos y juegos se
+   piden ya traducidos a PokeAPI. Este archivo cubre lo único
+   que PokeAPI no traduce al español: las localizaciones.
 
-   Fuente de los nombres: WikiDex (columna "Español (España)"),
-   que usa la nomenclatura oficial de los juegos localizados.
+   Método:
+   1. Si la API trae nombre en español, se usa ese.
+   2. Si no, se busca el nombre EN INGLÉS en el diccionario.
+      Indexar por el nombre real (y no por el identificador
+      interno) evita tener que adivinar cómo se escribe cada
+      ruta o cueva en la base de datos.
+   3. El sufijo (planta, sótano, entrada, dirección) se obtiene
+      restando el identificador del lugar al del área, así que
+      es exacto y no depende de suposiciones.
+   4. Si nada coincide, se devuelve el nombre en inglés tal
+      cual. Nunca se inventa una traducción.
+
+   Nombres oficiales tomados de WikiDex (español de España).
    Cobertura verificada: Kanto, Archi7, Johto y Hoenn.
-   Lo que no esté aquí cae al español de la API y, si tampoco
-   existe, se muestra el nombre en inglés sin inventar nada.
    ============================================================ */
 
-const LUGARES_ES = {
+/* Normaliza para comparar: minúsculas, sin tildes ni puntuación */
+function _clave(txt){
+  return (txt||'')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[.'\u2019\u00b7]/g,'')
+    .replace(/[^a-z0-9]+/g,' ')
+    .trim();
+}
 
+/* Diccionario indexado por nombre en inglés */
+const LUGARES_EN = {
   /* ---------- KANTO ---------- */
-  'pallet-town':'Pueblo Paleta',
-  'viridian-city':'Ciudad Verde',
-  'pewter-city':'Ciudad Plateada',
-  'cerulean-city':'Ciudad Celeste',
-  'vermilion-city':'Ciudad Carmín',
-  'lavender-town':'Pueblo Lavanda',
-  'celadon-city':'Ciudad Azulona',
-  'fuchsia-city':'Ciudad Fucsia',
-  'saffron-city':'Ciudad Azafrán',
-  'cinnabar-island':'Isla Canela',
-  'indigo-plateau':'Meseta Añil',
-  'kanto-victory-road-1':'Calle Victoria',
-  'kanto-victory-road-2':'Calle Victoria',
-  'victory-road':'Calle Victoria',
-  'viridian-forest':'Bosque Verde',
-  'mt-moon':'Monte Moon',
-  'diglett-cave':'Cueva Diglett',
-  'digletts-cave':'Cueva Diglett',
-  'rock-tunnel':'Túnel Roca',
-  'cerulean-cave':'Cueva Celeste',
-  'seafoam-islands':'Islas Espuma',
-  'power-plant':'Central de Energía',
-  'pokemon-tower':'Torre Pokémon',
-  'pokemon-mansion':'Mansión Pokémon',
-  'safari-zone':'Zona Safari',
-  'kanto-safari-zone':'Zona Safari',
-  'silph-co':'Silph S. A.',
-  'fighting-dojo':'Dojo Karate',
-  'rocket-game-corner':'Sala de Juegos Rocket',
-  'celadon-game-corner':'Sala de Juegos Rocket',
-  'rocket-hideout':'Guarida Rocket',
-  'team-rocket-hideout':'Guarida Rocket',
-  'underground-path':'Vía Subterránea',
-  'kanto-underground-path':'Vía Subterránea',
-  'ss-anne':'S. S. Anne',
-  's-s-anne':'S. S. Anne',
-  'tohjo-falls':'Cataratas Tohjo',
-  'pokemon-league':'Liga Pokémon',
-  'kanto-pokemon-league':'Liga Pokémon',
-  'pokemon-day-care':'Guardería Pokémon',
-  'day-care':'Guardería Pokémon',
-  'pewter-museum-of-science':'Museo de la Ciencia',
-  'celadon-department-store':'Centro Comercial Azulona',
-  'celadon-condominiums':'Edificio Azulona',
-  'pal-park':'Parque Compi',
-  'trainer-house':'Casa del entrenador',
-  'lavender-radio-tower':'Torre Radio',
-  'house-of-memories':'Cementerio de Pueblo Lavanda',
-  'seagallop-ferry':'Surcamar Veloce',
-  'sea-cottage':'Casa del Mar',
-  'bill-house':'Casa de Bill',
-  'route-4-pokemon-center':'Centro Pokémon (Ruta 4)',
-  'cinnabar-lab':'Laboratorio de Isla Canela',
-  'pokemon-research-lab':'Laboratorio Pokémon',
-  'oak-lab':'Laboratorio del profesor Oak',
-  'pokemon-fan-club':'Club de Fans de Pokémon',
-  'cycling-road':'Camino de bicis',
+  'pallet town':'Pueblo Paleta',
+  'viridian city':'Ciudad Verde',
+  'pewter city':'Ciudad Plateada',
+  'cerulean city':'Ciudad Celeste',
+  'vermilion city':'Ciudad Carmín',
+  'lavender town':'Pueblo Lavanda',
+  'celadon city':'Ciudad Azulona',
+  'fuchsia city':'Ciudad Fucsia',
+  'saffron city':'Ciudad Azafrán',
+  'cinnabar island':'Isla Canela',
+  'indigo plateau':'Meseta Añil',
+  'viridian forest':'Bosque Verde',
+  'mt moon':'Monte Moon',
+  'mount moon':'Monte Moon',
+  'diglett s cave':'Cueva Diglett',
+  'digletts cave':'Cueva Diglett',
+  'rock tunnel':'Túnel Roca',
+  'cerulean cave':'Cueva Celeste',
+  'seafoam islands':'Islas Espuma',
+  'power plant':'Central de Energía',
+  'pokemon tower':'Torre Pokémon',
+  'pokemon mansion':'Mansión Pokémon',
+  'safari zone':'Zona Safari',
+  'kanto safari zone':'Zona Safari',
+  'silph co':'Silph S.A.',
+  'fighting dojo':'Dojo Karate',
+  'rocket game corner':'Sala de Juegos Rocket',
+  'celadon game corner':'Sala de Juegos Rocket',
+  'game corner':'Sala de Juegos',
+  'rocket hideout':'Guarida Rocket',
+  'team rocket hideout':'Guarida Rocket',
+  'underground path':'Vía Subterránea',
+  'ss anne':'S.S. Anne',
+  's s anne':'S.S. Anne',
+  'tohjo falls':'Cataratas Tohjo',
+  'pokemon league':'Liga Pokémon',
+  'victory road':'Calle Victoria',
+  'pokemon day care':'Guardería Pokémon',
+  'day care':'Guardería Pokémon',
+  'day care center':'Guardería Pokémon',
+  'pewter museum of science':'Museo de la Ciencia',
+  'celadon department store':'Centro Comercial Azulona',
+  'celadon condominiums':'Edificio Azulona',
+  'pal park':'Parque Compi',
+  'cycling road':'Camino de bicis',
+  'sea cottage':'Casa del Mar',
+  'bill s house':'Casa de Bill',
+  'oak s lab':'Laboratorio del profesor Oak',
+  'pokemon research lab':'Laboratorio Pokémon',
+  'cinnabar lab':'Laboratorio de Isla Canela',
+  'pokemon fan club':'Club de Fans de Pokémon',
+  'trainer house':'Casa del Entrenador',
+  'copycat s house':'Casa de la Imitadora',
 
   /* ---------- ARCHI7 (Islas Sete) ---------- */
-  'one-island':'Isla Prima',
-  'two-island':'Isla Secunda',
-  'three-island':'Isla Tera',
-  'four-island':'Isla Quarta',
-  'five-island':'Isla Inta',
-  'six-island':'Isla Exta',
-  'seven-island':'Isla Sétima',
-  'navel-rock':'Roca Ombligo',
-  'birth-island':'Isla Origen',
-  'treasure-beach':'Playa Tesoro',
-  'kindle-road':'Camino Candente',
-  'cape-brink':'Cabo Extremo',
-  'bond-bridge':'Puente Unión',
-  'five-isle-meadow':'Prado Isla Inta',
-  'memorial-pillar':'Pilar Recuerdo',
-  'water-labyrinth':'Aquarinto',
-  'resort-gorgeous':'Lugar de Recreo',
-  'water-path':'Vía Acuática',
-  'ruin-valley':'Valle Ruinas',
-  'green-path':'Vía Verde',
-  'outcast-island':'Isla Aislada',
-  'canyon-entrance':'Entrada al Cañón',
-  'sevault-canyon':'Cañón Sétano',
-  'tanoby-ruins':'Ruinas Sete',
-  'tanoby-key':'Llave Sete',
-  'tanoby-chamber':'Cámaras Sete',
-  'three-isle-path':'Vía Isla Tera',
-  'three-isle-port':'Puerto Isla Tera',
-  'icefall-cave':'Cueva Glaciada',
-  'lost-cave':'Cueva Perdida',
-  'dotted-hole':'Cueva Punteada',
-  'altering-cave':'Cueva Cambiante',
-  'berry-forest':'Bosque Baya',
-  'pattern-bush':'Bosquejo',
-  'ember-spa':'Balneario Ascuas',
-  'mt-ember':'Monte Ascuas',
-  'rocket-warehouse':'Almacén Rocket',
-  'trainer-tower':'Torre Desafío',
+  'one island':'Isla Prima',
+  'two island':'Isla Secunda',
+  'three island':'Isla Tera',
+  'four island':'Isla Quarta',
+  'five island':'Isla Inta',
+  'six island':'Isla Exta',
+  'seven island':'Isla Sétima',
+  'navel rock':'Roca Ombligo',
+  'birth island':'Isla Origen',
+  'treasure beach':'Playa Tesoro',
+  'kindle road':'Camino Candente',
+  'cape brink':'Cabo Extremo',
+  'bond bridge':'Puente Unión',
+  'five isle meadow':'Prado Isla Inta',
+  'memorial pillar':'Pilar Recuerdo',
+  'water labyrinth':'Aquarinto',
+  'resort gorgeous':'Lugar de Recreo',
+  'water path':'Vía Acuática',
+  'ruin valley':'Valle Ruinas',
+  'green path':'Vía Verde',
+  'outcast island':'Isla Aislada',
+  'canyon entrance':'Entrada al Cañón',
+  'sevault canyon':'Cañón Sétano',
+  'tanoby ruins':'Ruinas Sete',
+  'tanoby key':'Llave Sete',
+  'tanoby chamber':'Cámaras Sete',
+  'three isle path':'Vía Isla Tera',
+  'three isle port':'Puerto Isla Tera',
+  'icefall cave':'Cueva Glaciada',
+  'lost cave':'Cueva Perdida',
+  'dotted hole':'Cueva Punteada',
+  'altering cave':'Cueva Cambiante',
+  'berry forest':'Bosque Baya',
+  'pattern bush':'Bosquejo',
+  'ember spa':'Balneario Ascuas',
+  'mt ember':'Monte Ascuas',
+  'rocket warehouse':'Almacén Rocket',
+  'trainer tower':'Torre Desafío',
+  'monean chamber':'Cámara Monean',
+  'liptoo chamber':'Cámara Liptoo',
+  'weepth chamber':'Cámara Weepth',
+  'dilford chamber':'Cámara Dilford',
+  'scufib chamber':'Cámara Scufib',
+  'rixy chamber':'Cámara Rixy',
+  'viapois chamber':'Cámara Viapois',
 
   /* ---------- JOHTO ---------- */
-  'new-bark-town':'Pueblo Primavera',
-  'cherrygrove-city':'Ciudad Cerezo',
-  'violet-city':'Ciudad Malva',
-  'azalea-town':'Pueblo Azalea',
-  'goldenrod-city':'Ciudad Trigal',
-  'ecruteak-city':'Ciudad Iris',
-  'olivine-city':'Ciudad Olivo',
-  'cianwood-city':'Ciudad Orquídea',
-  'mahogany-town':'Pueblo Caoba',
-  'blackthorn-city':'Ciudad Endrino',
-  'dark-cave':'Cueva Oscura',
-  'union-cave':'Cueva Unión',
-  'slowpoke-well':'Pozo Slowpoke',
-  'mt-mortar':'Monte Mortero',
-  'ice-path':'Ruta Helada',
-  'dragons-den':'Guarida Dragón',
-  'dragon-den':'Guarida Dragón',
-  'cliff-edge-gate':'Paso Acantilado',
-  'cliff-cave':'Cueva Acantilado',
-  'mt-silver':'Monte Plateado',
-  'mt-silver-cave':'Cueva Monte Plateado',
-  'ilex-forest':'Encinar',
-  'whirl-islands':'Islas Remolino',
-  'sprout-tower':'Torre Bellsprout',
-  'burned-tower':'Torre Quemada',
-  'bell-tower':'Torre Campana',
-  'tin-tower':'Torre Campana',
-  'embedded-tower':'Torre Oculta',
-  'ruins-of-alph':'Ruinas Alfa',
-  'goldenrod-tunnel':'Túnel Trigal',
-  'goldenrod-underground':'Túnel Trigal',
-  'national-park':'Parque Nacional',
-  'moomoo-farm':'Granja Mu-mu',
-  'lake-of-rage':'Lago de la Furia',
-  'radio-tower':'Torre de Radio',
-  'goldenrod-radio-tower':'Torre de Radio',
-  'olivine-lighthouse':'Faro de Olivo',
-  'lighthouse':'Faro de Olivo',
-  'battle-tower':'Torre Batalla',
-  'bellchime-trail':'Senda Dindón',
-  'johto-safari-zone':'Zona Safari',
-  'safari-zone-gate':'Puerta Zona Safari',
-  'magnet-train':'Magnetotrén',
-  'ss-aqua':'S.S. Aqua',
-  's-s-aqua':'S.S. Aqua',
-  'elm-lab':'Laboratorio del profesor Elm',
-  'burned-tower-b1f':'Torre Quemada',
-  'mt-silver-outside':'Monte Plateado',
-  'johto-victory-road':'Calle Victoria',
-  'sinjoh-ruins':'Ruinas de Sinjoh',
-  'pokeathlon-dome':'Carpa Pokéathlon',
-  'global-terminal':'Terminal Global',
-  'goldenrod-game-corner':'Casino de Ciudad Trigal',
+  'new bark town':'Pueblo Primavera',
+  'cherrygrove city':'Ciudad Cerezo',
+  'violet city':'Ciudad Malva',
+  'azalea town':'Pueblo Azalea',
+  'goldenrod city':'Ciudad Trigal',
+  'ecruteak city':'Ciudad Iris',
+  'olivine city':'Ciudad Olivo',
+  'cianwood city':'Ciudad Orquídea',
+  'mahogany town':'Pueblo Caoba',
+  'blackthorn city':'Ciudad Endrino',
+  'dark cave':'Cueva Oscura',
+  'union cave':'Cueva Unión',
+  'slowpoke well':'Pozo Slowpoke',
+  'mt mortar':'Monte Mortero',
+  'ice path':'Ruta Helada',
+  'dragon s den':'Guarida Dragón',
+  'dragons den':'Guarida Dragón',
+  'cliff edge gate':'Paso Acantilado',
+  'cliff cave':'Cueva Acantilado',
+  'mt silver':'Monte Plateado',
+  'mt silver cave':'Cueva Monte Plateado',
+  'ilex forest':'Encinar',
+  'whirl islands':'Islas Remolino',
+  'sprout tower':'Torre Bellsprout',
+  'burned tower':'Torre Quemada',
+  'bell tower':'Torre Campana',
+  'tin tower':'Torre Campana',
+  'embedded tower':'Torre Oculta',
+  'ruins of alph':'Ruinas Alfa',
+  'goldenrod tunnel':'Túnel Trigal',
+  'goldenrod underground':'Túnel Trigal',
+  'national park':'Parque Nacional',
+  'moomoo farm':'Granja Mu-mu',
+  'lake of rage':'Lago de la Furia',
+  'radio tower':'Torre de Radio',
+  'goldenrod radio tower':'Torre de Radio',
+  'olivine lighthouse':'Faro de Olivo',
+  'lighthouse':'Faro',
+  'battle tower':'Torre Batalla',
+  'bellchime trail':'Senda Dindón',
+  'johto safari zone':'Zona Safari',
+  'safari zone gate':'Puerta Zona Safari',
+  'magnet train':'Magnetotrén',
+  'ss aqua':'S.S. Aqua',
+  's s aqua':'S.S. Aqua',
+  'elm s lab':'Laboratorio del profesor Elm',
+  'sinjoh ruins':'Ruinas de Sinjoh',
+  'pokeathlon dome':'Carpa Pokéathlon',
+  'global terminal':'Terminal Global',
+  'frontier access':'Acceso al Frente Batalla',
 
   /* ---------- HOENN ---------- */
-  'littleroot-town':'Villa Raíz',
-  'oldale-town':'Pueblo Escaso',
-  'petalburg-city':'Ciudad Petalia',
-  'rustboro-city':'Ciudad Férrica',
-  'dewford-town':'Pueblo Azuliza',
-  'slateport-city':'Ciudad Portual',
-  'mauville-city':'Ciudad Malvalona',
-  'verdanturf-town':'Pueblo Verdegal',
-  'fallarbor-town':'Pueblo Pardal',
-  'lavaridge-town':'Pueblo Lavacalda',
-  'fortree-city':'Ciudad Arborada',
-  'lilycove-city':'Ciudad Calagua',
-  'mossdeep-city':'Ciudad Algaria',
-  'sootopolis-city':'Arrecípolis',
-  'pacifidlog-town':'Pueblo Oromar',
-  'ever-grande-city':'Ciudad Colosalia',
-  'rusturf-tunnel':'Túnel Fervergal',
-  'island-cave':'Cueva Insular',
-  'granite-cave':'Cueva Granito',
-  'fiery-path':'Senda Ígnea',
-  'jagged-pass':'Desfiladero',
-  'ancient-tomb':'Tumba Antigua',
-  'desert-ruins':'Ruinas del Desierto',
-  'mt-chimney':'Monte Cenizo',
-  'desert-underpass':'Gruta Desértica',
-  'meteor-falls':'Cascada Meteoro',
-  'mt-pyre':'Monte Pírico',
-  'hoenn-victory-road':'Calle Victoria',
-  'hoenn-safari-zone':'Zona Safari',
-  'petalburg-woods':'Bosque Petalia',
-  'cave-of-origin':'Cueva Ancestral',
-  'seafloor-cavern':'Cueva Abisal',
-  'shoal-cave':'Cueva Bajera',
-  'sky-pillar':'Pilar Celeste',
-  'new-mauville':'Nueva Malvalona',
-  'abandoned-ship':'Barco Abandonado',
-  'scorched-slab':'Losa Chamuscada',
-  'magma-hideout':'Guarida Magma',
-  'aqua-hideout':'Guarida Aqua',
-  'southern-island':'Isla Sureña',
-  'mirage-tower':'Torre Espejismo',
-  'marine-cave':'Cueva Marina',
-  'terra-cave':'Cueva Terrestre',
-  'artisan-cave':'Cueva Artesa',
-  'battle-frontier':'Frente Batalla',
-  'trick-house':'Casa de Trucos',
-  'mirage-island':'Isla Espejismo',
-  'sealed-chamber':'Cámara Sellada',
-  'sky-pillar-outside':'Pilar Celeste',
-  'weather-institute':'Instituto Meteorológico',
-  'oceanic-museum':'Museo Oceánico',
-  'seaside-cycling-road':'Camino de bicis',
-  'devon-corporation':'Devon S. A.',
-  'safari-zone-hoenn':'Zona Safari'
+  'littleroot town':'Villa Raíz',
+  'oldale town':'Pueblo Escaso',
+  'petalburg city':'Ciudad Petalia',
+  'rustboro city':'Ciudad Férrica',
+  'dewford town':'Pueblo Azuliza',
+  'slateport city':'Ciudad Portual',
+  'mauville city':'Ciudad Malvalona',
+  'verdanturf town':'Pueblo Verdegal',
+  'fallarbor town':'Pueblo Pardal',
+  'lavaridge town':'Pueblo Lavacalda',
+  'fortree city':'Ciudad Arborada',
+  'lilycove city':'Ciudad Calagua',
+  'mossdeep city':'Ciudad Algaria',
+  'sootopolis city':'Arrecípolis',
+  'pacifidlog town':'Pueblo Oromar',
+  'ever grande city':'Ciudad Colosalia',
+  'rusturf tunnel':'Túnel Fervergal',
+  'island cave':'Cueva Insular',
+  'granite cave':'Cueva Granito',
+  'fiery path':'Senda Ígnea',
+  'jagged pass':'Desfiladero',
+  'ancient tomb':'Tumba Antigua',
+  'desert ruins':'Ruinas del Desierto',
+  'mt chimney':'Monte Cenizo',
+  'desert underpass':'Gruta Desértica',
+  'meteor falls':'Cascada Meteoro',
+  'mt pyre':'Monte Pírico',
+  'hoenn safari zone':'Zona Safari',
+  'petalburg woods':'Bosque Petalia',
+  'cave of origin':'Cueva Ancestral',
+  'seafloor cavern':'Cueva Abisal',
+  'shoal cave':'Cueva Bajera',
+  'sky pillar':'Pilar Celeste',
+  'new mauville':'Nueva Malvalona',
+  'abandoned ship':'Barco Abandonado',
+  'scorched slab':'Losa Chamuscada',
+  'magma hideout':'Guarida Magma',
+  'aqua hideout':'Guarida Aqua',
+  'southern island':'Isla Sureña',
+  'mirage tower':'Torre Espejismo',
+  'marine cave':'Cueva Marina',
+  'terra cave':'Cueva Terrestre',
+  'artisan cave':'Cueva Artesa',
+  'battle frontier':'Frente Batalla',
+  'trick house':'Casa de Trucos',
+  'mirage island':'Isla Espejismo',
+  'sealed chamber':'Cámara Sellada',
+  'weather institute':'Instituto Meteorológico',
+  'oceanic museum':'Museo Oceánico',
+  'seaside cycling road':'Camino de bicis',
+  'devon corporation':'Devon S.A.',
+  'battle tent':'Carpa Batalla',
+  'contest hall':'Sala de Concursos'
 };
 
-/* Sufijos de área: pisos, entradas, zonas internas */
-const SUFIJOS_ES = {
-  'area':'', 'entrance':'entrada', 'exterior':'exterior', 'outside':'exterior',
-  'inside':'interior', 'interior':'interior', 'gate':'puerta',
-  'north':'norte', 'south':'sur', 'east':'este', 'west':'oeste',
-  'northern':'norte', 'southern':'sur', 'eastern':'este', 'western':'oeste',
-  'basement':'sótano', 'roof':'azotea', 'tower':'torre', 'cave':'cueva',
-  'lobby':'vestíbulo', 'hideout':'guarida', 'port':'puerto',
-  'sea':'mar', 'sea-route':'ruta marina', 'underwater':'bajo el agua',
-  'grass':'hierba', 'water':'agua', 'surf':'surf', 'dock':'muelle',
-  'main':'principal', 'back':'fondo', 'front':'frente',
-  'chamber':'cámara', 'room':'sala', 'floor':'planta', 'summit':'cima',
-  'peak':'cima', 'top':'cima', 'bottom':'base', 'center':'centro',
-  'clearing':'claro', 'garden':'jardín', 'yard':'patio', 'house':'casa',
-  'low':'marea baja', 'high':'marea alta', 'tide':'', 'ice':'hielo',
-  'upper':'superior', 'lower':'inferior', 'inner':'interior', 'outer':'exterior',
-  'left':'izquierda', 'right':'derecha', 'middle':'centro', 'end':'final',
-  'b1f':'Sótano 1', 'b2f':'Sótano 2'
+/* Regiones, para las rutas */
+const REGIONES = {
+  kanto:'Kanto', johto:'Johto', hoenn:'Hoenn', sinnoh:'Sinnoh',
+  unova:'Teselia', kalos:'Kalos', alola:'Alola', galar:'Galar',
+  hisui:'Hisui', paldea:'Paldea'
 };
 
-/* Palabras genéricas para armar nombres no catalogados */
-const PALABRAS_ES = {
-  'route':'Ruta', 'city':'Ciudad', 'town':'Pueblo', 'village':'Aldea',
-  'cave':'Cueva', 'forest':'Bosque', 'woods':'Bosque', 'tower':'Torre',
-  'mt':'Monte', 'mount':'Monte', 'mountain':'Monte', 'lake':'Lago',
-  'river':'Río', 'sea':'Mar', 'island':'Isla', 'islands':'Islas',
-  'road':'Camino', 'path':'Senda', 'trail':'Sendero', 'bridge':'Puente',
-  'tunnel':'Túnel', 'ruins':'Ruinas', 'temple':'Templo', 'shrine':'Santuario',
-  'park':'Parque', 'garden':'Jardín', 'valley':'Valle', 'canyon':'Cañón',
-  'desert':'Desierto', 'beach':'Playa', 'cape':'Cabo', 'bay':'Bahía',
-  'falls':'Cataratas', 'waterfall':'Catarata', 'well':'Pozo', 'mine':'Mina',
-  'mansion':'Mansión', 'castle':'Castillo', 'tomb':'Tumba', 'lab':'Laboratorio',
-  'plateau':'Meseta', 'plains':'Llanura', 'meadow':'Prado', 'marsh':'Pantano',
-  'swamp':'Ciénaga', 'volcano':'Volcán', 'crater':'Cráter', 'ranch':'Rancho',
-  'farm':'Granja', 'port':'Puerto', 'harbor':'Puerto', 'pier':'Muelle',
-  'gym':'Gimnasio', 'league':'Liga', 'zone':'Zona', 'chamber':'Cámara',
-  'hideout':'Guarida', 'lighthouse':'Faro', 'museum':'Museo', 'stadium':'Estadio'
+/* Sufijos de área: se traducen palabra por palabra */
+const SUFIJOS = {
+  area:'', entrance:'entrada', exit:'salida', outside:'exterior',
+  inside:'interior', interior:'interior', exterior:'exterior',
+  gate:'puerta', north:'norte', south:'sur', east:'este', west:'oeste',
+  northern:'norte', southern:'sur', eastern:'este', western:'oeste',
+  northeast:'noreste', northwest:'noroeste', southeast:'sureste', southwest:'suroeste',
+  main:'principal', back:'fondo', front:'frente', center:'centro', middle:'centro',
+  upper:'superior', lower:'inferior', inner:'interior', outer:'exterior',
+  left:'izquierda', right:'derecha', end:'final', top:'cima', bottom:'base',
+  summit:'cima', peak:'cima', base:'base', roof:'azotea', basement:'sótano',
+  floor:'planta', room:'sala', hall:'sala', chamber:'cámara', corridor:'pasillo',
+  kitchen:'cocina', cabin:'camarote', deck:'cubierta', dock:'muelle', port:'puerto',
+  yard:'patio', garden:'jardín', clearing:'claro',
+  grass:'hierba', water:'agua', surf:'surf', underwater:'bajo el agua',
+  sea:'mar', pond:'estanque', river:'río', lake:'lago',
+  cave:'cueva', tower:'torre', house:'casa', shop:'tienda',
+  low:'marea baja', high:'marea alta', tide:'', ice:'hielo',
+  first:'primera', second:'segunda', third:'tercera'
 };
 
-/* Métodos de encuentro (PokeAPI sí los traduce, esto es respaldo) */
-const METODOS_ES = {
-  'walk':'Hierba alta o cueva',
-  'old-rod':'Caña vieja',
-  'good-rod':'Caña buena',
-  'super-rod':'Supercaña',
-  'surf':'Surf',
-  'rock-smash':'Golpe Roca',
-  'headbutt':'Golpe Cabeza',
-  'gift':'Regalo',
-  'gift-egg':'Huevo de regalo',
-  'only-one':'Encuentro único',
-  'seaweed':'Algas'
+/* Palabras genéricas, por si hay que armar un nombre desde cero */
+const GENERICAS = {
+  route:'Ruta', city:'Ciudad', town:'Pueblo', village:'Aldea',
+  forest:'Bosque', woods:'Bosque', mt:'Monte', mount:'Monte',
+  island:'Isla', islands:'Islas', road:'Camino', path:'Senda',
+  bridge:'Puente', tunnel:'Túnel', ruins:'Ruinas', park:'Parque',
+  valley:'Valle', canyon:'Cañón', desert:'Desierto', beach:'Playa',
+  cape:'Cabo', bay:'Bahía', falls:'Cataratas', well:'Pozo',
+  mine:'Mina', mansion:'Mansión', castle:'Castillo', tomb:'Tumba',
+  lab:'Laboratorio', plateau:'Meseta', meadow:'Prado', marsh:'Pantano',
+  swamp:'Ciénaga', volcano:'Volcán', crater:'Cráter', farm:'Granja',
+  gym:'Gimnasio', league:'Liga', zone:'Zona', hideout:'Guarida',
+  lighthouse:'Faro', museum:'Museo', stadium:'Estadio', plant:'Central'
 };
 
-/* ============================================================
-   Funciones
-   ============================================================ */
-
-/* Rutas: kanto-route-2, johto-route-29, hoenn-route-101 */
-function _ruta(slug){
-  const m = slug.match(/^(?:([a-z]+)-)?route-(\d+)(.*)$/);
+/* Pisos: 1f, b2f, 3f... */
+function _piso(t){
+  const m = t.match(/^(b?)(\d+)f$/);
   if(!m) return null;
-  const region = m[1] ? m[1].charAt(0).toUpperCase()+m[1].slice(1) : null;
-  let nombre = 'Ruta ' + m[2];
-  if(region && !['kanto','johto','hoenn','sinnoh','unova','kalos','alola','galar','paldea'].includes(m[1]))
-    return null;
-  return {base:nombre, resto:m[3]||''};
+  return m[1] ? 'Sótano '+m[2] : 'Planta '+m[2];
 }
 
-/* Pisos: 1f, 2f, b1f, b2f, 3f... */
-function _piso(txt){
-  const m = txt.match(/^b?(\d+)f$/);
-  if(!m) return null;
-  return txt.startsWith('b') ? 'Sótano '+m[1] : 'Planta '+m[1];
+function _capitalizar(t){
+  return t.split(' ').filter(Boolean)
+    .map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(' ');
 }
 
-/* Palabras que en español van delante del nombre propio:
-   'monean-chamber' → 'Cámara Monean' (no 'Monean Cámara') */
-const NUCLEO_ES = {
-  'chamber':'Cámara', 'room':'Sala', 'gate':'Puerta', 'entrance':'Entrada',
-  'dock':'Muelle', 'port':'Puerto', 'hall':'Sala', 'deck':'Cubierta',
-  'kitchen':'Cocina', 'cabin':'Camarote', 'corridor':'Pasillo',
-  'bridge':'Puente', 'tower':'Torre', 'cave':'Cueva', 'house':'Casa'
+function _palabra(p){
+  const piso = _piso(p);
+  if(piso) return piso;
+  if(SUFIJOS[p] !== undefined) return SUFIJOS[p];
+  if(GENERICAS[p]) return GENERICAS[p];
+  if(/^\d+$/.test(p)) return p;
+  return p.charAt(0).toUpperCase()+p.slice(1);
+}
+
+/* Traduce el trozo que sobra tras quitar el nombre del lugar */
+function _sufijo(resto){
+  if(!resto) return '';
+  const partes = resto.split('-').filter(Boolean);
+  if(!partes.length) return '';
+
+  /* "towards-<lugar>" se traduce como "hacia <lugar>" */
+  const i = partes.indexOf('towards');
+  if(i !== -1){
+    const antes = _sufijo(partes.slice(0,i).join('-'));
+    const destinoEn = partes.slice(i+1).join(' ');
+    const destino = buscarLugarEn(destinoEn) || _capitalizar(destinoEn);
+    return (antes ? antes+' ' : '') + 'hacia ' + destino;
+  }
+
+  /* "<nombre>-chamber" → "Cámara <nombre>" */
+  const ultima = partes[partes.length-1];
+  const nucleos = {chamber:'Cámara', room:'Sala', gate:'Puerta', entrance:'Entrada',
+                   hall:'Sala', house:'Casa', cave:'Cueva', tower:'Torre'};
+  if(partes.length>1 && nucleos[ultima]){
+    const resto2 = partes.slice(0,-1).map(_palabra).filter(Boolean).join(' ');
+    return resto2 ? nucleos[ultima]+' '+resto2 : nucleos[ultima];
+  }
+
+  return partes.map(_palabra).filter(Boolean).join(' ');
+}
+
+/* Patrones para lugares que no están en el diccionario.
+   "Eterna Forest" → "Bosque Eterna": el nombre propio se conserva
+   y el sustantivo pasa al español, así nunca queda medio traducido. */
+const PATRON_FINAL = {
+  forest:'Bosque', woods:'Bosque', cave:'Cueva', cavern:'Caverna',
+  city:'Ciudad', town:'Pueblo', village:'Aldea', island:'Isla',
+  islands:'Islas', lake:'Lago', river:'Río', sea:'Mar', bay:'Bahía',
+  beach:'Playa', cape:'Cabo', tower:'Torre', bridge:'Puente',
+  tunnel:'Túnel', road:'Camino', path:'Senda', trail:'Sendero',
+  ruins:'Ruinas', temple:'Templo', shrine:'Santuario', park:'Parque',
+  garden:'Jardín', gardens:'Jardines', valley:'Valle', canyon:'Cañón',
+  desert:'Desierto', falls:'Cataratas', waterfall:'Catarata',
+  well:'Pozo', mine:'Mina', mines:'Minas', mansion:'Mansión',
+  castle:'Castillo', tomb:'Tumba', lab:'Laboratorio', plateau:'Meseta',
+  plains:'Llanura', meadow:'Prado', marsh:'Pantano', swamp:'Ciénaga',
+  volcano:'Volcán', crater:'Cráter', ranch:'Rancho', farm:'Granja',
+  port:'Puerto', harbor:'Puerto', pier:'Muelle', gym:'Gimnasio',
+  league:'Liga', zone:'Zona', chamber:'Cámara', hideout:'Guarida',
+  lighthouse:'Faro', museum:'Museo', stadium:'Estadio', mountain:'Montaña',
+  hill:'Colina', hills:'Colinas', pass:'Paso', gate:'Puerta',
+  bunker:'Búnker', tunnels:'Túneles', springs:'Manantiales',
+  chateau:'Mansión', center:'Centro', square:'Plaza', street:'Calle',
+  building:'Edificio', station:'Estación', factory:'Fábrica',
+  laboratory:'Laboratorio', graveyard:'Cementerio', den:'Guarida',
+  grove:'Arboleda', jungle:'Selva', canal:'Canal', reservoir:'Embalse',
+  quarry:'Cantera', tundra:'Tundra', glacier:'Glaciar', dome:'Cúpula',
+  colosseum:'Coliseo', arena:'Arena', altar:'Altar', shore:'Orilla',
+  cliff:'Acantilado', cliffs:'Acantilados', bog:'Ciénaga', dunes:'Dunas',
+  province:'Provincia', area:'Zona', district:'Distrito', sector:'Sector',
+  isle:'Isla', islet:'Islote', peak:'Pico', ridge:'Cresta', basin:'Cuenca',
+  wilds:'Paraje', fields:'Campos', field:'Campo', flats:'Llanos',
+  hollow:'Hondonada', outskirts:'Afueras', trench:'Fosa', reef:'Arrecife',
+  depths:'Profundidades', ravine:'Barranco', terrace:'Terraza',
+  courtyard:'Patio', chapel:'Capilla', tomb2:'Tumba', spire:'Aguja'
+};
+/* Palabras iniciales: "Mt. Coronet" → "Monte Coronet" */
+const PATRON_INICIO = {
+  mt:'Monte', mount:'Monte', lake:'Lago', route:'Ruta', cape:'Cabo',
+  fort:'Fuerte', old:'Viejo', new:'Nuevo', great:'Gran'
 };
 
-/* Traduce un fragmento suelto usando las tablas genéricas */
-function _fragmento(txt){
-  if(!txt) return '';
-  let t = txt.replace(/^-/,'');
+function _porPatron(k){
+  const partes = k.split(' ').filter(Boolean);
+  if(partes.length < 2) return null;
 
-  /* '...-towards-viridian-city' → '... hacia Ciudad Verde' */
-  const iTw = t.indexOf('towards-');
-  if(iTw !== -1){
-    const antes = t.slice(0, iTw).replace(/-$/,'');
-    const destinoSlug = t.slice(iTw + 8);
-    const destino = LUGARES_ES[destinoSlug] || _fragmento(destinoSlug);
-    const pre = antes ? _fragmento(antes)+' ' : '';
-    return pre + 'hacia ' + destino;
+  const primera = partes[0], ultima = partes[partes.length-1];
+  if(PATRON_INICIO[primera]){
+    const propio = _capitalizar(partes.slice(1).join(' '));
+    return PATRON_INICIO[primera]+' '+propio;
+  }
+  if(PATRON_FINAL[ultima]){
+    const propio = _capitalizar(partes.slice(0,-1).join(' '));
+    return PATRON_FINAL[ultima]+' '+propio;
+  }
+  return null;
+}
+
+/* Busca un nombre en inglés en el diccionario */
+function buscarLugarEn(nombreEn){
+  const k = _clave(nombreEn);
+  if(!k) return null;
+  if(LUGARES_EN[k]) return LUGARES_EN[k];
+
+  /* Rutas: "Kanto Route 2", "Route 104" */
+  const r = k.match(/^(?:([a-z]+) )?(?:sea )?route (\d+)$/);
+  if(r){
+    const reg = r[1] && REGIONES[r[1]] ? ' ('+REGIONES[r[1]]+')' : '';
+    return 'Ruta '+r[2]+reg;
+  }
+  const r2 = k.match(/^(?:([a-z]+) )?route (\d+) (.+)$/);
+  if(r2){
+    const reg = r2[1] && REGIONES[r2[1]] ? ' ('+REGIONES[r2[1]]+')' : '';
+    return 'Ruta '+r2[2]+reg+' '+_capitalizar(r2[3]);
   }
 
-  /* 'monean-chamber' → 'Cámara Monean' */
-  const partesRaw = t.split('-').filter(Boolean);
-  const ultima = partesRaw[partesRaw.length-1];
-  if(partesRaw.length>1 && NUCLEO_ES[ultima]){
-    const resto = partesRaw.slice(0,-1).map(p=>{
-      const piso=_piso(p);
-      if(piso) return piso;
-      if(SUFIJOS_ES[p]!==undefined) return SUFIJOS_ES[p];
-      if(PALABRAS_ES[p]) return PALABRAS_ES[p];
-      return p.charAt(0).toUpperCase()+p.slice(1);
-    }).filter(Boolean).join(' ');
-    return resto ? NUCLEO_ES[ultima]+' '+resto : NUCLEO_ES[ultima];
-  }
-
-  const out = partesRaw.map(p=>{
-    const piso = _piso(p);
-    if(piso) return piso;
-    if(NUCLEO_ES[p]) return NUCLEO_ES[p];
-    if(SUFIJOS_ES[p] !== undefined) return SUFIJOS_ES[p];
-    if(PALABRAS_ES[p]) return PALABRAS_ES[p];
-    if(/^\d+$/.test(p)) return p;
-    return p.charAt(0).toUpperCase()+p.slice(1);
-  }).filter(Boolean);
-  return out.join(' ');
+  return _porPatron(k);
 }
 
 /**
- * Traduce el nombre de un área de PokeAPI.
- * @param {string} slugArea  ej. 'mt-moon-1f', 'kanto-route-2-south-towards-viridian-city'
- * @param {string} [esApi]   nombre en español que devolvió la API, si existe
- * @param {string} [enApi]   nombre en inglés que devolvió la API, si existe
+ * Traduce el nombre de un área.
+ * @param {string} slugArea    identificador del área (ej. 'mt-moon-1f')
+ * @param {string} [esApi]     nombre en español que devolvió la API
+ * @param {string} [enApi]     nombre EN INGLÉS del lugar padre
+ * @param {string} [slugLugar] identificador del lugar padre (ej. 'mt-moon')
  */
-function traducirLugar(slugArea, esApi, enApi){
-  if(!slugArea) return esApi || enApi || '';
-  let s = slugArea.toLowerCase();
+function traducirLugar(slugArea, esApi, enApi, slugLugar){
+  if(!slugArea && !enApi) return '';
+  const area = (slugArea||'').toLowerCase();
+  const lugar = (slugLugar||'').toLowerCase();
 
-  /* Quitamos el sufijo -area, que no aporta nada */
-  s = s.replace(/-area$/,'');
+  /* 1. El sufijo sale de restar el lugar al área: exacto, sin adivinar */
+  let resto = '';
+  if(lugar && area.startsWith(lugar)){
+    resto = area.slice(lugar.length).replace(/^-/,'');
+  }
+  if(resto === 'area') resto = '';
 
-  /* 1. Coincidencia exacta en el diccionario */
-  if(LUGARES_ES[s]) return LUGARES_ES[s];
+  /* 2. Nombre base */
+  let base = (esApi && esApi.trim()) ? esApi.trim() : null;
+  if(!base && enApi) base = buscarLugarEn(enApi);
+  if(!base && enApi && enApi.trim()) base = _capitalizar(_clave(enApi));
 
-  /* 2. Rutas */
-  const r = _ruta(s);
-  if(r){
-    const extra = r.resto ? ' · '+_fragmento(r.resto) : '';
-    return r.base + extra;
+  /* 3. Sin nombre del lugar: se arma desde el identificador */
+  if(!base){
+    const sinResto = resto && area.endsWith(resto)
+      ? area.slice(0, area.length-resto.length).replace(/-$/,'')
+      : area.replace(/-area$/,'');
+    base = buscarLugarEn(sinResto.replace(/-/g,' ')) || _sufijo(sinResto);
   }
 
-  /* 3. Prefijo más largo que esté en el diccionario + sufijo traducido */
-  const partes = s.split('-');
-  for(let i=partes.length-1; i>0; i--){
-    const base = partes.slice(0,i).join('-');
-    if(LUGARES_ES[base]){
-      const resto = _fragmento(partes.slice(i).join('-'));
-      return resto ? LUGARES_ES[base]+' · '+resto : LUGARES_ES[base];
-    }
-  }
-
-  /* 4. Español de la API, si lo hay */
-  if(esApi && esApi.trim()) return esApi;
-
-  /* 5. Último recurso: armado genérico a partir del slug */
-  const armado = _fragmento(s);
-  return armado || enApi || slugArea.replace(/-/g,' ');
+  const suf = _sufijo(resto);
+  return suf ? base+' · '+suf : base;
 }
 
 function traducirMetodo(slug, esApi){
   if(esApi && esApi.trim()) return esApi;
-  return METODOS_ES[slug] || slug.replace(/-/g,' ');
+  const M = {
+    walk:'Hierba alta o cueva', 'old-rod':'Caña vieja', 'good-rod':'Caña buena',
+    'super-rod':'Supercaña', surf:'Surf', 'rock-smash':'Golpe Roca',
+    headbutt:'Golpe Cabeza', gift:'Regalo', 'gift-egg':'Huevo de regalo',
+    'only-one':'Encuentro único', seaweed:'Algas'
+  };
+  return M[slug] || slug.replace(/-/g,' ');
 }
 
-/* Expuesto globalmente para PopoDex.html */
 window.PopoTrad = {
-  LUGARES_ES, SUFIJOS_ES, PALABRAS_ES, NUCLEO_ES, METODOS_ES,
-  traducirLugar, traducirMetodo
+  LUGARES_EN, SUFIJOS, GENERICAS, REGIONES,
+  traducirLugar, traducirMetodo, buscarLugarEn
 };
