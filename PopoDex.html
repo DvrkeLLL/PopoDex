@@ -404,17 +404,39 @@ select:focus,input:focus{border-color:var(--accent);}
 .gan-cifra b{font-size:27px;font-family:var(--mono);line-height:1;}
 .gan-cifra span{font-family:var(--mono);font-size:10px;color:var(--muted);}
 
-/* Tarjetas de equipo con sprites */
-.eqp-card{
-  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
-  padding:13px;margin-bottom:9px;cursor:pointer;text-align:center;
+/* Tarjetas de equipo 3:2 */
+.equipos-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.eq-t{
+  aspect-ratio:3/2;background:var(--bg-panel);border:1px solid var(--border);
+  border-radius:var(--r);padding:9px;cursor:pointer;display:flex;flex-direction:column;
+  transition:border-color .15s, transform .12s;text-align:left;font-family:var(--body);
 }
-.eqp-card:active{border-color:var(--accent);}
-.eqp-sprites{display:flex;justify-content:center;gap:2px;margin-bottom:9px;flex-wrap:wrap;}
-.eqp-sprites img{width:44px;height:44px;image-rendering:pixelated;}
-.eqp-sprites .hueco{width:44px;height:44px;border:1px dashed var(--border);border-radius:3px;}
-.eqp-nom{font-size:14px;font-weight:600;}
-.eqp-meta{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:2px;}
+.eq-t:active{transform:scale(.98);}
+.eq-t.sel{border-color:var(--accent);}
+.eq-t-top{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:6px;}
+.eq-t-gen{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+.eq-t-cont{font-family:var(--mono);font-size:8.5px;color:var(--muted);
+  border:1px solid var(--border);border-radius:2px;padding:1px 5px;}
+.eq-t-sprites{
+  flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);
+  gap:2px;background:var(--bg-screen);border-radius:3px;padding:4px;min-height:0;
+}
+.eq-t-celda{display:flex;align-items:center;justify-content:center;min-height:0;}
+.eq-t-celda img{max-width:100%;max-height:100%;image-rendering:pixelated;}
+.eq-t-celda.hueca{border:1px dashed var(--border);border-radius:3px;}
+.eq-t-pie{margin-top:6px;}
+.eq-t-nom{font-size:12.5px;font-weight:600;line-height:1.2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.eq-t-juego{font-family:var(--mono);font-size:8.5px;color:var(--muted);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.eq-t.nueva{
+  border-style:dashed;border-color:var(--accent-dim);align-items:center;
+  justify-content:center;gap:4px;
+}
+.eq-t.nueva .mas{font-size:24px;font-weight:300;color:var(--accent);line-height:1;}
+.eq-t.nueva .txt{font-size:12px;font-weight:600;color:var(--text);}
+.eq-t.nueva .sub{font-family:var(--mono);font-size:8.5px;color:var(--muted);}
+.eq-t.vacia{opacity:.5;}
 
 /* Botón para elegir equipo en Mejor ataque */
 .eq-elegir{
@@ -3998,11 +4020,19 @@ function elegirRival(){
 }
 
 /* ---------- Mejor ataque ---------- */
-let dnEqMejor = 0;          // equipo elegido para comparar
+let dnEqMejor = null;       // equipo elegido para comparar (null = aún sin elegir)
 let dnTop = 0;              // posición en el ranking general
 let dnIdxMov = {};          // por pokémon, qué movimiento suyo se muestra
 let dnFilas = [];
 let dnVerResumen = (()=>{ try{ return localStorage.getItem('popodex:resumen')!=='0'; }catch(e){ return true; } })();
+
+function usarEquipoMejor(i){
+  if(!equipos[i].miembros.length){ aviso('Ese equipo está vacío'); return; }
+  dnEqMejor = i;
+  dnTop = 0;
+  dnIdxMov = {};
+  renderDanio();
+}
 
 function alternarResumen(){
   dnVerResumen = !dnVerResumen;
@@ -4021,11 +4051,24 @@ async function panelMejor(){
       <button class="btn btn-p" style="width:100%;" onclick="goTo('equipo')">Ir a Equipo</button>`;
     return;
   }
-  if(dnEqMejor>=equipos.length) dnEqMejor = 0;
-  const eq = equipos[dnEqMejor];
 
+  /* Sin equipo elegido: se muestran las tarjetas para que escoja */
+  if(dnEqMejor===null || dnEqMejor>=equipos.length){
+    cont.innerHTML = `
+      <p class="section-label">¿Con qué equipo comparamos?</p>
+      <div class="equipos-grid">
+        ${equipos.map((eq,i)=>tarjetaEquipo(eq,i,`usarEquipoMejor(${i})`,false)).join('')}
+        <button class="eq-t nueva" onclick="goTo('equipo');nuevoEquipo();">
+          <span class="mas">+</span><span class="txt">Nuevo</span>
+          <span class="sub">Crear equipo</span>
+        </button>
+      </div>`;
+    return;
+  }
+
+  const eq = equipos[dnEqMejor];
   const cabecera = `
-    <button class="eq-elegir" onclick="abrirEquipos(i=>{dnEqMejor=i;dnTop=0;dnIdxMov={};renderDanio();})">
+    <button class="eq-elegir" onclick="abrirEquipos(i=>usarEquipoMejor(i))">
       <span class="ee-sprites">
         ${eq.miembros.map(m=>`<img src="${SPRITE(m.pid)}" alt="">`).join('')}
         ${Array.from({length:6-eq.miembros.length},()=>'<span class="hueco"></span>').join('')}
@@ -4358,25 +4401,45 @@ function pintarResultado(r, gen){
     </div>`;
 }
 
-/* ---------- Panel de equipos con sprites ---------- */
+/* ---------- Tarjeta de equipo 3:2 ---------- */
+function tarjetaEquipo(eq, i, accion, seleccionado){
+  const huecos = 6-eq.miembros.length;
+  const gen = genDeJuego(eq.juego);
+  const vacio = !eq.miembros.length;
+  return `
+    <button class="eq-t ${seleccionado?'sel':''} ${vacio?'vacia':''}" onclick="${accion}">
+      <span class="eq-t-top">
+        <span class="eq-t-gen" style="background:${GEN_COLOR[gen]}"></span>
+        <span class="eq-t-cont">${eq.miembros.length}/6</span>
+      </span>
+      <span class="eq-t-sprites">
+        ${eq.miembros.slice(0,6).map(m=>
+          `<span class="eq-t-celda"><img src="${SPRITE(m.pid)}" alt="" loading="lazy"></span>`).join('')}
+        ${Array.from({length:huecos},()=>'<span class="eq-t-celda hueca"></span>').join('')}
+      </span>
+      <span class="eq-t-pie">
+        <span class="eq-t-nom">${eq.nombre}</span>
+        <span class="eq-t-juego">${nombreDeJuego(eq.juego)}</span>
+      </span>
+    </button>`;
+}
+
+/* ---------- Panel de equipos ---------- */
 let equiposCallback = null;
 function abrirEquipos(cb){
   equiposCallback = cb;
-  const cont = document.getElementById('eqp-lista');
-  cont.innerHTML = equipos.map((eq,i)=>{
-    const huecos = 6-eq.miembros.length;
-    return `<div class="eqp-card" onclick="elegirEquipoPanel(${i})">
-      <div class="eqp-sprites">
-        ${eq.miembros.map(m=>`<img src="${SPRITE(m.pid)}" alt="">`).join('')}
-        ${Array.from({length:huecos},()=>'<span class="hueco"></span>').join('')}
-      </div>
-      <div class="eqp-nom">${eq.nombre}</div>
-      <div class="eqp-meta">${nombreDeJuego(eq.juego)} · ${eq.miembros.length}/6</div>
+  document.getElementById('eqp-lista').innerHTML =
+    `<div class="equipos-grid">
+      ${equipos.map((eq,i)=>tarjetaEquipo(eq,i,`elegirEquipoPanel(${i})`,false)).join('')}
+      <button class="eq-t nueva" onclick="closeOverlay('ov-equipos');goTo('equipo');nuevoEquipo();">
+        <span class="mas">+</span><span class="txt">Nuevo</span>
+        <span class="sub">Crear equipo</span>
+      </button>
     </div>`;
-  }).join('');
   openOverlay('ov-equipos');
 }
 function elegirEquipoPanel(i){
+  if(!equipos[i].miembros.length){ aviso('Ese equipo está vacío'); return; }
   closeOverlay('ov-equipos');
   const cb = equiposCallback;
   if(cb) cb(i);
