@@ -318,6 +318,7 @@ select:focus,input:focus{border-color:var(--accent);}
 .sm-fila:active,.sm-fila.on{background:var(--bg-screen);}
 .sm-main{flex:1;min-width:0;}
 .sm-nom{font-size:12.5px;font-weight:500;}
+.campo-chips{display:flex;flex-wrap:wrap;gap:3px;}
 .tabla-tipo{display:flex;flex-direction:column;gap:9px;}
 .tt-fila{display:flex;gap:6px;align-items:flex-start;}
 .tt-mult{font-family:var(--mono);font-size:10px;font-weight:700;min-width:40px;
@@ -1136,6 +1137,8 @@ select:focus,input:focus{border-color:var(--accent);}
         </div>
         <button class="campo" id="sm-juego" style="width:100%;margin-bottom:10px;"
           onclick="elegirJuegoSelMov()"></button>
+        <button class="campo" id="sm-tipos-campo" style="width:100%;margin-bottom:10px;"
+          onclick="abrirTiposMov()"></button>
         <div class="grid3" id="sm-clases" style="margin-bottom:10px;">
           <button class="pill" data-sc="special">Especial</button>
           <button class="pill" data-sc="physical">Físico</button>
@@ -1146,6 +1149,25 @@ select:focus,input:focus{border-color:var(--accent);}
       </div>
       <div class="sheet-ft">
         <button class="btn btn-s" onclick="quitarFiltroMov()">Sin filtrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SELECTOR DE TIPOS ============ -->
+  <div class="overlay" id="ov-seltipos">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="st-sub">—</div>
+          <h2 class="sheet-title" style="font-size:17px;">Elegir tipos</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-seltipos')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd"><div class="grid3" id="st-chips"></div></div>
+      <div class="sheet-ft">
+        <button class="btn btn-s" onclick="stTodos()">Quitar todos</button>
+        <button class="btn btn-p" onclick="stListo()">Listo</button>
       </div>
     </div>
   </div>
@@ -1721,8 +1743,20 @@ document.querySelectorAll('[data-go]').forEach(el=>{
   el.addEventListener('click',()=>goTo(el.dataset.go));
 });
 
-function openOverlay(id){document.getElementById(id).classList.add('open');}
-function closeOverlay(id){document.getElementById(id).classList.remove('open');}
+let capaOverlay = 40;
+function openOverlay(id){
+  const el = document.getElementById(id);
+  capaOverlay += 2;                      // cada panel nuevo va por encima del anterior
+  el.style.zIndex = capaOverlay;
+  el.classList.add('open');
+}
+function closeOverlay(id){
+  const el = document.getElementById(id);
+  el.classList.remove('open');
+  el.style.zIndex = '';
+  /* Si no queda ninguno abierto, se reinicia el contador */
+  if(!document.querySelector('.overlay.open')) capaOverlay = 40;
+}
 document.querySelectorAll('.overlay').forEach(ov=>{
   ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('open'); });
 });
@@ -1990,6 +2024,7 @@ async function abrirSelMov(){
   document.querySelectorAll('[data-sc]').forEach(b=>
     b.classList.toggle('on', smClases.includes(b.dataset.sc)));
   pintarJuegoSelMov();
+  pintarCampoTiposMov();
   filtrarSelMov();
 }
 
@@ -2005,13 +2040,74 @@ function pintarJuegoSelMov(){
     </span><span class="campo-x">›</span>`;
 }
 
+/* ---------- Selector de tipos reutilizable ---------- */
+let stSel = [], stCb = null, stValidos = TYPES;
+
+function abrirTipos(cfg){
+  stSel = [...(cfg.actual||[])];
+  stCb = cfg.alElegir;
+  stValidos = cfg.tipos || TYPES;
+  document.getElementById('st-sub').textContent = cfg.sub || '';
+  pintarChipsTipos();
+  openOverlay('ov-seltipos');
+}
+function pintarChipsTipos(){
+  document.getElementById('st-chips').innerHTML = stValidos.map(t=>
+    `<button class="chip ${stSel.includes(t)?'on':''}" data-st="${t}"
+      style="background:${TCOLOR[t]}">${TES[t]}</button>`).join('');
+  document.querySelectorAll('[data-st]').forEach(b=>b.addEventListener('click',()=>{
+    const t = b.dataset.st;
+    stSel = stSel.includes(t) ? stSel.filter(x=>x!==t) : [...stSel, t];
+    b.classList.toggle('on');
+  }));
+}
+function stTodos(){ stSel = []; pintarChipsTipos(); }
+function stListo(){
+  closeOverlay('ov-seltipos');
+  if(stCb) stCb([...stSel]);
+}
+
+/* ---------- Tipos en el catálogo de movimientos ---------- */
+let smTipos = [];
+
+function abrirTiposMov(){
+  const gen = smJuego ? genDeJuego(smJuego) : 9;
+  abrirTipos({
+    sub: smJuego ? nombreDeJuego(smJuego) : 'Todos los tipos',
+    actual: smTipos,
+    tipos: tiposValidos(gen),
+    alElegir: v=>{ smTipos = v; pintarCampoTiposMov(); filtrarSelMov(); }
+  });
+}
+
+function pintarCampoTiposMov(){
+  const el = document.getElementById('sm-tipos-campo');
+  if(!el) return;
+  if(!smTipos.length){
+    el.innerHTML = `<span class="campo-main">
+      <span class="campo-val sin">Todos los tipos</span>
+      <span class="campo-sub">Tocar para filtrar</span>
+      </span><span class="campo-x">›</span>`;
+  }else{
+    el.innerHTML = `<span class="campo-main">
+      <span class="campo-chips">${smTipos.map(t=>
+        `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
+      </span><span class="campo-x">›</span>`;
+  }
+}
+
 function elegirJuegoSelMov(){
   abrirSelector({
     titulo:'Juego', sub:'Solo movimientos que ya existían', buscar:true, actual:smJuego,
     opciones: [{valor:'', nombre:'Todos los juegos', detalle:'Sin filtrar por época'}]
       .concat(JUEGOS.map(j=>({valor:j.slug, nombre:j.es, img:spriteJuego(j.slug),
         detalle:`${j.gen}.ª generación`}))),
-    alElegir: v=>{ smJuego = v; pintarJuegoSelMov(); filtrarSelMov(); }
+    alElegir: v=>{
+      smJuego = v;
+      const validos = tiposValidos(v ? genDeJuego(v) : 9);
+      smTipos = smTipos.filter(t=>validos.includes(t));
+      pintarJuegoSelMov(); pintarCampoTiposMov(); filtrarSelMov();
+    }
   });
 }
 
@@ -2023,6 +2119,7 @@ function filtrarSelMov(){
   let lista = movInfo.filter(m=>{
     if(m.gen > gen) return false;
     if(t && !(norm(m.es).includes(t) || m.slug.includes(t))) return false;
+    if(smTipos.length && !smTipos.includes(m.tipo)) return false;
     if(smClases.length){
       const c = (gen<=3 && m.clase!=='status') ? (TCAT[m.tipo]||m.clase) : m.clase;
       if(!smClases.includes(c)) return false;
@@ -2208,6 +2305,13 @@ async function applyFilters(){
   render();
   closeOverlay('ov-filters');
   document.getElementById('s-pokedex').scrollTop = 0;
+}
+
+function limpiarBusqueda(){
+  document.getElementById('dex-busca').value='';
+  document.getElementById('dex-limpiar').style.display='none';
+  filters.texto='';
+  render();
 }
 
 function clearFilters(){
