@@ -347,6 +347,15 @@ select:focus,input:focus{border-color:var(--accent);}
 .mec-p b{color:var(--text);}
 .mec-gen{font-family:var(--mono);font-size:9px;color:#fff;background:var(--accent);
   padding:2px 7px;border-radius:2px;display:inline-block;margin-bottom:8px;}
+.sim-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:13px;}
+.sim-quita{border:none;cursor:pointer;font-size:9px;padding:5px 9px;}
+.cg-blk{margin-bottom:9px;}
+.cg-blk .cg-op{margin-bottom:0;}
+.cg-cont{
+  border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r);
+  padding:0 12px 8px;background:var(--bg-panel);
+}
+.cg-chev.abierto{transform:rotate(90deg);}
 .formula{font-family:var(--mono);font-size:11px;background:var(--bg-screen);
   border:1px solid var(--border);border-radius:var(--r);padding:11px;
   margin:8px 0;line-height:1.7;overflow-x:auto;white-space:pre;}
@@ -4990,6 +4999,13 @@ function infoMenu(){
       <span class="util-s">Todos los movimientos con potencia, precisión, PP y efecto</span></span>
       <span class="campo-x">›</span>
     </button>
+    <button class="util" onclick="infoIr('simulador')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/>
+      <path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg>
+      <span class="util-main"><span class="util-t">Simulador de cobertura</span>
+      <span class="util-s">Elige tipos de ataque y mira qué combinaciones cubres</span></span>
+      <span class="campo-x">›</span>
+    </button>
     <button class="util" onclick="infoIr('tipos')">
       <svg viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 4-3 6.5-7 8-4-1.5-7-4-7-8V7z"/></svg>
       <span class="util-main"><span class="util-t">Tabla de tipos</span>
@@ -5021,12 +5037,14 @@ function infoIr(v){
   infoVista = v;
   document.getElementById('info-volver').style.display = 'flex';
   const T = {movs:['Movimientos','Buscador'], tipos:['Tabla de tipos','Efectividades'],
+             simulador:['Simulador','Cobertura de ataque'],
              mecanicas:['Mecánicas','Por generación'], formulas:['Fórmulas','Cómo se calcula'],
              acerca:['Acerca de','PopoDex']};
   document.getElementById('info-titulo').textContent = T[v][0];
   document.getElementById('info-sub').textContent = T[v][1];
   document.getElementById('s-info').scrollTop = 0;
   if(v==='movs') panelMovimientos();
+  else if(v==='simulador') panelSimulador();
   else if(v==='tipos') panelTipos();
   else if(v==='mecanicas') panelMecanicas();
   else if(v==='formulas') panelFormulas();
@@ -5261,6 +5279,155 @@ async function quienAprende(slug, nombre){
       </div>
       ${ids.length>80 ? `<p class="hint" style="text-align:center;padding-top:8px;">y ${ids.length-80} más</p>`:''}`;
   }catch(e){ cont.innerHTML = '<div class="hint">No se pudo consultar.</div>'; }
+}
+
+/* ---------- Simulador de cobertura ---------- */
+let simTipos = [];        // tipos de ataque elegidos
+let simJuego = '';        // '' = solo combinaciones, sin pokémon
+let simAbierto = {x4:false, x2:false, sin:true};
+let simCache = {};        // juego -> especies de su pokédex
+
+async function poolSimulador(juego){
+  if(!juego) return null;                    // sin juego: se usan todas las especies
+  if(simCache[juego]) return simCache[juego];
+  const dex = dexDisponibles(juego)[0];      // la pokédex regional de ese juego
+  const ids = await especiesDeDex(dex);
+  simCache[juego] = ids;
+  return ids;
+}
+
+async function panelSimulador(){
+  const body = document.getElementById('info-body');
+  const gen = simJuego ? genDeJuego(simJuego) : 9;
+  const tb = tablaPara(gen);
+  const validos = tiposValidos(gen);
+  simTipos = simTipos.filter(t=>validos.includes(t));
+
+  /* Combinaciones de tipos que existen de verdad */
+  let ids = null;
+  if(simJuego){
+    body.innerHTML = '<div class="hint">Cargando pokédex...</div>';
+    try{ ids = await poolSimulador(simJuego); }
+    catch(e){ ids = null; }
+  }
+  const pool = ids
+    ? ids.map(id=>allMons.find(m=>m.id===id)).filter(Boolean)
+    : allMons;
+
+  const combos = {};
+  pool.forEach(m=>{
+    const tips = tiposEnGen(m, gen);
+    if(!tips.length || !tips.every(t=>validos.includes(t))) return;
+    const clave = [...tips].sort().join('/');
+    if(!combos[clave]) combos[clave] = {tipos:tips, mons:[]};
+    combos[clave].mons.push({id:m.id, es:m.es||m.name});
+  });
+
+  const filas = Object.values(combos).map(c=>{
+    let mejor = 0, via = [];
+    simTipos.forEach(t=>{
+      const e = c.tipos.reduce((n,d)=>n*(tb[t]?.[d] ?? 1), 1);
+      if(e>mejor){ mejor = e; via = [t]; }
+      else if(e===mejor && e>=2){ via.push(t); }
+    });
+    return {...c, mult:mejor, via};
+  }).sort((a,b)=> b.mult-a.mult || a.tipos.join().localeCompare(b.tipos.join()));
+
+  const x4  = filas.filter(f=>f.mult>=4);
+  const x2  = filas.filter(f=>f.mult>=2 && f.mult<4);
+  const sin = filas.filter(f=>f.mult<2);
+  const pc  = filas.length ? Math.round((x4.length+x2.length)/filas.length*100) : 0;
+
+  const bloque = (k, lista, lab, desc, col) => `
+    <div class="cg-blk">
+      <button class="cg-op" onclick="simAlternar('${k}')">
+        <span class="cg-mult" style="background:${col}">${lab}</span>
+        <span class="cg-txt">
+          <span class="cg-desc">${desc}</span>
+          <span class="cg-n">${lista.length} combinacion${lista.length===1?'':'es'}${
+            simJuego ? ' · '+lista.reduce((n,f)=>n+f.mons.length,0)+' pokémon' : ''}</span>
+        </span>
+        <span class="cg-chev ${simAbierto[k]?'abierto':''}">›</span>
+      </button>
+      ${simAbierto[k] ? `<div class="cg-cont">${
+        !lista.length ? '<div class="hint" style="padding:12px 2px;">Ninguna.</div>'
+        : lista.map(f=>`
+          <div class="cc">
+            <div class="cc-hd">
+              <span class="cc-tipos">${f.tipos.map(t=>
+                `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
+              <span class="cc-mult ${claseMult(f.mult)}">x${f.mult}</span>
+            </div>
+            ${f.mult>=2 && f.via.length ? `<div class="cc-via">con ${
+              f.via.map(t=>TES[t]).join(', ')}</div>` : ''}
+            ${simJuego ? `<div class="cc-mons">${f.mons.map(m=>
+              `<span class="cc-mon" title="${m.es}"><img src="${SPRITE(m.id)}" alt="" loading="lazy"></span>`
+              ).join('')}</div>` : ''}
+          </div>`).join('')}</div>` : ''}
+    </div>`;
+
+  body.innerHTML = `
+    <div class="sm-dos" style="margin-bottom:12px;">
+      <button class="campo" onclick="simElegirTipos()">
+        <img class="jm" src="${SPRITE(133)}" alt="">
+        <span class="campo-main"><span class="campo-val ${simTipos.length?'':'sin'}">${
+          simTipos.length ? simTipos.length+' tipo'+(simTipos.length===1?'':'s') : 'Tipos'}</span></span>
+      </button>
+      <button class="campo" onclick="simElegirJuego()">
+        ${simJuego?`<img class="jm" src="${spriteJuego(simJuego)}" alt="">`:''}
+        <span class="campo-main"><span class="campo-val ${simJuego?'':'sin'}">${
+          simJuego ? nombreDeJuego(simJuego) : 'Sin juego'}</span></span>
+      </button>
+    </div>
+
+    ${simTipos.length ? `<div class="sim-chips">${simTipos.map(t=>
+      `<button class="tchip sim-quita" style="background:${TCOLOR[t]}"
+        onclick="simQuitar('${t}')">${TES[t]} ✕</button>`).join('')}</div>` : ''}
+
+    ${!simTipos.length
+      ? `<div class="eq-vacio" style="padding:34px 16px;">
+          <p>Elige uno o más tipos de ataque<br>para ver qué cubres.</p></div>`
+      : `<div class="cob-bloque" style="margin-bottom:14px;">
+          <div class="cob-cifra"><b>${x4.length+x2.length}</b><span>de ${filas.length} combinaciones · ${pc} %</span></div>
+          <div class="cob-barra">
+            <i style="width:${filas.length?x4.length/filas.length*100:0}%;background:#1F6B57"></i>
+            <i style="width:${filas.length?x2.length/filas.length*100:0}%;background:#2E7D6B"></i>
+            <i style="width:${filas.length?sin.length/filas.length*100:0}%;background:#D9B8C4"></i>
+          </div>
+          <div class="cob-leyenda">
+            <span><i class="pt" style="background:#1F6B57"></i>x4: ${x4.length}</span>
+            <span><i class="pt" style="background:#2E7D6B"></i>x2: ${x2.length}</span>
+            <span><i class="pt" style="background:#D9B8C4"></i>sin cubrir: ${sin.length}</span>
+          </div>
+          <div class="hint" style="padding-top:9px;font-size:9.5px;">${
+            simJuego ? 'Combinaciones presentes en '+nombreDeJuego(simJuego)
+                     : 'Todas las combinaciones que existen entre los pokémon'}</div>
+        </div>
+        ${bloque('sin', sin, '!',  'Sin cubrir',      '#B34A3A')}
+        ${bloque('x4',  x4,  'x4', 'Daño cuádruple',  '#1F6B57')}
+        ${bloque('x2',  x2,  'x2', 'Daño doble',      '#2E7D6B')}`}`;
+}
+
+function simAlternar(k){ simAbierto[k] = !simAbierto[k]; panelSimulador(); }
+function simQuitar(t){ simTipos = simTipos.filter(x=>x!==t); panelSimulador(); }
+
+function simElegirTipos(){
+  const gen = simJuego ? genDeJuego(simJuego) : 9;
+  abrirTipos({
+    sub:'Tipos con los que atacas', actual:simTipos, tipos:tiposValidos(gen),
+    alElegir: v=>{ simTipos = v; panelSimulador(); }
+  });
+}
+
+function simElegirJuego(){
+  abrirSelector({
+    titulo:'Juego', sub:'Para medir contra su pokédex', buscar:true, actual:simJuego,
+    opciones: [{valor:'', nombre:'Sin juego',
+                detalle:'Solo combinaciones de tipos, sin pokémon'}]
+      .concat(JUEGOS.map(j=>({valor:j.slug, nombre:j.es, img:spriteJuego(j.slug),
+        detalle:`${j.gen}.ª generación`}))),
+    alElegir: v=>{ simJuego = v; panelSimulador(); }
+  });
 }
 
 /* ---------- Tabla de tipos ---------- */
