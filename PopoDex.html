@@ -279,6 +279,50 @@ select:focus,input:focus{border-color:var(--accent);}
 .nav-i.active .nav-dot{background:var(--accent);}
 .soon{padding:70px 24px;text-align:center;}
 
+/* ---------- INFO ---------- */
+.util{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px;margin-bottom:10px;font-family:var(--body);
+}
+.util:active{border-color:var(--accent);}
+.util svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+.util-main{flex:1;min-width:0;}
+.util-t{font-size:13.5px;font-weight:600;}
+.util-s{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;}
+.mi-fila{
+  display:flex;align-items:center;gap:9px;padding:10px 11px;cursor:pointer;
+  border-bottom:1px solid var(--border);
+}
+.mi-fila:last-child{border-bottom:none;}
+.mi-fila:active{background:var(--bg-screen);}
+.mi-main{flex:1;min-width:0;}
+.mi-nom{font-size:12.5px;font-weight:600;}
+.mi-sub{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;}
+.mi-n{width:30px;text-align:right;flex-shrink:0;font-family:var(--mono);font-size:10.5px;}
+.mi-lista{border:1px solid var(--border);border-radius:var(--r);}
+.mi-cab{display:flex;gap:8px;padding:0 11px 6px;font-family:var(--mono);font-size:8.5px;
+  color:var(--dim);text-transform:uppercase;letter-spacing:.06em;}
+.mi-cab .a{flex:1;} .mi-cab .b{width:30px;text-align:right;}
+.mi-cuenta{font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 0 8px;}
+.tabla-tipo{display:flex;flex-direction:column;gap:9px;}
+.tt-fila{display:flex;gap:6px;align-items:flex-start;}
+.tt-mult{font-family:var(--mono);font-size:10px;font-weight:700;min-width:40px;
+  padding:3px 5px;border-radius:2px;text-align:center;flex-shrink:0;color:#fff;}
+.tt-tipos{display:flex;gap:4px;flex-wrap:wrap;}
+.mec{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:13px 14px;margin-bottom:10px;}
+.mec-t{font-size:13px;font-weight:600;margin:0 0 7px;}
+.mec-p{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 7px;}
+.mec-p:last-child{margin-bottom:0;}
+.mec-p b{color:var(--text);}
+.mec-gen{font-family:var(--mono);font-size:9px;color:#fff;background:var(--accent);
+  padding:2px 7px;border-radius:2px;display:inline-block;margin-bottom:8px;}
+.formula{font-family:var(--mono);font-size:11px;background:var(--bg-screen);
+  border:1px solid var(--border);border-radius:var(--r);padding:11px;
+  margin:8px 0;line-height:1.7;overflow-x:auto;white-space:pre;}
+
 /* ---------- DAÑO ---------- */
 .grupo{
   background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
@@ -875,9 +919,22 @@ select:focus,input:focus{border-color:var(--accent);}
     <div class="pad" id="dn-body"></div>
   </div>
 
-  <div class="screen" id="s-info"><div class="hdr"><h1 class="hdr-title">Info útil</h1></div>
-    <div class="soon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/></svg>
-    <h3>Próximo apartado</h3><p>Mecánicas, fórmulas y diferencias entre generaciones.</p></div></div>
+  <div class="screen" id="s-info">
+    <div class="hdr">
+      <div class="hdr-row">
+        <div>
+          <p class="hdr-sub" id="info-sub">Utilidades</p>
+          <h1 class="hdr-title" id="info-titulo">Info útil</h1>
+        </div>
+        <button class="icon-btn" id="info-volver" style="display:none;" onclick="infoMenu()">
+          <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      </div>
+    </div>
+    <div class="pad" id="info-body"></div>
+  </div>
+
+  <!-- ============ DETALLE DE MOVIMIENTO ============ -->
+  <div class="overlay" id="ov-movdet"><div class="sheet" id="movdet-sheet"></div></div>
 
   <!-- ============ OVERLAY DETALLE ============ -->
   <div class="overlay" id="ov-detail"><div class="sheet" id="detail-sheet"></div></div>
@@ -1570,6 +1627,7 @@ function goTo(id){
   document.querySelector('.screen.active').scrollTop = 0;
   if(id==='equipo' && equipoAbierto===null) renderEquipos();
   if(id==='dano') renderDanio();
+  if(id==='info' && infoVista==='menu') infoMenu();
 }
 document.querySelectorAll('[data-go]').forEach(el=>{
   el.addEventListener('click',()=>goTo(el.dataset.go));
@@ -4453,6 +4511,483 @@ function elegirEquipoPanel(i){
   if(cb) cb(i);
 }
 
+/* ================= INFO ÚTIL ================= */
+let infoVista = 'menu';
+let movInfo = [];              // catálogo completo de movimientos
+let movInfoCargando = false;
+let mfTexto = '', mfTipos = [], mfClases = [], mfPotMin = null, mfGen = '';
+let mfLista = [], mfDibujados = 0;
+const LOTE_MOV = 50;
+
+function infoMenu(){
+  infoVista = 'menu';
+  document.getElementById('info-volver').style.display = 'none';
+  document.getElementById('info-sub').textContent = 'Utilidades';
+  document.getElementById('info-titulo').textContent = 'Info útil';
+  document.getElementById('info-body').innerHTML = `
+    <button class="util" onclick="infoIr('movs')">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <span class="util-main"><span class="util-t">Buscador de movimientos</span>
+      <span class="util-s">Todos los movimientos con potencia, precisión, PP y efecto</span></span>
+      <span class="campo-x">›</span>
+    </button>
+    <button class="util" onclick="infoIr('tipos')">
+      <svg viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 4-3 6.5-7 8-4-1.5-7-4-7-8V7z"/></svg>
+      <span class="util-main"><span class="util-t">Tabla de tipos</span>
+      <span class="util-s">Efectividades atacando y defendiendo, por juego</span></span>
+      <span class="campo-x">›</span>
+    </button>
+    <button class="util" onclick="infoIr('mecanicas')">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="17" cy="18" r="2.5"/></svg>
+      <span class="util-main"><span class="util-t">Mecánicas por generación</span>
+      <span class="util-s">Qué cambia entre juegos y por qué afecta a tus cálculos</span></span>
+      <span class="campo-x">›</span>
+    </button>
+    <button class="util" onclick="infoIr('formulas')">
+      <svg viewBox="0 0 24 24"><path d="M5 5h14M9 5v14M5 12h8"/><path d="M15 12l4 7M19 12l-4 7"/></svg>
+      <span class="util-main"><span class="util-t">Fórmulas</span>
+      <span class="util-s">Cómo se calculan estadísticas y daño</span></span>
+      <span class="campo-x">›</span>
+    </button>
+    <button class="util" onclick="infoIr('acerca')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/>
+      <circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none"/></svg>
+      <span class="util-main"><span class="util-t">Acerca de PopoDex</span>
+      <span class="util-s">Fuentes de los datos y aviso legal</span></span>
+      <span class="campo-x">›</span>
+    </button>`;
+}
+
+function infoIr(v){
+  infoVista = v;
+  document.getElementById('info-volver').style.display = 'flex';
+  const T = {movs:['Movimientos','Buscador'], tipos:['Tabla de tipos','Efectividades'],
+             mecanicas:['Mecánicas','Por generación'], formulas:['Fórmulas','Cómo se calcula'],
+             acerca:['Acerca de','PopoDex']};
+  document.getElementById('info-titulo').textContent = T[v][0];
+  document.getElementById('info-sub').textContent = T[v][1];
+  document.getElementById('s-info').scrollTop = 0;
+  if(v==='movs') panelMovimientos();
+  else if(v==='tipos') panelTipos();
+  else if(v==='mecanicas') panelMecanicas();
+  else if(v==='formulas') panelFormulas();
+  else panelAcerca();
+}
+
+/* ---------- Buscador de movimientos ---------- */
+async function cargarCatalogoMovs(){
+  if(movInfo.length) return movInfo;
+  const guardado = Cache.get('catalogomovs');
+  if(guardado){ movInfo = guardado; return movInfo; }
+  const d = await gql(`{
+    move(order_by:{id:asc}) {
+      id name power accuracy pp priority generation_id
+      type { name }
+      movedamageclass { name }
+      movenames(where:{language_id:{_eq:${ES}}}) { name }
+    }
+  }`);
+  movInfo = d.move.map(m=>({
+    id:m.id, slug:m.name,
+    es: m.movenames[0]?.name || m.name.replace(/-/g,' '),
+    tipo: m.type?.name || 'normal',
+    clase: m.movedamageclass?.name || 'status',
+    pot:m.power, prec:m.accuracy, pp:m.pp, pri:m.priority, gen:m.generation_id
+  }));
+  Cache.set('catalogomovs', movInfo);
+  return movInfo;
+}
+
+async function panelMovimientos(){
+  const body = document.getElementById('info-body');
+  body.innerHTML = '<div class="hint">Cargando movimientos...</div>';
+  try{
+    await cargarCatalogoMovs();
+    await cargarCambiosMov();
+  }catch(e){
+    body.innerHTML = `<div class="hint">No se pudo cargar el catálogo.<br>${e.message||''}</div>
+      <button class="btn btn-s" style="width:100%;margin-top:8px;" onclick="panelMovimientos()">Reintentar</button>`;
+    return;
+  }
+
+  body.innerHTML = `
+    <div class="buscador" style="margin:0 0 11px;">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <input type="text" id="mf-busca" placeholder="Buscar movimiento..." autocomplete="off" value="${mfTexto}">
+    </div>
+    <label class="f-lab">Tipo</label>
+    <div class="grid3" id="mf-tipos" style="margin-bottom:13px;"></div>
+    <label class="f-lab">Categoría</label>
+    <div class="grid3" style="margin-bottom:13px;">
+      <button class="pill ${mfClases.includes('physical')?'on':''}" data-mc="physical">Físico</button>
+      <button class="pill ${mfClases.includes('special')?'on':''}" data-mc="special">Especial</button>
+      <button class="pill ${mfClases.includes('status')?'on':''}" data-mc="status">Estado</button>
+    </div>
+    <div class="cfg" style="margin-bottom:13px;">
+      <div class="cfg-fila" style="grid-template-columns:auto 1fr auto 2fr;">
+        <span class="cfg-lab">Pot ≥</span>
+        <input type="number" id="mf-pot" min="0" max="300" value="${mfPotMin??''}" placeholder="—">
+        <span class="cfg-lab">Juego</span>
+        <button class="campo mini" onclick="elegirJuegoMovs()">
+          <span class="campo-main"><span class="campo-val ${mfGen?'':'sin'}">${
+            mfGen ? nombreDeJuego(mfGen) : 'Todos'}</span></span>
+          <span class="campo-x">›</span></button>
+      </div>
+      <button class="btn btn-s" style="width:100%;margin-top:9px;" onclick="limpiarFiltroMovs()">Despejar filtros</button>
+    </div>
+    <p class="mi-cuenta" id="mf-cuenta"></p>
+    <div class="mi-cab"><span class="a">Movimiento</span><span class="b">Pot</span>
+      <span class="b">Prec</span><span class="b">PP</span></div>
+    <div class="mi-lista" id="mf-lista"></div>`;
+
+  document.getElementById('mf-tipos').innerHTML = TYPES.map(t=>
+    `<button class="chip ${mfTipos.includes(t)?'on':''}" data-mt="${t}"
+      style="background:${TCOLOR[t]}">${TES[t]}</button>`).join('');
+
+  document.getElementById('mf-busca').addEventListener('input', e=>{
+    mfTexto = e.target.value; filtrarMovs();
+  });
+  document.getElementById('mf-pot').addEventListener('input', e=>{
+    const v = e.target.value;
+    mfPotMin = v==='' ? null : Number(v);
+    filtrarMovs();
+  });
+  document.querySelectorAll('[data-mt]').forEach(b=>b.addEventListener('click',()=>{
+    const t = b.dataset.mt;
+    mfTipos = mfTipos.includes(t) ? mfTipos.filter(x=>x!==t) : [...mfTipos,t];
+    b.classList.toggle('on');
+    filtrarMovs();
+  }));
+  document.querySelectorAll('[data-mc]').forEach(b=>b.addEventListener('click',()=>{
+    const c = b.dataset.mc;
+    mfClases = mfClases.includes(c) ? mfClases.filter(x=>x!==c) : [...mfClases,c];
+    b.classList.toggle('on');
+    filtrarMovs();
+  }));
+
+  const caja = document.getElementById('s-info');
+  if(!caja.dataset.scrollMovs){
+    caja.dataset.scrollMovs = '1';
+    caja.addEventListener('scroll', ()=>{
+      if(infoVista!=='movs') return;
+      if(caja.scrollTop + caja.clientHeight >= caja.scrollHeight - 250) masMovs();
+    }, {passive:true});
+  }
+  filtrarMovs();
+}
+
+function elegirJuegoMovs(){
+  abrirSelector({
+    titulo:'Juego', sub:'Solo movimientos que ya existían', buscar:true, actual:mfGen,
+    opciones: [{valor:'', nombre:'Todos los juegos', detalle:'Sin filtrar por época'}]
+      .concat(JUEGOS.map(j=>({valor:j.slug, nombre:j.es, detalle:`${j.gen}.ª generación`}))),
+    alElegir: v=>{ mfGen = v; panelMovimientos(); }
+  });
+}
+
+function limpiarFiltroMovs(){
+  mfTexto=''; mfTipos=[]; mfClases=[]; mfPotMin=null; mfGen='';
+  panelMovimientos();
+}
+
+function filtrarMovs(){
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const t = norm(mfTexto.trim());
+  const genTope = mfGen ? genDeJuego(mfGen) : 9;
+
+  mfLista = movInfo.filter(m=>{
+    if(m.gen > genTope) return false;
+    if(t && !(norm(m.es).includes(t) || m.slug.includes(t))) return false;
+    /* En 1.ª-3.ª generación la categoría dependía del tipo */
+    const clase = genTope<=3 && m.clase!=='status' ? (TCAT[m.tipo]||m.clase) : m.clase;
+    if(mfClases.length && !mfClases.includes(clase)) return false;
+    if(mfTipos.length && !mfTipos.includes(m.tipo)) return false;
+    if(mfPotMin!=null && (!m.pot || m.pot < mfPotMin)) return false;
+    return true;
+  });
+
+  document.getElementById('mf-cuenta').textContent =
+    `${mfLista.length} movimiento${mfLista.length===1?'':'s'}` +
+    (mfGen ? ` · hasta ${nombreDeJuego(mfGen)}` : '');
+  mfDibujados = 0;
+  document.getElementById('mf-lista').innerHTML = '';
+  masMovs();
+}
+
+function filaMovInfo(m){
+  const genTope = mfGen ? genDeJuego(mfGen) : 9;
+  const v = mfGen ? valoresMov(m.slug, genTope, {pot:m.pot,prec:m.prec,pp:m.pp,tipo:m.tipo})
+                  : {pot:m.pot,prec:m.prec,pp:m.pp,tipo:m.tipo,cambiado:false};
+  const clase = genTope<=3 && m.clase!=='status' ? (TCAT[v.tipo]||m.clase) : m.clase;
+  return `
+    <div class="mi-fila" onclick="verMovimiento('${m.slug}')">
+      <div class="mi-main">
+        <div class="mi-nom">${m.es}</div>
+        <div class="mi-sub">
+          <span class="tchip" style="background:${TCOLOR[v.tipo]}">${TES[v.tipo]}</span>
+          <span class="mv-cls" style="color:${CLASE_COL[clase]}">${CLASE_ES[clase]}</span>
+          ${m.pri ? `<span class="mv-h-dat">Prioridad ${m.pri>0?'+':''}${m.pri}</span>`:''}
+        </div>
+      </div>
+      <span class="mi-n ${v.cambiado?'hist':''}">${v.pot ?? '—'}</span>
+      <span class="mi-n ${v.cambiado?'hist':''}">${v.prec ?? '—'}</span>
+      <span class="mi-n ${v.cambiado?'hist':''}">${v.pp ?? '—'}</span>
+    </div>`;
+}
+
+function masMovs(){
+  if(mfDibujados >= mfLista.length) return;
+  const cont = document.getElementById('mf-lista');
+  if(!cont) return;
+  const hasta = Math.min(mfDibujados + LOTE_MOV, mfLista.length);
+  cont.insertAdjacentHTML('beforeend',
+    mfLista.slice(mfDibujados, hasta).map(filaMovInfo).join(''));
+  mfDibujados = hasta;
+  if(!mfLista.length) cont.innerHTML = '<div class="hint" style="padding:16px;">Sin resultados.</div>';
+}
+
+/* Detalle de un movimiento */
+async function verMovimiento(slug){
+  const m = movInfo.find(x=>x.slug===slug);
+  if(!m) return;
+  const sheet = document.getElementById('movdet-sheet');
+  openOverlay('ov-movdet');
+  const genTope = mfGen ? genDeJuego(mfGen) : 9;
+  const v = mfGen ? valoresMov(slug, genTope, {pot:m.pot,prec:m.prec,pp:m.pp,tipo:m.tipo})
+                  : {pot:m.pot,prec:m.prec,pp:m.pp,tipo:m.tipo,cambiado:false};
+  const clase = genTope<=3 && m.clase!=='status' ? (TCAT[v.tipo]||m.clase) : m.clase;
+
+  sheet.innerHTML = `
+    <div class="sheet-hd">
+      <div>
+        <div class="sheet-num">${m.gen}.ª generación en adelante</div>
+        <h2 class="sheet-title" style="font-size:18px;">${m.es}</h2>
+      </div>
+      <button class="mini-btn close" onclick="closeOverlay('ov-movdet')">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="sheet-bd">
+      <div class="det-types" style="margin-bottom:14px;">
+        <span class="tchip" style="background:${TCOLOR[v.tipo]};font-size:10px;padding:4px 10px;">${TES[v.tipo]}</span>
+        <span class="tchip" style="background:${CLASE_COL[clase]};font-size:10px;padding:4px 10px;">${CLASE_ES[clase]}</span>
+      </div>
+      <div class="kv"><span>Potencia</span><span>${v.pot ?? '—'}</span></div>
+      <div class="kv"><span>Precisión</span><span>${v.prec ? v.prec+' %' : '—'}</span></div>
+      <div class="kv"><span>PP</span><span>${v.pp ?? '—'}</span></div>
+      <div class="kv"><span>Prioridad</span><span>${m.pri>0?'+':''}${m.pri}</span></div>
+      ${v.cambiado ? `<div class="hint" style="padding:9px 0;">Valores propios de ${nombreDeJuego(mfGen)}.</div>`:''}
+      <button class="btn btn-s" style="width:100%;margin-top:12px;" onclick="quienAprende('${slug}','${m.es}')">
+        Ver qué pokémon lo aprenden</button>
+      <div id="movdet-quien" style="margin-top:11px;"></div>
+    </div>`;
+}
+
+async function quienAprende(slug, nombre){
+  const cont = document.getElementById('movdet-quien');
+  cont.innerHTML = '<div class="hint">Buscando...</div>';
+  try{
+    const mapa = await whoLearns(slug);
+    const ids = [...mapa.keys()].sort((a,b)=>a-b);
+    if(!ids.length){ cont.innerHTML = '<div class="hint">Ningún pokémon lo aprende.</div>'; return; }
+    cont.innerHTML = `
+      <p class="mi-cuenta">${ids.length} pokémon aprenden ${nombre}</p>
+      <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:6px;padding:0;">
+        ${ids.slice(0,80).map(id=>{
+          const mon = allMons.find(x=>x.id===id);
+          if(!mon) return '';
+          return `<div class="mini" onclick="closeOverlay('ov-movdet');goTo('pokedex');setTimeout(()=>openDetail(${id}),200)">
+            <img src="${SPRITE(id)}" alt="" loading="lazy"><div>${mon.es||mon.name}</div></div>`;
+        }).join('')}
+      </div>
+      ${ids.length>80 ? `<p class="hint" style="text-align:center;padding-top:8px;">y ${ids.length-80} más</p>`:''}`;
+  }catch(e){ cont.innerHTML = '<div class="hint">No se pudo consultar.</div>'; }
+}
+
+/* ---------- Tabla de tipos ---------- */
+let tipoElegido = 'fire';
+let tipoJuego = '';
+
+function panelTipos(){
+  const gen = tipoJuego ? genDeJuego(tipoJuego) : 9;
+  const tb = tablaPara(gen);
+  const validos = tiposValidos(gen);
+  if(!validos.includes(tipoElegido)) tipoElegido = 'fire';
+
+  const atacando = {}, defendiendo = {};
+  validos.forEach(t=>{
+    atacando[t] = tb[tipoElegido]?.[t] ?? 1;
+    defendiendo[t] = tb[t]?.[tipoElegido] ?? 1;
+  });
+
+  const grupos = [
+    {v:2, lab:'x2', col:'#2E7D6B'},
+    {v:1, lab:'x1', col:'#8A8296'},
+    {v:.5, lab:'x0.5', col:'#C8683A'},
+    {v:0, lab:'x0', col:'#3D3A4A'}
+  ];
+  const bloque = datos => grupos.map(g=>{
+    const lista = validos.filter(t=>datos[t]===g.v);
+    if(!lista.length) return '';
+    return `<div class="tt-fila">
+      <span class="tt-mult" style="background:${g.col}">${g.lab}</span>
+      <span class="tt-tipos">${lista.map(t=>
+        `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('info-body').innerHTML = `
+    <button class="campo" style="width:100%;margin-bottom:12px;" onclick="elegirJuegoTipos()">
+      <span class="campo-main"><span class="campo-val">${tipoJuego?nombreDeJuego(tipoJuego):'Tabla actual'}</span>
+      <span class="campo-sub">${gen}.ª generación · ${validos.length} tipos</span></span>
+      <span class="campo-x">›</span></button>
+    <label class="f-lab">Tipo</label>
+    <div class="grid3" id="tt-tipos" style="margin-bottom:16px;">
+      ${validos.map(t=>`<button class="chip ${t===tipoElegido?'on':''}" data-tt="${t}"
+        style="background:${TCOLOR[t]}">${TES[t]}</button>`).join('')}
+    </div>
+    <p class="section-label">${TES[tipoElegido]} atacando</p>
+    <div class="tabla-tipo" style="margin-bottom:20px;">${bloque(atacando)}</div>
+    <p class="section-label">${TES[tipoElegido]} defendiendo</p>
+    <div class="tabla-tipo">${bloque(defendiendo)}</div>`;
+
+  document.querySelectorAll('[data-tt]').forEach(b=>b.addEventListener('click',()=>{
+    tipoElegido = b.dataset.tt; panelTipos();
+  }));
+}
+
+function elegirJuegoTipos(){
+  abrirSelector({
+    titulo:'Juego', sub:'La tabla cambió con los años', buscar:true, actual:tipoJuego,
+    opciones: [{valor:'', nombre:'Tabla actual', detalle:'La de los juegos recientes'}]
+      .concat(JUEGOS.map(j=>({valor:j.slug, nombre:j.es, detalle:`${j.gen}.ª generación`}))),
+    alElegir: v=>{ tipoJuego = v; panelTipos(); }
+  });
+}
+
+/* ---------- Mecánicas ---------- */
+function panelMecanicas(){
+  document.getElementById('info-body').innerHTML = `
+    <div class="mec">
+      <span class="mec-gen">1.ª y 2.ª generación</span>
+      <h3 class="mec-t">DVs y Puntos de Esfuerzo</h3>
+      <p class="mec-p">En vez de IVs se usaban <b>DVs</b>, que iban de 0 a 15 en lugar de 0 a 31.
+        El DV de PS no se elegía: salía de combinar los DVs de las otras estadísticas.</p>
+      <p class="mec-p">Y en vez de EVs había <b>Puntos de Esfuerzo</b>, que llegaban hasta 65535
+        por estadística y no tenían tope conjunto: se podían tener todas al máximo.</p>
+    </div>
+
+    <div class="mec">
+      <span class="mec-gen">1.ª a 3.ª generación</span>
+      <h3 class="mec-t">Físico o especial según el tipo</h3>
+      <p class="mec-p">La categoría no dependía del movimiento sino de su <b>tipo</b>.
+        Todo movimiento de Fuego era especial y todo movimiento Normal era físico,
+        sin excepciones.</p>
+      <p class="mec-p"><b>Físicos:</b> Normal, Lucha, Veneno, Tierra, Volador, Bicho, Roca,
+        Fantasma y Acero.<br>
+        <b>Especiales:</b> Fuego, Agua, Planta, Eléctrico, Psíquico, Hielo, Dragón y Siniestro.</p>
+      <p class="mec-p">Por eso Triturar en Esmeralda usa el Ataque Especial de Tyranitar
+        y no su Ataque, aunque hoy sea un movimiento físico.</p>
+    </div>
+
+    <div class="mec">
+      <span class="mec-gen">1.ª generación</span>
+      <h3 class="mec-t">Tabla de tipos distinta</h3>
+      <p class="mec-p">No existían <b>Siniestro</b> ni <b>Acero</b>. Bicho y Veneno se pegaban
+        fuerte entre sí, Fuego no resistía Hielo, y por un fallo del juego Fantasma
+        no afectaba a Psíquico pese a que debía ser superefectivo.</p>
+      <p class="mec-p">La variación aleatoria del daño iba de 217 a 255 sobre 255,
+        no de 85 a 100 como después.</p>
+    </div>
+
+    <div class="mec">
+      <span class="mec-gen">3.ª generación</span>
+      <h3 class="mec-t">Llegan naturalezas, habilidades y EVs modernos</h3>
+      <p class="mec-p">Aparecen las <b>25 naturalezas</b>, que suben una estadística un 10 %
+        y bajan otra un 10 %, y las <b>habilidades</b>. Los EVs pasan a 0-252 por
+        estadística con un tope de 510 en total.</p>
+    </div>
+
+    <div class="mec">
+      <span class="mec-gen">4.ª generación</span>
+      <h3 class="mec-t">Físico y especial por movimiento</h3>
+      <p class="mec-p">Cada movimiento pasa a tener su propia categoría, independiente del tipo.
+        Es el cambio que más altera los cálculos de daño entre juegos antiguos y modernos.</p>
+    </div>
+
+    <div class="mec">
+      <span class="mec-gen">6.ª generación</span>
+      <h3 class="mec-t">Aparece el tipo Hada</h3>
+      <p class="mec-p">Se añade el tipo <b>Hada</b> y varios pokémon cambian de tipo:
+        Clefable, Jigglypuff y Marill pasan de Normal o Agua a Hada.
+        Acero deja de resistir Fantasma y Siniestro.</p>
+    </div>`;
+}
+
+/* ---------- Fórmulas ---------- */
+function panelFormulas(){
+  document.getElementById('info-body').innerHTML = `
+    <div class="mec">
+      <h3 class="mec-t">Estadísticas · 3.ª generación en adelante</h3>
+      <div class="formula">PS = ((2×Base + IV + EV/4) × Nivel/100) + Nivel + 10
+
+Resto = (((2×Base + IV + EV/4) × Nivel/100) + 5) × Naturaleza</div>
+      <p class="mec-p">La naturaleza multiplica por 1.1 la estadística que sube
+        y por 0.9 la que baja. No afecta a los PS.</p>
+    </div>
+
+    <div class="mec">
+      <h3 class="mec-t">Estadísticas · 1.ª y 2.ª generación</h3>
+      <div class="formula">PS = (((Base + DV) × 2 + √PtosEsf/4) × Nivel/100) + Nivel + 10
+
+Resto = (((Base + DV) × 2 + √PtosEsf/4) × Nivel/100) + 5</div>
+      <p class="mec-p">Sin naturalezas, así que dos pokémon idénticos con los mismos
+        DVs y esfuerzo tienen exactamente las mismas estadísticas.</p>
+    </div>
+
+    <div class="mec">
+      <h3 class="mec-t">Daño</h3>
+      <div class="formula">Base = ((2×Nivel/5 + 2) × Potencia × Ataque / Defensa) / 50 + 2
+
+Daño = Base × STAB × Efectividad × Azar</div>
+      <p class="mec-p"><b>STAB</b> es ×1.5 si el movimiento coincide con un tipo del atacante
+        (×2 con la habilidad Adaptable).</p>
+      <p class="mec-p"><b>Efectividad</b> multiplica cada tipo del defensor:
+        ×4, ×2, ×1, ×0.5, ×0.25 o ×0.</p>
+      <p class="mec-p"><b>Azar</b> va de 0.85 a 1.00, y por eso el daño se muestra
+        como un rango en vez de un número exacto.</p>
+      <p class="mec-p">Ataque y Defensa son los físicos o los especiales según la categoría
+        del movimiento, que en 1.ª-3.ª generación depende de su tipo.</p>
+    </div>`;
+}
+
+/* ---------- Acerca de ---------- */
+function panelAcerca(){
+  document.getElementById('info-body').innerHTML = `
+    <div class="mec">
+      <h3 class="mec-t">De dónde salen los datos</h3>
+      <p class="mec-p">Estadísticas, tipos, movimientos, habilidades, evoluciones y
+        localizaciones vienen de <b>PokeAPI</b>, un proyecto abierto y gratuito.
+        Los nombres en español los sirve la propia API.</p>
+      <p class="mec-p">Los nombres de lugares que PokeAPI no traduce se completan con un
+        diccionario propio basado en <b>WikiDex</b>, con la nomenclatura oficial
+        de los juegos en español.</p>
+      <p class="mec-p">Todo se guarda en tu navegador para no repetir consultas.
+        Puedes vaciarlo desde Inicio.</p>
+    </div>
+
+    <div class="mec">
+      <h3 class="mec-t">Aviso</h3>
+      <p class="mec-p">PopoDex es un proyecto de aficionado sin ánimo de lucro,
+        sin publicidad ni cobro alguno.</p>
+      <p class="mec-p">No está afiliado ni respaldado por <b>Nintendo</b>,
+        <b>Game Freak</b>, <b>Creatures Inc.</b> ni <b>The Pokémon Company</b>.
+        Pokémon y todos los nombres relacionados son marcas registradas
+        de sus respectivos propietarios.</p>
+      <p class="mec-p">Los sprites son propiedad de sus titulares y se muestran
+        únicamente con fines informativos.</p>
+    </div>`;
+}
+
 /* ================= COPIA DE SEGURIDAD ================= */
 const COPIA_VER = 1;
 
@@ -4611,6 +5146,7 @@ async function loadHome(){
 
 /* ================= INIT ================= */
 buildTypeChips();
+infoMenu();
 cargarJuego();
 pintarCampoJuego();
 if(juegoActual) cargarTiposPasados().then(render);
