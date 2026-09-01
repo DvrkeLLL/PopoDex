@@ -394,6 +394,17 @@ select:focus,input:focus{border-color:var(--accent);}
 .rv-mas{font-size:26px;font-weight:300;color:var(--accent);line-height:1;margin-bottom:4px;}
 .rv-txt{font-size:14px;font-weight:600;color:var(--text);}
 .rv-sub{font-family:var(--mono);font-size:9.5px;color:var(--muted);}
+.rival-fila{display:flex;align-items:stretch;gap:7px;margin-bottom:9px;}
+.rival-fila .rival-card{flex:1;min-width:0;margin-bottom:0;}
+.limpiar-rival{
+  flex:0 0 36px;background:var(--bg-panel);border:1px solid var(--border);
+  border-radius:var(--r);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;padding:0;
+}
+.limpiar-rival svg{width:15px;height:15px;stroke:var(--dim);fill:none;stroke-width:2;
+  stroke-linecap:round;}
+.limpiar-rival:active{border-color:var(--alert);}
+.limpiar-rival:active svg{stroke:var(--alert);}
 .rival-card{
   width:100%;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
   padding:11px 13px;cursor:pointer;display:flex;align-items:center;gap:11px;
@@ -779,6 +790,37 @@ select:focus,input:focus{border-color:var(--accent);}
 .mh{background:#C8683A;} .mq{background:#B34A3A;} .m0{background:#3D3A4A;}
 .combo-via{font-family:var(--mono);font-size:9px;color:#2E7D6B;margin-top:5px;}
 .combo-mons{font-size:11px;color:var(--muted);margin-top:7px;line-height:1.55;}
+
+/* Grupos plegables del detalle de cobertura */
+.cg{border:1px solid var(--border);border-radius:var(--r);margin-bottom:9px;overflow:hidden;}
+.cg-hd{
+  width:100%;display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg-panel);
+  border:none;cursor:pointer;font-family:var(--body);text-align:left;
+}
+.cg-mult{
+  font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;
+  padding:5px 9px;border-radius:2px;flex-shrink:0;min-width:44px;text-align:center;
+}
+.cg-txt{flex:1;min-width:0;}
+.cg-desc{font-size:12.5px;font-weight:600;display:block;}
+.cg-n{font-family:var(--mono);font-size:9px;color:var(--muted);display:block;margin-top:2px;}
+.cg-chev{font-family:var(--mono);font-size:15px;color:var(--accent);
+  transition:transform .2s;flex-shrink:0;}
+.cg.abierto .cg-chev{transform:rotate(90deg);}
+.cg-bd{display:none;padding:0 12px 10px;background:var(--bg-panel);}
+.cg.abierto .cg-bd{display:block;}
+.cc{border-top:1px solid var(--border);padding:10px 0;}
+.cc:first-child{border-top:none;}
+.cc-hd{display:flex;align-items:center;gap:7px;}
+.cc-tipos{display:flex;gap:3px;flex:1;flex-wrap:wrap;}
+.cc-mult{
+  font-family:var(--mono);font-size:9.5px;font-weight:700;padding:2px 6px;
+  border-radius:2px;color:#fff;flex-shrink:0;
+}
+.cc-via{font-family:var(--mono);font-size:9px;color:#2E7D6B;margin-top:5px;}
+.cc-mons{display:flex;flex-wrap:wrap;gap:1px;margin-top:7px;}
+.cc-mon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;}
+.cc-mon img{width:30px;height:30px;image-rendering:pixelated;}
 .soon svg{width:38px;height:38px;stroke:var(--dim);fill:none;stroke-width:1.5;margin-bottom:14px;}
 .soon h3{font-size:15px;margin:0 0 6px;}
 .soon p{font-size:12px;color:var(--muted);margin:0;line-height:1.5;}
@@ -1054,10 +1096,7 @@ select:focus,input:focus{border-color:var(--accent);}
         <button class="mini-btn close" onclick="closeOverlay('ov-cobertura')">
           <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
-      <div class="sheet-bd">
-        <div class="pick-tabs" id="cob-tabs"></div>
-        <div id="cob-lista"></div>
-      </div>
+      <div class="sheet-bd"><div id="cob-lista"></div></div>
     </div>
   </div>
 
@@ -1625,7 +1664,7 @@ function goTo(id){
   document.getElementById('s-'+id).classList.add('active');
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.toggle('active', n.dataset.go===id));
   document.querySelector('.screen.active').scrollTop = 0;
-  if(id==='equipo' && equipoAbierto===null) renderEquipos();
+  if(id==='equipo') verListaEquipos();
   if(id==='dano') renderDanio();
   if(id==='info' && infoVista==='menu') infoMenu();
 }
@@ -2618,6 +2657,7 @@ function miembroNuevo(pid, gen){
 function verListaEquipos(){
   equipoAbierto = null;
   document.getElementById('eq-volver').style.display='none';
+  document.getElementById('eq-nuevo').style.display='flex';
   document.getElementById('eq-sub').textContent = 'Tus equipos';
   document.querySelector('#s-equipo .hdr-title').textContent = 'Equipo';
   renderEquipos();
@@ -2702,6 +2742,7 @@ function abrirEquipo(i){
   equipoAbierto = i;
   const eq = equipos[i];
   document.getElementById('eq-volver').style.display='flex';
+  document.getElementById('eq-nuevo').style.display='none';
   document.getElementById('eq-sub').textContent = nombreDeJuego(eq.juego);
   document.querySelector('#s-equipo .hdr-title').textContent = eq.nombre;
   renderEquipo();
@@ -3641,7 +3682,6 @@ async function movsDe(pid, grupo){
 
 let coberturaDex = null;
 let coberturaDatos = null;
-let coberturaTab = 'mal';
 
 async function calcularCobertura(){
   const eq = equipos[equipoAbierto];
@@ -3689,7 +3729,7 @@ async function calcularCobertura(){
     if(!tips.length || !tips.every(t=>validos.includes(t))) return;
     const clave = [...tips].sort().join('/');
     if(!combos[clave]) combos[clave] = {tipos:tips, mons:[]};
-    combos[clave].mons.push(mon.es || mon.name);
+    combos[clave].mons.push({id:mon.id, es:mon.es || mon.name});
   });
 
   const filas = Object.values(combos).map(c=>{
@@ -3743,61 +3783,83 @@ function pintarCobertura(){
       <span><i class="pt" style="background:#2E7D6B"></i>x2: ${x2}</span>
       <span><i class="pt" style="background:#D9B8C4"></i>sin cubrir: ${sin}</span>
     </div>
-    <div class="cob-tipos">${tiposAtaque.map(t=>{
-      const n = porTipo[t].length;
-      return `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}${n>1?' ×'+n:''}</span>`;
-    }).join('')}</div>
-    <button class="btn btn-s" style="width:100%;margin-top:11px;" onclick="abrirCobertura()">
+    <button class="btn btn-s" style="width:100%;margin-top:12px;" onclick="abrirCobertura()">
       Ver detalle</button>`;
 }
 
+let cobAbiertos = {x4:true, x2:false, sin:false};
+
 function abrirCobertura(){
   if(!coberturaDatos) return;
-  coberturaTab = 'mal';
   pintarDetalleCobertura();
   openOverlay('ov-cobertura');
 }
 
-function setCobTab(t){ coberturaTab = t; pintarDetalleCobertura(); }
+function alternarGrupoCob(k){
+  cobAbiertos[k] = !cobAbiertos[k];
+  pintarDetalleCobertura();
+}
 
 function pintarDetalleCobertura(){
   const {filas} = coberturaDatos;
-  const cubiertas = filas.filter(f=>f.mult>=2);
-  const sin = filas.filter(f=>f.mult<2);
-  const lista = coberturaTab==='mal' ? sin : [...cubiertas].sort((a,b)=>b.mult-a.mult);
-
   document.getElementById('cob-sub').textContent = DEX_ES[coberturaDex] || coberturaDex;
-  document.getElementById('cob-tabs').innerHTML = `
-    <button class="pick-tab ${coberturaTab==='mal'?'on':''}" onclick="setCobTab('mal')">Sin cubrir (${sin.length})</button>
-    <button class="pick-tab ${coberturaTab==='bien'?'on':''}" onclick="setCobTab('bien')">Cubiertas (${cubiertas.length})</button>`;
 
-  const cont = document.getElementById('cob-lista');
-  if(!lista.length){
-    cont.innerHTML = `<div class="hint" style="padding:24px 12px;text-align:center;">${
-      coberturaTab==='mal'
-        ? 'Sin agujeros: el equipo llega a x2 contra todas las combinaciones de esta pokédex.'
-        : 'Ninguna combinación alcanza x2.'}</div>`;
-    return;
-  }
-  cont.innerHTML = lista.map(f=>`
-    <div class="combo ${f.mult<2?'malo':''}">
-      <div class="combo-top">
-        <span class="combo-tipos">${f.tipos.map(t=>
-          `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
-        <span class="mult ${claseMult(f.mult)}">x${f.mult}</span>
-      </div>
-      ${f.mult>=2 && f.via.length ? `<div class="combo-via">${
-        f.via.map(v=>v.quienes.map(q=>`${q.mov} (${q.de})`).join(', ')).join(' · ')}</div>` : ''}
-      <div class="combo-mons">${f.mons.join(' · ')}</div>
-    </div>`).join('');
+  const grupos = [
+    {k:'x4',  lab:'x4',          desc:'Daño cuádruple',      col:'#1F6B57',
+     filas:filas.filter(f=>f.mult>=4)},
+    {k:'x2',  lab:'x2',          desc:'Daño doble',          col:'#2E7D6B',
+     filas:filas.filter(f=>f.mult>=2 && f.mult<4)},
+    {k:'sin', lab:'Sin cubrir',  desc:'No llegas a x2',      col:'#B34A3A',
+     filas:filas.filter(f=>f.mult<2)}
+  ];
+
+  document.getElementById('cob-lista').innerHTML = grupos.map(g=>{
+    const abierto = cobAbiertos[g.k];
+    const total = g.filas.reduce((n,f)=>n+f.mons.length,0);
+    return `
+      <div class="cg ${abierto?'abierto':''}">
+        <button class="cg-hd" onclick="alternarGrupoCob('${g.k}')">
+          <span class="cg-mult" style="background:${g.col}">${g.lab}</span>
+          <span class="cg-txt">
+            <span class="cg-desc">${g.desc}</span>
+            <span class="cg-n">${g.filas.length} combinacion${g.filas.length===1?'':'es'} · ${total} pokémon</span>
+          </span>
+          <span class="cg-chev">›</span>
+        </button>
+        <div class="cg-bd">
+          ${!g.filas.length
+            ? '<div class="hint" style="padding:12px 2px;">Ninguna.</div>'
+            : g.filas.map(f=>`
+              <div class="cc">
+                <div class="cc-hd">
+                  <span class="cc-tipos">${f.tipos.map(t=>
+                    `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
+                  <span class="cc-mult ${claseMult(f.mult)}">x${f.mult}</span>
+                </div>
+                ${f.mult>=2 && f.via.length ? `<div class="cc-via">${
+                  f.via.map(v=>v.quienes.map(q=>q.mov).join(', ')).join(' · ')}</div>` : ''}
+                <div class="cc-mons">
+                  ${f.mons.map(m=>`
+                    <span class="cc-mon" title="${m.es}">
+                      <img src="${SPRITE(m.id)}" alt="${m.es}" loading="lazy">
+                    </span>`).join('')}
+                </div>
+              </div>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
 }
 
 function elegirDexCobertura(){
   const eq = equipos[equipoAbierto];
+  if(!eq) return;
   abrirSelector({
-    titulo:'Pokédex', sub:'Contra qué lista se mide', buscar:false, actual:coberturaDex,
-    opciones: dexDisponibles(eq.juego).map(d=>({valor:d, nombre:DEX_ES[d]||d,
-      detalle: d==='national' ? 'Todas las especies' : 'Solo las de esta región'})),
+    titulo:'Pokédex', sub:'Contra qué lista se mide la cobertura',
+    buscar:false, actual:coberturaDex,
+    opciones: dexDisponibles(eq.juego).map(d=>({
+      valor:d, nombre:DEX_ES[d]||d,
+      detalle: d==='national' ? 'Todas las especies' : 'Solo las de esta región'
+    })),
     alElegir: v=>cambiarDexCobertura(v)
   });
 }
@@ -3972,16 +4034,21 @@ async function renderDanio(){
   }else{
     const natRival = NATURALEZAS.find(n=>n.slug===dnRivalCfg.nat) || {es:'—'};
     const habRival = dnHabsRival.find(h=>h.slug===dnRivalCfg.hab);
-    html += `<button class="rival-card" onclick="elegirRival()">
-      <img src="${SPRITE(dnRival)}" alt="">
-      <span class="rc-main">
-        <span class="rc-num">N.º ${String(dnRival).padStart(4,'0')}</span>
-        <span class="rc-nom">${defMon.es}</span>
-        <span class="tipos">${tiposEnGen(defMon,gen).map(t=>
-          `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
-      </span>
-      <span class="campo-x">›</span>
-    </button>
+    html += `<div class="rival-fila">
+      <button class="rival-card" onclick="elegirRival()">
+        <img src="${SPRITE(dnRival)}" alt="">
+        <span class="rc-main">
+          <span class="rc-num">N.º ${String(dnRival).padStart(4,'0')}</span>
+          <span class="rc-nom">${defMon.es}</span>
+          <span class="tipos">${tiposEnGen(defMon,gen).map(t=>
+            `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
+        </span>
+        <span class="campo-x">›</span>
+      </button>
+      <button class="limpiar-rival" onclick="limpiarRival()" title="Quitar rival">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
     <div class="cfg">
       <div class="cfg-fila">
         <span class="cfg-lab">Nivel</span>
@@ -4071,6 +4138,15 @@ function elegirJuegoDanio(){
     opciones: JUEGOS.map(j=>({valor:j.slug, nombre:j.es, detalle:`${j.gen}.ª generación`})),
     alElegir: v=>{ dnJuego=v; dnMovsCache={}; dnMovsAtk=[]; dnTop=0; dnIdxMov={}; renderDanio(); }
   });
+}
+
+function limpiarRival(){
+  dnRival = null;
+  dnHabsRival = [];
+  dnRivalCfg = {nivel:50, iv:31, ev:0, nat:'hardy', hab:''};
+  dnTop = 0;
+  dnIdxMov = {};
+  renderDanio();
 }
 
 function elegirRival(){
