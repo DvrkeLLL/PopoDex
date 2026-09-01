@@ -2908,8 +2908,8 @@ const MASCOTA = {
 };
 const spriteJuego = slug => MASCOTA[slug] ? SPRITE(MASCOTA[slug]) : '';
 
-const genDeJuego = slug => (JUEGOS.find(j=>j.slug===slug)||{gen:3}).gen;
-const nombreDeJuego = slug => (JUEGOS.find(j=>j.slug===slug)||{es:slug}).es;
+const genDeJuego = slug => (JUEGOS.find(j=>j.slug===slug)||{gen:9}).gen;
+const nombreDeJuego = slug => (JUEGOS.find(j=>j.slug===slug)||{es:'Sin juego fijado'}).es;
 
 /* Naturalezas (desde 3.ª gen): sube una estadística 10% y baja otra 10% */
 const NATURALEZAS = [
@@ -3033,10 +3033,10 @@ function renderEquipos(){
 }
 
 /* ---------- Crear equipo (panel propio) ---------- */
-let crearGen = 3, crearJuego = 'firered';
+let crearGen = 1, crearJuego = 'red';
 
 function nuevoEquipo(){
-  crearGen = 3; crearJuego = 'firered';
+  crearGen = 1; crearJuego = 'red';
   document.getElementById('in-nombre').value = '';
   pintarCrearGens(); pintarCrearJuegos(); validarCrear();
   openOverlay('ov-crear');
@@ -3697,7 +3697,7 @@ function pintarCampos(){
 }
 
 /* ---------- Selector de juego global ---------- */
-let juegoGenTmp = 3;
+let juegoGenTmp = 1;
 
 function pintarCampoJuego(){
   const el = document.getElementById('campo-juego');
@@ -3720,7 +3720,7 @@ function pintarCampoJuego(){
 }
 
 function abrirElegirJuego(){
-  juegoGenTmp = juegoActual ? genDeJuego(juegoActual) : 3;
+  juegoGenTmp = juegoActual ? genDeJuego(juegoActual) : 1;
   pintarJuegoGens(); pintarJuegoLista();
   openOverlay('ov-juego');
 }
@@ -4349,7 +4349,7 @@ function juegoDanio(){
   if(dnJuego) return dnJuego;
   if(juegoActual) return juegoActual;
   if(equipos.length) return equipos[0].juego;
-  return 'scarlet';
+  return '';                       // ninguno en concreto: se usan los datos actuales
 }
 
 async function movsAsignados(miembro, juego){
@@ -4393,7 +4393,8 @@ async function renderDanio(){
   const body = document.getElementById('dn-body');
   const gen = genDeJuego(juegoDanio());
   const defMon = dnRival ? allMons.find(x=>x.id===dnRival) : null;
-  document.getElementById('dn-sub').textContent = nombreDeJuego(juegoDanio());
+  const jd = juegoDanio();
+  document.getElementById('dn-sub').textContent = jd ? nombreDeJuego(jd) : 'Datos actuales';
 
   /* --- Rival: siempre arriba --- */
   let html = '';
@@ -4443,9 +4444,11 @@ async function renderDanio(){
           <span class="campo-sub">Habilidad</span></span><span class="campo-x">›</span></button>
       </div>`:''}
       <button class="campo" style="width:100%;margin-top:7px;" onclick="elegirJuegoDanio()">
-        <img class="jm" src="${spriteJuego(juegoDanio())}" alt="">
-        <span class="campo-main"><span class="campo-val">${nombreDeJuego(juegoDanio())}</span>
-        <span class="campo-sub">${gen}.ª generación · rige el cálculo</span>
+        ${jd?`<img class="jm" src="${spriteJuego(jd)}" alt="">`:''}
+        <span class="campo-main">
+          <span class="campo-val ${jd?'':'sin'}">${jd?nombreDeJuego(jd):'Sin juego fijado'}</span>
+          <span class="campo-sub">${jd ? gen+'.ª generación · rige el cálculo'
+                                       : 'Se usan los datos más recientes'}</span>
         </span><span class="campo-x">›</span></button>
     </div>`;
   }
@@ -4508,8 +4511,9 @@ function elegirJuegoDanio(){
   abrirSelector({
     titulo:'Juego', sub:'Rige tipos, categorías y efectividades', buscar:true,
     actual:juegoDanio(),
-    opciones: JUEGOS.map(j=>({valor:j.slug, nombre:j.es, img:spriteJuego(j.slug),
-      detalle:`${j.gen}.ª generación`})),
+    opciones: [{valor:'', nombre:'Sin juego fijado', detalle:'Datos más recientes'}]
+      .concat(JUEGOS.map(j=>({valor:j.slug, nombre:j.es, img:spriteJuego(j.slug),
+      detalle:`${j.gen}.ª generación`}))),
     alElegir: v=>{ dnJuego=v; dnMovsCache={}; dnMovsAtk=[]; dnTop=0; dnIdxMov={}; renderDanio(); }
   });
 }
