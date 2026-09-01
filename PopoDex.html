@@ -512,16 +512,6 @@ select:focus,input:focus{border-color:var(--accent);}
 
 .eq-barra{display:flex;gap:8px;margin-bottom:16px;}
 .eq-barra select{flex:1;}
-.res-lista{max-height:230px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);margin-top:8px;}
-.res-item{
-  display:flex;align-items:center;gap:9px;padding:8px 10px;cursor:pointer;
-  border-bottom:1px solid var(--border);
-}
-.res-item:last-child{border-bottom:none;}
-.res-item:active{background:var(--bg-screen);}
-.res-item img{width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;}
-.res-nom{font-size:12.5px;font-weight:500;text-transform:capitalize;flex:1;}
-.res-num{font-family:var(--mono);font-size:9.5px;color:var(--dim);}
 
 .ed-top{display:flex;gap:12px;align-items:center;margin-bottom:14px;}
 .ed-img{
@@ -1522,25 +1512,32 @@ async function cargarJuegos(){
 
 async function cargarLugares(){
   if(TRAD.lugares) return TRAD.lugares;
-  const guardado = Cache.get('lugares');
+  const guardado = Cache.get('lugares2');
   if(guardado){ TRAD.lugares = guardado; return guardado; }
   const map = {};
   try{
+    /* Se piden los nombres en español y en inglés: el inglés es la clave
+       con la que el diccionario local encuentra la traducción correcta */
     const d = await gql(`{
       locationarea {
         name
-        location { name locationnames(where:{language_id:{_eq:${ES}}}) { name } }
+        location {
+          name
+          locationnames(where:{language_id:{_in:[${ES},9]}}) { name language_id }
+        }
       }
     }`);
     d.locationarea.forEach(a=>{
+      const nombres = a.location?.locationnames || [];
       map[a.name] = {
         loc: a.location?.name || '',
-        es: a.location?.locationnames?.[0]?.name || ''
+        es: (nombres.find(n=>n.language_id===ES)||{}).name || '',
+        en: (nombres.find(n=>n.language_id===9)||{}).name || ''
       };
     });
   }catch(e){ /* el diccionario local cubre igual */ }
   TRAD.lugares = map;
-  if(Object.keys(map).length) Cache.set('lugares', map);
+  if(Object.keys(map).length) Cache.set('lugares2', map);
   return map;
 }
 
@@ -1561,7 +1558,7 @@ function nombreJuego(slug){
 
 function nombreLugar(slugArea){
   const info = TRAD.lugares ? TRAD.lugares[slugArea] : null;
-  return window.PopoTrad.traducirLugar(slugArea, info?.es, info?.loc);
+  return window.PopoTrad.traducirLugar(slugArea, info?.es, info?.en, info?.loc);
 }
 
 
@@ -2134,7 +2131,7 @@ async function loadLocations(id){
         return;
       }
     }
-    bd.innerHTML = entradas.slice(0,40).map(e=>{
+    bd.innerHTML = entradas.map(e=>{
       const lugar = nombreLugar(e.location_area.name);
       const juegos = [...new Set(e.version_details.map(v=>nombreJuego(v.version.name)))].join(', ');
       const niveles = e.version_details
@@ -2741,44 +2738,23 @@ function borrarEquipo(){
 function editarSlot(i){
   slotAbierto = i;
   const eq = equipos[equipoAbierto];
-  openOverlay('ov-miembro');
-  if(!eq.miembros[i]) pantallaBuscador();
-  else pantallaEditor();
-}
-
-function pantallaBuscador(){
-  document.getElementById('miembro-sheet').innerHTML = `
-    <div class="sheet-hd">
-      <div><h2 class="sheet-title" style="font-size:17px;">Elegir pokémon</h2></div>
-      <div class="hd-actions">
-        <button class="mini-btn close" onclick="closeOverlay('ov-miembro')">
-          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      </div>
-    </div>
-    <div class="sheet-bd">
-      <input type="text" id="busca-mon" placeholder="Buscar por nombre o número..." autocomplete="off">
-      <div class="res-lista" id="res-mon"></div>
-    </div>`;
-  const input = document.getElementById('busca-mon');
-  input.addEventListener('input', ()=>pintarResultados(input.value));
-  pintarResultados('');
-  setTimeout(()=>input.focus(),80);
-}
-
-function pintarResultados(txt){
-  const t = txt.trim().toLowerCase();
-  const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  let lista = allMons;
-  if(t){
-    lista = allMons.filter(m=>
-      norm(m.es||'').includes(norm(t)) || m.name.includes(t) || String(m.id)===t);
+  if(!eq.miembros[i]){
+    elegirPokemonSlot();
+  }else{
+    openOverlay('ov-miembro');
+    pantallaEditor();
   }
-  document.getElementById('res-mon').innerHTML = lista.slice(0,60).map(m=>`
-    <div class="res-item" onclick="elegirMon(${m.id})">
-      <img src="${SPRITE(m.id)}" alt="" loading="lazy">
-      <span class="res-nom">${m.es||m.name}</span>
-      <span class="res-num">#${String(m.id).padStart(3,'0')}</span>
-    </div>`).join('') || '<div class="hint" style="padding:14px;">Sin resultados.</div>';
+}
+
+function elegirPokemonSlot(){
+  abrirSelector({
+    titulo:'Elegir pokémon', sub:'Para este espacio del equipo', buscar:true, actual:'',
+    opciones: allMons.map(m=>({
+      valor:String(m.id), nombre:m.es||m.name, img:SPRITE(m.id),
+      detalle: `N.º ${String(m.id).padStart(3,'0')} · ${tiposDe(m).map(t=>TES[t]).join(' / ')}`
+    })),
+    alElegir: v=>{ setTimeout(()=>elegirMon(Number(v)), 120); }
+  });
 }
 
 function elegirMon(pid){
@@ -2788,6 +2764,7 @@ function elegirMon(pid){
   eq.miembros = eq.miembros.filter(Boolean);
   slotAbierto = eq.miembros.findIndex(m=>m.pid===pid);
   guardarEquipos();
+  openOverlay('ov-miembro');
   pantallaEditor();
 }
 
@@ -3117,18 +3094,12 @@ function abrirSelector(cfg){
   if(cfg.buscar) setTimeout(()=>busca.focus(),90);
 }
 
-function pintarSelector(){
-  if(!elConfig) return;
-  const txt = document.getElementById('el-busca').value.trim().toLowerCase();
-  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  let lista = elConfig.opciones;
-  if(txt) lista = lista.filter(o=>norm(o.nombre).includes(norm(txt)));
-  const tope = elConfig.buscar ? 80 : lista.length;
+const LOTE_SELECTOR = 60;   // cuántas filas se dibujan de una vez
+let elListaActual = [];
+let elDibujadas = 0;
 
-  const cont = document.getElementById('el-lista');
-  if(!lista.length){ cont.innerHTML='<div class="hint" style="padding:14px;">Sin resultados.</div>'; return; }
-
-  cont.innerHTML = lista.slice(0,tope).map(o=>`
+function filaSelector(o){
+  return `
     <div class="el-item ${o.valor===elConfig.actual?'on':''}" onclick="elegirOpcion('${o.valor}')">
       ${o.img ? `<img src="${o.img}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : ''}
       <div class="el-main">
@@ -3136,9 +3107,46 @@ function pintarSelector(){
         ${o.detalle ? `<div class="el-sub">${o.detalle}</div>` : ''}
       </div>
       ${o.valor===elConfig.actual ? '<span class="el-tick">✓</span>' : ''}
-    </div>`).join('') +
-    (lista.length>tope ? `<div class="hint" style="padding:11px;text-align:center;">
-      ${lista.length-tope} más. Afina la búsqueda.</div>` : '');
+    </div>`;
+}
+
+function pintarSelector(){
+  if(!elConfig) return;
+  const txt = document.getElementById('el-busca').value.trim().toLowerCase();
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  elListaActual = txt
+    ? elConfig.opciones.filter(o=>norm(o.nombre).includes(norm(txt)))
+    : elConfig.opciones;
+
+  const cont = document.getElementById('el-lista');
+  if(!elListaActual.length){
+    cont.innerHTML='<div class="hint" style="padding:14px;">Sin resultados.</div>';
+    return;
+  }
+  elDibujadas = Math.min(LOTE_SELECTOR, elListaActual.length);
+  cont.innerHTML = elListaActual.slice(0, elDibujadas).map(filaSelector).join('');
+  vigilarScrollSelector();
+}
+
+/* Al acercarse al final se dibuja el siguiente lote: la lista sale completa
+   sin tener que cargar miles de filas de golpe */
+function masSelector(){
+  if(elDibujadas >= elListaActual.length) return;
+  const cont = document.getElementById('el-lista');
+  const hasta = Math.min(elDibujadas + LOTE_SELECTOR, elListaActual.length);
+  cont.insertAdjacentHTML('beforeend',
+    elListaActual.slice(elDibujadas, hasta).map(filaSelector).join(''));
+  elDibujadas = hasta;
+}
+
+let scrollSelectorPuesto = false;
+function vigilarScrollSelector(){
+  const caja = document.querySelector('#ov-elegir .sheet-bd');
+  if(!caja || scrollSelectorPuesto) return;
+  scrollSelectorPuesto = true;
+  caja.addEventListener('scroll', ()=>{
+    if(caja.scrollTop + caja.clientHeight >= caja.scrollHeight - 200) masSelector();
+  }, {passive:true});
 }
 
 function elegirOpcion(valor){
