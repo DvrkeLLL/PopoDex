@@ -792,10 +792,15 @@ select:focus,input:focus{border-color:var(--accent);}
 .combo-mons{font-size:11px;color:var(--muted);margin-top:7px;line-height:1.55;}
 
 /* Grupos plegables del detalle de cobertura */
-.cg{border:1px solid var(--border);border-radius:var(--r);margin-bottom:9px;overflow:hidden;}
-.cg-hd{
-  width:100%;display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg-panel);
-  border:none;cursor:pointer;font-family:var(--body);text-align:left;
+.cg-op{
+  width:100%;display:flex;align-items:center;gap:11px;padding:15px 13px;
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  cursor:pointer;font-family:var(--body);text-align:left;margin-bottom:10px;
+}
+.cg-op:active{border-color:var(--accent);}
+.cg-volver{
+  background:none;border:none;color:var(--accent);font-family:var(--mono);font-size:11px;
+  cursor:pointer;padding:0 0 12px;font-weight:700;
 }
 .cg-mult{
   font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;
@@ -804,11 +809,7 @@ select:focus,input:focus{border-color:var(--accent);}
 .cg-txt{flex:1;min-width:0;}
 .cg-desc{font-size:12.5px;font-weight:600;display:block;}
 .cg-n{font-family:var(--mono);font-size:9px;color:var(--muted);display:block;margin-top:2px;}
-.cg-chev{font-family:var(--mono);font-size:15px;color:var(--accent);
-  transition:transform .2s;flex-shrink:0;}
-.cg.abierto .cg-chev{transform:rotate(90deg);}
-.cg-bd{display:none;padding:0 12px 10px;background:var(--bg-panel);}
-.cg.abierto .cg-bd{display:block;}
+.cg-chev{font-family:var(--mono);font-size:15px;color:var(--accent);flex-shrink:0;}
 .cc{border-top:1px solid var(--border);padding:10px 0;}
 .cc:first-child{border-top:none;}
 .cc-hd{display:flex;align-items:center;gap:7px;}
@@ -3787,67 +3788,94 @@ function pintarCobertura(){
       Ver detalle</button>`;
 }
 
-let cobAbiertos = {x4:true, x2:false, sin:false};
+let cobVista = 'menu';   // menu · sin · super · x4 · x2
 
 function abrirCobertura(){
   if(!coberturaDatos) return;
+  cobVista = 'menu';
   pintarDetalleCobertura();
   openOverlay('ov-cobertura');
 }
 
-function alternarGrupoCob(k){
-  cobAbiertos[k] = !cobAbiertos[k];
+function irCobertura(v){
+  cobVista = v;
   pintarDetalleCobertura();
+  const bd = document.querySelector('#ov-cobertura .sheet-bd');
+  if(bd) bd.scrollTop = 0;
+}
+
+function _grupoCob(k){
+  const f = coberturaDatos.filas;
+  if(k==='x4')  return f.filter(x=>x.mult>=4);
+  if(k==='x2')  return f.filter(x=>x.mult>=2 && x.mult<4);
+  if(k==='sin') return f.filter(x=>x.mult<2);
+  return f.filter(x=>x.mult>=2);
+}
+
+function _tarjetaCob(k, lab, desc, col, accion){
+  const filas = _grupoCob(k);
+  const mons = filas.reduce((n,f)=>n+f.mons.length,0);
+  return `
+    <button class="cg-op" onclick="${accion}">
+      <span class="cg-mult" style="background:${col}">${lab}</span>
+      <span class="cg-txt">
+        <span class="cg-desc">${desc}</span>
+        <span class="cg-n">${filas.length} combinacion${filas.length===1?'':'es'} · ${mons} pokémon</span>
+      </span>
+      <span class="cg-chev">›</span>
+    </button>`;
+}
+
+function _listaCob(filas, vacio){
+  if(!filas.length) return `<div class="hint" style="padding:22px 12px;text-align:center;">${vacio}</div>`;
+  return filas.map(f=>`
+    <div class="cc">
+      <div class="cc-hd">
+        <span class="cc-tipos">${f.tipos.map(t=>
+          `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
+        <span class="cc-mult ${claseMult(f.mult)}">x${f.mult}</span>
+      </div>
+      ${f.mult>=2 && f.via.length ? `<div class="cc-via">${
+        f.via.map(v=>v.quienes.map(q=>q.mov).join(', ')).join(' · ')}</div>` : ''}
+      <div class="cc-mons">
+        ${f.mons.map(m=>`<span class="cc-mon" title="${m.es}">
+          <img src="${SPRITE(m.id)}" alt="${m.es}" loading="lazy"></span>`).join('')}
+      </div>
+    </div>`).join('');
 }
 
 function pintarDetalleCobertura(){
-  const {filas} = coberturaDatos;
-  document.getElementById('cob-sub').textContent = DEX_ES[coberturaDex] || coberturaDex;
+  const cont = document.getElementById('cob-lista');
+  const sub  = document.getElementById('cob-sub');
+  const dex  = DEX_ES[coberturaDex] || coberturaDex;
 
-  const grupos = [
-    {k:'x4',  lab:'x4',          desc:'Daño cuádruple',      col:'#1F6B57',
-     filas:filas.filter(f=>f.mult>=4)},
-    {k:'x2',  lab:'x2',          desc:'Daño doble',          col:'#2E7D6B',
-     filas:filas.filter(f=>f.mult>=2 && f.mult<4)},
-    {k:'sin', lab:'Sin cubrir',  desc:'No llegas a x2',      col:'#B34A3A',
-     filas:filas.filter(f=>f.mult<2)}
-  ];
+  if(cobVista==='menu'){
+    sub.textContent = dex;
+    cont.innerHTML =
+      _tarjetaCob('sin','!','Sin cubrir','#B34A3A',"irCobertura('sin')") +
+      _tarjetaCob('super','✓','Superefectivos','#2E7D6B',"irCobertura('super')");
+    return;
+  }
 
-  document.getElementById('cob-lista').innerHTML = grupos.map(g=>{
-    const abierto = cobAbiertos[g.k];
-    const total = g.filas.reduce((n,f)=>n+f.mons.length,0);
-    return `
-      <div class="cg ${abierto?'abierto':''}">
-        <button class="cg-hd" onclick="alternarGrupoCob('${g.k}')">
-          <span class="cg-mult" style="background:${g.col}">${g.lab}</span>
-          <span class="cg-txt">
-            <span class="cg-desc">${g.desc}</span>
-            <span class="cg-n">${g.filas.length} combinacion${g.filas.length===1?'':'es'} · ${total} pokémon</span>
-          </span>
-          <span class="cg-chev">›</span>
-        </button>
-        <div class="cg-bd">
-          ${!g.filas.length
-            ? '<div class="hint" style="padding:12px 2px;">Ninguna.</div>'
-            : g.filas.map(f=>`
-              <div class="cc">
-                <div class="cc-hd">
-                  <span class="cc-tipos">${f.tipos.map(t=>
-                    `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
-                  <span class="cc-mult ${claseMult(f.mult)}">x${f.mult}</span>
-                </div>
-                ${f.mult>=2 && f.via.length ? `<div class="cc-via">${
-                  f.via.map(v=>v.quienes.map(q=>q.mov).join(', ')).join(' · ')}</div>` : ''}
-                <div class="cc-mons">
-                  ${f.mons.map(m=>`
-                    <span class="cc-mon" title="${m.es}">
-                      <img src="${SPRITE(m.id)}" alt="${m.es}" loading="lazy">
-                    </span>`).join('')}
-                </div>
-              </div>`).join('')}
-        </div>
-      </div>`;
-  }).join('');
+  if(cobVista==='super'){
+    sub.textContent = dex+' · superefectivos';
+    cont.innerHTML =
+      `<button class="cg-volver" onclick="irCobertura('menu')">‹ Volver</button>` +
+      _tarjetaCob('x4','x4','Daño cuádruple','#1F6B57',"irCobertura('x4')") +
+      _tarjetaCob('x2','x2','Daño doble','#2E7D6B',"irCobertura('x2')");
+    return;
+  }
+
+  const T = {
+    sin:['Sin cubrir', 'menu', 'Sin agujeros: llegas a x2 contra todas las combinaciones.'],
+    x4: ['x4 · daño cuádruple', 'super', 'Ninguna combinación recibe x4.'],
+    x2: ['x2 · daño doble', 'super', 'Ninguna combinación recibe x2.']
+  }[cobVista];
+
+  sub.textContent = dex+' · '+T[0];
+  cont.innerHTML =
+    `<button class="cg-volver" onclick="irCobertura('${T[1]}')">‹ Volver</button>` +
+    _listaCob(_grupoCob(cobVista), T[2]);
 }
 
 function elegirDexCobertura(){
@@ -4140,12 +4168,23 @@ function elegirJuegoDanio(){
   });
 }
 
+/* Al cambiar de rival se reinicia la elección: el equipo o el atacante
+   que servían contra el anterior no tienen por qué servir contra el nuevo */
+function reiniciarEleccion(){
+  dnEqMejor = null;
+  dnAtk = {pid:null, nivel:50, iv:31, ev:252, nat:'hardy', hab:'', movSlug:'',
+           deEquipo:null, bajo:false};
+  dnHabsAtk = [];
+  dnMovsAtk = [];
+  dnTop = 0;
+  dnIdxMov = {};
+}
+
 function limpiarRival(){
   dnRival = null;
   dnHabsRival = [];
   dnRivalCfg = {nivel:50, iv:31, ev:0, nat:'hardy', hab:''};
-  dnTop = 0;
-  dnIdxMov = {};
+  reiniciarEleccion();
   renderDanio();
 }
 
@@ -4157,7 +4196,14 @@ function elegirRival(){
       valor:String(m.id), nombre:m.es||m.name, img:SPRITE(m.id),
       detalle: tiposDe(m).map(t=>TES[t]).join(' / ')
     })),
-    alElegir: v=>{ dnRival=Number(v); dnHabsRival=[]; dnRivalCfg.hab=''; renderDanio(); }
+    alElegir: v=>{
+      const nuevo = Number(v);
+      if(nuevo !== dnRival) reiniciarEleccion();
+      dnRival = nuevo;
+      dnHabsRival = [];
+      dnRivalCfg.hab = '';
+      renderDanio();
+    }
   });
 }
 
