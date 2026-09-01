@@ -136,6 +136,8 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
   width:100%;max-width:420px;max-height:100%;
   display:flex;flex-direction:column;overflow:hidden;
 }
+/* La altura de cada panel la fija ajustarAlturaPanel(): se queda con
+   la del contenido más grande que haya necesitado, con tope de pantalla. */
 .sheet-hd{
   display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
   padding:14px 14px 10px;border-bottom:1px solid var(--border);background:var(--bg-panel);flex-shrink:0;
@@ -225,8 +227,15 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
 .hint{font-family:var(--mono);font-size:10px;color:var(--muted);padding:10px 0;}
 
 /* ---------- FILTROS ---------- */
-.f-group{margin-bottom:16px;}
-.f-lab{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin:0 0 7px;display:block;}
+.f-group{margin-bottom:16px;text-align:center;padding-bottom:16px;
+  border-bottom:1px solid var(--border);}
+.f-group:last-of-type{border-bottom:none;padding-bottom:4px;}
+.f-group > *{text-align:left;}
+.f-group .warn,.f-group .mv-state{text-align:center;}
+/* Rareza, Ataque y método de aprendizaje: botones centrados */
+.f-group .chips{justify-content:center;}
+.f-lab{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted);
+  text-transform:uppercase;margin:0 0 7px;display:block;text-align:center;}
 select,input[type="number"],input[type="text"],textarea{
   width:100%;background:var(--bg-screen);border:1px solid var(--border);color:var(--text);
   font-family:var(--mono);font-size:16px;padding:9px 10px;border-radius:var(--r);outline:none;
@@ -234,7 +243,9 @@ select,input[type="number"],input[type="text"],textarea{
 select:focus,input:focus{border-color:var(--accent);}
 .stat-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .si{display:flex;align-items:center;gap:6px;}
-.si label{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:44px;flex-shrink:0;text-transform:uppercase;}
+.si{justify-content:center;}
+.si label{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:44px;
+  flex-shrink:0;text-transform:uppercase;text-align:right;}
 .si input{padding:7px 8px;font-size:11.5px;}
 .chips{display:flex;flex-wrap:wrap;gap:5px;}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
@@ -319,6 +330,10 @@ select:focus,input:focus{border-color:var(--accent);}
 .sm-main{flex:1;min-width:0;}
 .sm-nom{font-size:12.5px;font-weight:500;}
 .campo-chips{display:flex;flex-wrap:wrap;gap:3px;}
+.sm-dos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.sm-dos .campo{padding:8px 10px;min-width:0;}
+.sm-dos .jm{width:26px;height:26px;}
+.sm-dos .campo-val{font-size:12px;}
 .tabla-tipo{display:flex;flex-direction:column;gap:9px;}
 .tt-fila{display:flex;gap:6px;align-items:flex-start;}
 .tt-mult{font-family:var(--mono);font-size:10px;font-weight:700;min-width:40px;
@@ -557,6 +572,7 @@ select:focus,input:focus{border-color:var(--accent);}
 }
 .eq-card:active{border-color:var(--accent);}
 .eq-top{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.eq-card .eq-top .jm{width:34px;height:34px;opacity:.9;}
 .eq-nom{font-size:14px;font-weight:600;}
 .eq-meta{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:2px;}
 .eq-mini{display:flex;gap:2px;margin-top:9px;}
@@ -661,7 +677,14 @@ select:focus,input:focus{border-color:var(--accent);}
   background:var(--bg-panel);color:var(--gc);border-radius:var(--r);cursor:pointer;
 }
 .gen-row button.on{background:var(--gc);border-color:var(--gc);color:#fff;}
-.juegos{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+/* La lista de juegos cambia de tamaño según la generación (de 2 a 6 juegos).
+   Se le fija una altura de tres filas y el resto se desplaza, así el panel
+   nunca crece ni encoge al cambiar de generación. */
+.juegos{
+  display:grid;grid-template-columns:1fr 1fr;gap:5px;
+  grid-auto-rows:44px;height:142px;overflow-y:auto;align-content:start;
+  padding-right:2px;
+}
 .juegos button{
   font-family:var(--body);font-size:11.5px;padding:9px 6px;border:1px solid var(--border);
   background:var(--bg-panel);color:var(--muted);border-radius:var(--r);cursor:pointer;
@@ -960,8 +983,6 @@ select:focus,input:focus{border-color:var(--accent);}
         <div class="hd-actions">
           <button class="icon-btn" id="eq-volver" style="display:none;" onclick="verListaEquipos()">
             <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-          <button class="icon-btn" id="eq-nuevo" onclick="nuevoEquipo()">
-            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
         </div>
       </div>
     </div>
@@ -1135,10 +1156,10 @@ select:focus,input:focus{border-color:var(--accent);}
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
           <input type="text" id="sm-busca" placeholder="Buscar por nombre..." autocomplete="off">
         </div>
-        <button class="campo" id="sm-juego" style="width:100%;margin-bottom:10px;"
-          onclick="elegirJuegoSelMov()"></button>
-        <button class="campo" id="sm-tipos-campo" style="width:100%;margin-bottom:10px;"
-          onclick="abrirTiposMov()"></button>
+        <div class="sm-dos">
+          <button class="campo" id="sm-juego" onclick="elegirJuegoSelMov()"></button>
+          <button class="campo" id="sm-tipos-campo" onclick="abrirTiposMov()"></button>
+        </div>
         <div class="grid3" id="sm-clases" style="margin-bottom:10px;">
           <button class="pill" data-sc="special">Especial</button>
           <button class="pill" data-sc="physical">Físico</button>
@@ -1238,7 +1259,7 @@ select:focus,input:focus{border-color:var(--accent);}
       </div>
       <div class="sheet-bd">
         <div class="f-group">
-          <label class="f-lab">Generación <span id="gen-hint" style="text-transform:none;letter-spacing:0;">(todas)</span></label>
+          <label class="f-lab">Generación <span id="gen-hint" style="text-transform:none;letter-spacing:0;color:var(--accent);">(todas)</span></label>
           <div class="grid3" id="f-gens">
             <button class="pill" data-gen="1" style="--gc:#D64541">1 · Kanto</button>
             <button class="pill" data-gen="2" style="--gc:#B8901F">2 · Johto</button>
@@ -1731,6 +1752,12 @@ function nombreLugar(slugArea){
 
 /* ================= NAVEGACIÓN ================= */
 function goTo(id){
+  /* Ningún panel debe quedar abierto al cambiar de apartado */
+  document.querySelectorAll('.overlay.open').forEach(o=>{
+    o.classList.remove('open');
+    o.style.zIndex = '';
+  });
+  capaOverlay = 40;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('s-'+id).classList.add('active');
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.toggle('active', n.dataset.go===id));
@@ -1744,17 +1771,59 @@ document.querySelectorAll('[data-go]').forEach(el=>{
 });
 
 let capaOverlay = 40;
+
+/* ---------- Altura estable de los paneles ----------
+   Cada panel se queda con el alto del contenido más grande que haya
+   necesitado, de modo que no crezca ni encoja al cambiar de opción.
+   Si ese máximo no cabe en pantalla, se limita y aparece el
+   desplazamiento dentro del cuerpo. */
+const altoMax = {};
+let ajustandoAlto = false;
+
+function ajustarAlturaPanel(id){
+  const ov = document.getElementById(id);
+  if(!ov || !ov.classList.contains('open')) return;
+  const sheet = ov.querySelector('.sheet');
+  if(!sheet) return;
+
+  ajustandoAlto = true;
+  sheet.style.minHeight = '';                 // medir el alto natural
+  const natural = sheet.offsetHeight;
+  const tope = ov.clientHeight - 44;          // deja el margen del panel
+  const nuevo = Math.min(Math.max(altoMax[id] || 0, natural), tope);
+  altoMax[id] = nuevo;
+  sheet.style.minHeight = nuevo + 'px';
+  requestAnimationFrame(()=>{ ajustandoAlto = false; });
+}
+
+/* Vigila los cambios de contenido para reajustar cuando haga falta */
+function vigilarPanel(ov){
+  if(ov.dataset.vigilado) return;
+  ov.dataset.vigilado = '1';
+  if(typeof MutationObserver === 'undefined') return;
+  let pendiente = null;
+  new MutationObserver(()=>{
+    if(ajustandoAlto) return;
+    clearTimeout(pendiente);
+    pendiente = setTimeout(()=>ajustarAlturaPanel(ov.id), 50);
+  }).observe(ov, {childList:true, subtree:true, characterData:true});
+}
+
 function openOverlay(id){
   const el = document.getElementById(id);
   capaOverlay += 2;                      // cada panel nuevo va por encima del anterior
   el.style.zIndex = capaOverlay;
   el.classList.add('open');
+  vigilarPanel(el);
+  requestAnimationFrame(()=>ajustarAlturaPanel(id));
 }
 function closeOverlay(id){
   const el = document.getElementById(id);
   el.classList.remove('open');
   el.style.zIndex = '';
-  /* Si no queda ninguno abierto, se reinicia el contador */
+  const sheet = el.querySelector('.sheet');
+  if(sheet) sheet.style.minHeight = '';
+  delete altoMax[id];          // la próxima vez se vuelve a medir desde cero
   if(!document.querySelector('.overlay.open')) capaOverlay = 40;
 }
 document.querySelectorAll('.overlay').forEach(ov=>{
@@ -1997,7 +2066,6 @@ function pintarCampoMov(){
   if(!movElegido){
     el.innerHTML = `<span class="campo-main">
       <span class="campo-val sin">Cualquiera</span>
-      <span class="campo-sub">Elegir un movimiento concreto</span>
       </span><span class="campo-x">›</span>`;
   }else{
     const m = movElegido;
@@ -2030,14 +2098,12 @@ async function abrirSelMov(){
 
 function pintarJuegoSelMov(){
   const el = document.getElementById('sm-juego');
-  const g = smJuego ? genDeJuego(smJuego) : 9;
   document.getElementById('sm-sub').textContent = smJuego ? nombreDeJuego(smJuego) : 'Todos los juegos';
   el.innerHTML = `
     ${smJuego?`<img class="jm" src="${spriteJuego(smJuego)}" alt="">`:''}
     <span class="campo-main">
-      <span class="campo-val ${smJuego?'':'sin'}">${smJuego?nombreDeJuego(smJuego):'Todos los juegos'}</span>
-      <span class="campo-sub">${smJuego?g+'.ª generación · valores de la época':'Sin filtrar por época'}</span>
-    </span><span class="campo-x">›</span>`;
+      <span class="campo-val ${smJuego?'':'sin'}">${smJuego?nombreDeJuego(smJuego):'Todos'}</span>
+    </span>`;
 }
 
 /* ---------- Selector de tipos reutilizable ---------- */
@@ -2080,19 +2146,23 @@ function abrirTiposMov(){
   });
 }
 
+/* Eevee acompaña al filtro de tipos: es el pokémon que puede
+   convertirse en más tipos distintos */
 function pintarCampoTiposMov(){
   const el = document.getElementById('sm-tipos-campo');
   if(!el) return;
+  const icono = `<img class="jm" src="${SPRITE(133)}" alt="">`;
   if(!smTipos.length){
-    el.innerHTML = `<span class="campo-main">
-      <span class="campo-val sin">Todos los tipos</span>
-      <span class="campo-sub">Tocar para filtrar</span>
-      </span><span class="campo-x">›</span>`;
-  }else{
-    el.innerHTML = `<span class="campo-main">
+    el.innerHTML = `${icono}<span class="campo-main">
+      <span class="campo-val sin">Tipos</span></span>`;
+  }else if(smTipos.length<=2){
+    el.innerHTML = `${icono}<span class="campo-main">
       <span class="campo-chips">${smTipos.map(t=>
         `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
-      </span><span class="campo-x">›</span>`;
+      </span>`;
+  }else{
+    el.innerHTML = `${icono}<span class="campo-main">
+      <span class="campo-val">${smTipos.length} tipos</span></span>`;
   }
 }
 
@@ -2917,7 +2987,6 @@ function miembroNuevo(pid, gen){
 function verListaEquipos(){
   equipoAbierto = null;
   document.getElementById('eq-volver').style.display='none';
-  document.getElementById('eq-nuevo').style.display='flex';
   document.getElementById('eq-sub').textContent = 'Tus equipos';
   document.querySelector('#s-equipo .hdr-title').textContent = 'Equipo';
   renderEquipos();
@@ -2925,15 +2994,16 @@ function verListaEquipos(){
 
 function renderEquipos(){
   const body = document.getElementById('eq-body');
-  if(!equipos.length){
-    body.innerHTML = `
-      <div class="eq-vacio">
-        <svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.6"/>
-        <path d="M2.5 20c.5-4 2.7-6 5.5-6s5 2 5.5 6"/><path d="M14 20c.3-3 1.7-4.6 3.5-4.6s3.1 1.6 3.5 4.6"/></svg>
-        <p>Todavía no tienes equipos.<br>Toca + para crear el primero.</p>
-      </div>`;
-    return;
-  }
+  const nuevo = `
+    <button class="rival-vacio" onclick="nuevoEquipo()">
+      <span class="rv-mas">+</span>
+      <span class="rv-txt">Crear equipo</span>
+      <span class="rv-sub">${equipos.length ? 'Otro equipo para otro juego'
+                                             : 'Empieza por aquí'}</span>
+    </button>`;
+
+  if(!equipos.length){ body.innerHTML = nuevo; return; }
+
   body.innerHTML = equipos.map((eq,i)=>{
     const huecos = 6 - eq.miembros.length;
     return `
@@ -2943,20 +3013,20 @@ function renderEquipos(){
           <div class="eq-nom">${eq.nombre}</div>
           <div class="eq-meta">${nombreDeJuego(eq.juego)} · ${eq.miembros.length}/6</div>
         </div>
+        <img class="jm" src="${spriteJuego(eq.juego)}" alt="">
       </div>
       <div class="eq-mini">
         ${eq.miembros.map(m=>`<img src="${SPRITE(m.pid)}" alt="">`).join('')}
         ${Array.from({length:huecos},()=>'<span class="hueco"></span>').join('')}
       </div>
     </div>`;
-  }).join('');
+  }).join('') + nuevo;
 }
 
 /* ---------- Crear equipo (panel propio) ---------- */
 let crearGen = 3, crearJuego = 'firered';
 
 function nuevoEquipo(){
-  if(equipoAbierto!==null){ verListaEquipos(); return; }
   crearGen = 3; crearJuego = 'firered';
   document.getElementById('in-nombre').value = '';
   pintarCrearGens(); pintarCrearJuegos(); validarCrear();
@@ -3005,7 +3075,6 @@ function abrirEquipo(i){
   equipoAbierto = i;
   const eq = equipos[i];
   document.getElementById('eq-volver').style.display='flex';
-  document.getElementById('eq-nuevo').style.display='none';
   document.getElementById('eq-sub').textContent = nombreDeJuego(eq.juego);
   document.querySelector('#s-equipo .hdr-title').textContent = eq.nombre;
   renderEquipo();
@@ -5545,6 +5614,10 @@ pintarCampoJuego();
 if(juegoActual) cargarTiposPasados().then(render);
 document.getElementById('in-nombre').addEventListener('input', validarCrear);
 document.getElementById('pick-busca').addEventListener('input', pintarPick);
+window.addEventListener('resize', ()=>{
+  Object.keys(altoMax).forEach(id=>{ altoMax[id] = 0; });
+  document.querySelectorAll('.overlay.open').forEach(o=>ajustarAlturaPanel(o.id));
+});
 document.getElementById('el-busca').addEventListener('input', pintarSelector);
 document.getElementById('sm-busca').addEventListener('input', e=>{
   smTexto = e.target.value; filtrarSelMov();
