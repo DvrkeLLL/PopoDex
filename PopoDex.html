@@ -348,6 +348,17 @@ select:focus,input:focus{border-color:var(--accent);}
 .mec-gen{font-family:var(--mono);font-size:9px;color:#fff;background:var(--accent);
   padding:2px 7px;border-radius:2px;display:inline-block;margin-bottom:8px;}
 .sim-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:13px;}
+.reco{
+  display:flex;align-items:center;gap:9px;padding:11px 10px;cursor:pointer;
+  border-bottom:1px solid var(--border);
+}
+.reco:last-child{border-bottom:none;}
+.reco:active{background:var(--bg-screen);}
+.reco-pos{font-family:var(--mono);font-size:10px;color:var(--dim);width:14px;flex-shrink:0;}
+.reco-main{flex:1;min-width:0;}
+.reco-n4{font-family:var(--mono);font-size:12px;font-weight:700;color:#1F6B57;display:block;}
+.reco-n4.cero{color:var(--dim);font-weight:400;}
+.reco-n2{font-family:var(--mono);font-size:9px;color:var(--muted);display:block;margin-top:2px;}
 .sim-quita{border:none;cursor:pointer;font-size:9px;padding:5px 9px;}
 .cg-blk{margin-bottom:9px;}
 .cg-blk .cg-op{margin-bottom:0;}
@@ -1180,6 +1191,21 @@ select:focus,input:focus{border-color:var(--accent);}
       <div class="sheet-ft">
         <button class="btn btn-s" onclick="quitarFiltroMov()">Sin filtrar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============ RECOMENDACIONES DEL SIMULADOR ============ -->
+  <div class="overlay" id="ov-reco">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="reco-sub">—</div>
+          <h2 class="sheet-title" style="font-size:17px;">Qué te conviene añadir</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-reco')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd"><div id="reco-lista"></div></div>
     </div>
   </div>
 
@@ -5337,6 +5363,8 @@ async function panelSimulador(){
     return {...c, mult:mejor, via};
   }).sort((a,b)=> b.mult-a.mult || a.tipos.join().localeCompare(b.tipos.join()));
 
+  simEstado = {filas, tabla:tb, validos, gen};
+
   const x4  = filas.filter(f=>f.mult>=4);
   const x2  = filas.filter(f=>f.mult>=2 && f.mult<4);
   const sin = filas.filter(f=>f.mult<2);
@@ -5407,12 +5435,76 @@ async function panelSimulador(){
             simJuego ? 'Combinaciones presentes en '+nombreDeJuego(simJuego)
                      : 'Todas las combinaciones que existen entre los pokémon'}</div>
         </div>
+        <button class="btn btn-s" style="width:100%;margin-bottom:12px;"
+          onclick="abrirRecomendaciones()">Recomendaciones</button>
         ${bloque('sin', sin, '!',  'Sin cubrir',      '#B34A3A')}
         ${bloque('x4',  x4,  'x4', 'Daño cuádruple',  '#1F6B57')}
         ${bloque('x2',  x2,  'x2', 'Daño doble',      '#2E7D6B')}`}`;
 }
 
+/* Guarda el estado del último cálculo, para las recomendaciones */
+let simEstado = null;
+
 function simAlternar(k){ simAbierto[k] = !simAbierto[k]; panelSimulador(); }
+
+/* Para cada tipo que no tienes: cuántas combinaciones subirían a x4 que
+   hoy no lo están (incluidas las que ya cubres a x2, porque pasar de x2
+   a x4 también suma), y cuántas pasarían de no cubiertas a cubiertas. */
+function abrirRecomendaciones(){
+  if(!simEstado){ aviso('Elige primero algún tipo'); return; }
+  const {filas, tabla, validos, gen} = simEstado;
+  const candidatos = validos.filter(t=>!simTipos.includes(t));
+
+  const reco = candidatos.map(t=>{
+    let nuevos4 = 0, nuevos2 = 0, combos4 = [];
+    filas.forEach(f=>{
+      const e = f.tipos.reduce((n,d)=>n*(tabla[t]?.[d] ?? 1), 1);
+      if(e>=4 && f.mult<4){ nuevos4++; combos4.push(f); }
+      if(e>=2 && f.mult<2) nuevos2++;
+    });
+    return {tipo:t, nuevos4, nuevos2, combos4};
+  }).sort((a,b)=> b.nuevos4-a.nuevos4 || b.nuevos2-a.nuevos2 ||
+                  (TES[a.tipo]||'').localeCompare(TES[b.tipo]||''));
+
+  document.getElementById('reco-sub').textContent =
+    (simJuego ? nombreDeJuego(simJuego) : 'Todas las combinaciones') +
+    ' · ' + simTipos.map(t=>TES[t]).join(', ');
+
+  const utiles = reco.filter(r=>r.nuevos4>0);
+  const resto  = reco.filter(r=>r.nuevos4===0);
+
+  document.getElementById('reco-lista').innerHTML = `
+    <p class="mi-cuenta">Ordenado por cuántas combinaciones subirían a x4.
+      Cuenta también las que ya cubres a x2.</p>
+    ${!utiles.length
+      ? '<div class="hint" style="padding:18px 4px;">Ningún tipo suelto añade nuevos x4.</div>'
+      : utiles.map((r,i)=>filaReco(r,i)).join('')}
+    ${resto.length ? `
+      <p class="section-label" style="margin:18px 0 9px;">Sin x4 nuevos</p>
+      ${resto.map(r=>filaReco(r,null)).join('')}` : ''}`;
+
+  openOverlay('ov-reco');
+}
+
+function filaReco(r, pos){
+  return `
+    <div class="reco" onclick="simAgregar('${r.tipo}')">
+      <span class="reco-pos">${pos!==null ? pos+1 : '·'}</span>
+      <span class="tchip" style="background:${TCOLOR[r.tipo]};font-size:9.5px;padding:4px 9px;">${TES[r.tipo]}</span>
+      <span class="reco-main">
+        <span class="reco-n4 ${r.nuevos4?'':'cero'}">${r.nuevos4>0?'+':''}${r.nuevos4} a x4</span>
+        ${r.nuevos2 ? `<span class="reco-n2">+${r.nuevos2} que no cubrías</span>` : ''}
+      </span>
+      <span class="campo-x">+</span>
+    </div>`;
+}
+
+function simAgregar(t){
+  if(!simTipos.includes(t)) simTipos = [...simTipos, t];
+  closeOverlay('ov-reco');
+  aviso(TES[t]+' añadido');
+  panelSimulador();
+}
 function simQuitar(t){ simTipos = simTipos.filter(x=>x!==t); panelSimulador(); }
 
 function simElegirTipos(){
