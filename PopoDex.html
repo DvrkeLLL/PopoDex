@@ -376,6 +376,12 @@ select:focus,input:focus{border-color:var(--accent);}
 }
 .cb-chip.tuyo{opacity:.45;cursor:default;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);}
 .sim-quita{border:none;cursor:pointer;font-size:9px;padding:5px 9px;}
+.sim-limpiar{
+  font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;
+  background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:2px;padding:4px 9px;cursor:pointer;margin-left:auto;
+}
+.sim-limpiar:active{border-color:var(--alert);color:var(--alert);}
 .cg-blk{margin-bottom:9px;}
 .cg-blk .cg-op{margin-bottom:0;}
 .cg-cont{
@@ -4227,11 +4233,12 @@ function _tarjetaCob(k, lab, desc, col, accion){
 function _listaCob(filas, vacio){
   if(!filas.length) return `<div class="hint" style="padding:22px 12px;text-align:center;">${vacio}</div>`;
   return filas.map(f=>`
-    <div class="cc">
+    <div class="cc pulsable" onclick="verComboEquipo('${f.tipos.join(',')}')">
       <div class="cc-hd">
         <span class="cc-tipos">${f.tipos.map(t=>
           `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
         <span class="cc-mult ${claseMult(f.mult)}">x${f.mult}</span>
+        <span class="campo-x">›</span>
       </div>
       ${f.mult>=2 && f.via.length ? `<div class="cc-via">${
         f.via.map(v=>v.quienes.map(q=>q.mov).join(', ')).join(' · ')}</div>` : ''}
@@ -4274,6 +4281,48 @@ function pintarDetalleCobertura(){
   cont.innerHTML =
     `<button class="cg-volver" onclick="irCobertura('${T[1]}')">‹ Volver</button>` +
     _listaCob(_grupoCob(cobVista), T[2]);
+}
+
+/* Qué tipos vencen a una combinación, desde la cobertura de un equipo.
+   Marca los que el equipo ya tiene entre sus movimientos. */
+function verComboEquipo(clave){
+  const eq = equipos[equipoAbierto];
+  if(!eq || !coberturaDatos) return;
+  const tipos = clave.split(',');
+  const gen = genDeJuego(eq.juego);
+  const tabla = tablaPara(gen);
+  const validos = tiposValidos(gen);
+  const propios = coberturaDatos.tiposAtaque || [];
+
+  const x4 = [], x2 = [];
+  validos.forEach(t=>{
+    const e = tipos.reduce((n,d)=>n*(tabla[t]?.[d] ?? 1), 1);
+    const item = {tipo:t, tuyo:propios.includes(t)};
+    if(e>=4) x4.push(item);
+    else if(e>=2) x2.push(item);
+  });
+  const orden = a => a.sort((p,q)=>(TES[p.tipo]||'').localeCompare(TES[q.tipo]||''));
+  orden(x4); orden(x2);
+
+  document.getElementById('combo-titulo').innerHTML = tipos.map(t=>
+    `<span class="tchip" style="background:${TCOLOR[t]};font-size:10px;padding:4px 10px;">${TES[t]}</span>`
+  ).join(' ');
+
+  const grupo = (lista, lab, col) => !lista.length ? '' : `
+    <div class="cb-grupo">
+      <div class="cb-hd"><span class="cb-mult" style="background:${col}">${lab}</span></div>
+      <div class="cb-tipos">
+        ${lista.map(o=>`<span class="cb-chip ${o.tuyo?'tuyo':''}"
+          style="background:${TCOLOR[o.tipo]}">${TES[o.tipo]}${o.tuyo?' ✓':''}</span>`).join('')}
+      </div>
+    </div>`;
+
+  document.getElementById('combo-cuerpo').innerHTML =
+    (!x4.length && !x2.length)
+      ? '<div class="hint" style="padding:20px 2px;text-align:center;">Ningún tipo es superefectivo contra esta combinación.</div>'
+      : grupo(x4, 'x4', '#1F6B57') + grupo(x2, 'x2', '#2E7D6B');
+
+  openOverlay('ov-combo');
 }
 
 function elegirDexCobertura(){
@@ -5340,8 +5389,18 @@ async function quienAprende(slug, nombre){
 }
 
 /* ---------- Simulador de cobertura ---------- */
-let simTipos = [];        // tipos de ataque elegidos
-let simJuego = '';        // '' = solo combinaciones, sin pokémon
+/* La última simulación queda guardada entre sesiones */
+let simTipos = (()=>{ try{ return JSON.parse(localStorage.getItem('popodex:simtipos')||'[]'); }
+                      catch(e){ return []; } })();
+let simJuego = (()=>{ try{ return localStorage.getItem('popodex:simjuego')||''; }
+                      catch(e){ return ''; } })();
+
+function guardarSimulacion(){
+  try{
+    localStorage.setItem('popodex:simtipos', JSON.stringify(simTipos));
+    localStorage.setItem('popodex:simjuego', simJuego);
+  }catch(e){}
+}
 let simAbierto = {x4:false, x2:false, sin:true};
 let simCache = {};        // juego -> especies de su pokédex
 
@@ -5442,9 +5501,12 @@ async function panelSimulador(){
       </button>
     </div>
 
-    ${simTipos.length ? `<div class="sim-chips">${simTipos.map(t=>
-      `<button class="tchip sim-quita" style="background:${TCOLOR[t]}"
-        onclick="simQuitar('${t}')">${TES[t]} ✕</button>`).join('')}</div>` : ''}
+    ${simTipos.length || simJuego ? `<div class="sim-chips">
+      ${simTipos.map(t=>
+        `<button class="tchip sim-quita" style="background:${TCOLOR[t]}"
+          onclick="simQuitar('${t}')">${TES[t]} ✕</button>`).join('')}
+      <button class="sim-limpiar" onclick="simLimpiar()" title="Empezar de cero">Limpiar</button>
+    </div>` : ''}
 
     ${!simTipos.length
       ? `<div class="eq-vacio" style="padding:34px 16px;">
@@ -5576,18 +5638,30 @@ function filaReco(r, pos){
 
 function simAgregar(t){
   if(!simTipos.includes(t)) simTipos = [...simTipos, t];
+  guardarSimulacion();
   closeOverlay('ov-reco');
   closeOverlay('ov-combo');
   aviso(TES[t]+' añadido');
   panelSimulador();
 }
-function simQuitar(t){ simTipos = simTipos.filter(x=>x!==t); panelSimulador(); }
+function simQuitar(t){
+  simTipos = simTipos.filter(x=>x!==t);
+  guardarSimulacion();
+  panelSimulador();
+}
+
+function simLimpiar(){
+  simTipos = [];
+  simJuego = '';
+  guardarSimulacion();
+  panelSimulador();
+}
 
 function simElegirTipos(){
   const gen = simJuego ? genDeJuego(simJuego) : 9;
   abrirTipos({
     sub:'Tipos con los que atacas', actual:simTipos, tipos:tiposValidos(gen),
-    alElegir: v=>{ simTipos = v; panelSimulador(); }
+    alElegir: v=>{ simTipos = v; guardarSimulacion(); panelSimulador(); }
   });
 }
 
@@ -5598,7 +5672,7 @@ function simElegirJuego(){
                 detalle:'Solo combinaciones de tipos, sin pokémon'}]
       .concat(JUEGOS.map(j=>({valor:j.slug, nombre:j.es, img:spriteJuego(j.slug),
         detalle:`${j.gen}.ª generación`}))),
-    alElegir: v=>{ simJuego = v; panelSimulador(); }
+    alElegir: v=>{ simJuego = v; guardarSimulacion(); panelSimulador(); }
   });
 }
 
