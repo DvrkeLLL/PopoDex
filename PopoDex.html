@@ -366,12 +366,13 @@ select:focus,input:focus{border-color:var(--accent);}
 .cb-hd{display:flex;align-items:center;margin-bottom:9px;}
 .cb-mult{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;
   padding:4px 10px;border-radius:2px;}
-/* Todas las celdas del mismo ancho: tres columnas iguales */
-.cb-tipos{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;}
+/* Cinco por fila, todas del mismo ancho. El tamaño de letra está
+   calculado para que quepa "Eléctrico" incluso en pantallas estrechas. */
+.cb-tipos{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;}
 .cb-chip{
-  font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.03em;
-  padding:8px 4px;border-radius:2px;color:#fff;font-weight:700;border:none;cursor:pointer;
-  width:100%;text-align:center;line-height:1.2;
+  font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:0;
+  padding:8px 2px;border-radius:2px;color:#fff;font-weight:700;border:none;cursor:pointer;
+  width:100%;text-align:center;line-height:1.2;white-space:nowrap;overflow:hidden;
 }
 .cb-chip.tuyo{opacity:.45;cursor:default;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);}
 .sim-quita{border:none;cursor:pointer;font-size:9px;padding:5px 9px;}
