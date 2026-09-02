@@ -359,6 +359,19 @@ select:focus,input:focus{border-color:var(--accent);}
 .reco-n4{font-family:var(--mono);font-size:12px;font-weight:700;color:#1F6B57;display:block;}
 .reco-n4.cero{color:var(--dim);font-weight:400;}
 .reco-n2{font-family:var(--mono);font-size:9px;color:var(--muted);display:block;margin-top:2px;}
+.cc.pulsable{cursor:pointer;}
+.cc.pulsable:active{background:var(--bg-screen);}
+.cb-grupo{margin-bottom:16px;}
+.cb-hd{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.cb-mult{font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;
+  padding:3px 8px;border-radius:2px;}
+.cb-n{font-family:var(--mono);font-size:9.5px;color:var(--muted);}
+.cb-tipos{display:flex;flex-wrap:wrap;gap:5px;}
+.cb-chip{
+  font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.03em;
+  padding:6px 10px;border-radius:2px;color:#fff;font-weight:700;border:none;cursor:pointer;
+}
+.cb-chip.tuyo{opacity:.5;cursor:default;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);}
 .sim-quita{border:none;cursor:pointer;font-size:9px;padding:5px 9px;}
 .cg-blk{margin-bottom:9px;}
 .cg-blk .cg-op{margin-bottom:0;}
@@ -1191,6 +1204,21 @@ select:focus,input:focus{border-color:var(--accent);}
       <div class="sheet-ft">
         <button class="btn btn-s" onclick="quitarFiltroMov()">Sin filtrar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============ QUÉ CUBRE UNA COMBINACIÓN ============ -->
+  <div class="overlay" id="ov-combo">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num">Cómo cubrir esta combinación</div>
+          <h2 class="sheet-title" id="combo-titulo" style="font-size:17px;">—</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-combo')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd"><div id="combo-cuerpo"></div></div>
     </div>
   </div>
 
@@ -5384,11 +5412,13 @@ async function panelSimulador(){
       ${simAbierto[k] ? `<div class="cg-cont">${
         !lista.length ? '<div class="hint" style="padding:12px 2px;">Ninguna.</div>'
         : lista.map(f=>`
-          <div class="cc">
+          <div class="cc ${k==='sin'?'pulsable':''}"
+               ${k==='sin'?`onclick="verComboSinCubrir('${f.tipos.join(',')}')"`:''}>
             <div class="cc-hd">
               <span class="cc-tipos">${f.tipos.map(t=>
                 `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
               <span class="cc-mult ${claseMult(f.mult)}">x${f.mult}</span>
+              ${k==='sin'?'<span class="campo-x">›</span>':''}
             </div>
             ${f.mult>=2 && f.via.length ? `<div class="cc-via">con ${
               f.via.map(t=>TES[t]).join(', ')}</div>` : ''}
@@ -5440,6 +5470,61 @@ async function panelSimulador(){
         ${bloque('sin', sin, '!',  'Sin cubrir',      '#B34A3A')}
         ${bloque('x4',  x4,  'x4', 'Daño cuádruple',  '#1F6B57')}
         ${bloque('x2',  x2,  'x2', 'Daño doble',      '#2E7D6B')}`}`;
+}
+
+/* Qué tipos cubrirían una combinación concreta que hoy se te escapa */
+function verComboSinCubrir(clave){
+  if(!simEstado) return;
+  const tipos = clave.split(',');
+  const {tabla, validos} = simEstado;
+
+  const x4 = [], x2 = [], neutros = [], malos = [];
+  validos.forEach(t=>{
+    const e = tipos.reduce((n,d)=>n*(tabla[t]?.[d] ?? 1), 1);
+    const item = {tipo:t, e, tuyo:simTipos.includes(t)};
+    if(e>=4) x4.push(item);
+    else if(e>=2) x2.push(item);
+    else if(e>=1) neutros.push(item);
+    else malos.push(item);
+  });
+  const orden = a => a.sort((p,q)=>(TES[p.tipo]||'').localeCompare(TES[q.tipo]||''));
+  orden(x4); orden(x2); orden(neutros); orden(malos);
+
+  document.getElementById('combo-titulo').innerHTML = tipos.map(t=>
+    `<span class="tchip" style="background:${TCOLOR[t]};font-size:10px;padding:4px 10px;">${TES[t]}</span>`
+  ).join(' ');
+
+  const grupo = (lista, lab, col, nota) => {
+    if(!lista.length) return '';
+    return `
+      <div class="cb-grupo">
+        <div class="cb-hd">
+          <span class="cb-mult" style="background:${col}">${lab}</span>
+          <span class="cb-n">${lista.length} tipo${lista.length===1?'':'s'}</span>
+        </div>
+        ${nota?`<div class="hint" style="padding:0 0 7px;font-size:9.5px;">${nota}</div>`:''}
+        <div class="cb-tipos">
+          ${lista.map(o=>`
+            <button class="cb-chip ${o.tuyo?'tuyo':''}" style="background:${TCOLOR[o.tipo]}"
+              onclick="${o.tuyo?'':`simAgregar('${o.tipo}')`}">
+              ${TES[o.tipo]}${o.tuyo?' ✓':' +'}
+            </button>`).join('')}
+        </div>
+      </div>`;
+  };
+
+  document.getElementById('combo-cuerpo').innerHTML = `
+    <p class="mi-cuenta">Toca un tipo para añadirlo a tu selección.
+      Los marcados con ✓ ya los tienes.</p>
+    ${grupo(x4, 'x4', '#1F6B57', 'Daño cuádruple: lo mejor que puedes hacerle')}
+    ${grupo(x2, 'x2', '#2E7D6B', 'Daño doble')}
+    ${!x4.length && !x2.length
+      ? '<div class="hint" style="padding:16px 2px;">Ningún tipo es superefectivo contra esta combinación.</div>'
+      : ''}
+    ${grupo(neutros, 'x1', '#8A8296', '')}
+    ${grupo(malos, '≤x0.5', '#B34A3A', 'Le hacen poco o nada')}`;
+
+  openOverlay('ov-combo');
 }
 
 /* Guarda el estado del último cálculo, para las recomendaciones */
@@ -5502,6 +5587,7 @@ function filaReco(r, pos){
 function simAgregar(t){
   if(!simTipos.includes(t)) simTipos = [...simTipos, t];
   closeOverlay('ov-reco');
+  closeOverlay('ov-combo');
   aviso(TES[t]+' añadido');
   panelSimulador();
 }
