@@ -402,6 +402,30 @@ select:focus,input:focus{border-color:var(--accent);}
 .tt-mult{font-family:var(--mono);font-size:10px;font-weight:700;min-width:40px;
   padding:3px 5px;border-radius:2px;text-align:center;flex-shrink:0;color:#fff;}
 .tt-tipos{display:flex;gap:4px;flex-wrap:wrap;}
+.dos-filtros{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.dos-filtros .campo{padding:8px 10px;min-width:0;}
+.dos-filtros .campo-val{font-size:12px;}
+.dos-filtros .jm{width:26px;height:26px;}
+.o-punto{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+.texto{font-size:12.5px;color:var(--muted);line-height:1.65;margin:0 0 12px;}
+.texto:last-child{margin-bottom:0;}
+.texto b{color:var(--text);}
+.es-fila{
+  display:flex;align-items:center;gap:10px;padding:9px 8px;cursor:pointer;
+  border-bottom:1px solid var(--border);
+}
+.es-fila:last-child{border-bottom:none;}
+.es-fila:active{background:var(--bg-screen);}
+.es-fila img{width:42px;height:42px;image-rendering:pixelated;flex-shrink:0;}
+.es-main{flex:1;min-width:0;}
+.es-nom{font-size:12.5px;font-weight:600;}
+.es-num{font-family:var(--mono);font-size:9px;color:var(--dim);}
+.es-evs{display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0;}
+.es-ev{
+  font-family:var(--mono);font-size:9px;font-weight:700;color:#fff;
+  padding:3px 7px;border-radius:2px;white-space:nowrap;
+}
+.es-ev.apagado{opacity:.35;}
 .mec{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
   padding:13px 14px;margin-bottom:10px;}
 .mec-t{font-size:13px;font-weight:600;margin:0 0 7px;}
@@ -1113,11 +1137,28 @@ select:focus,input:focus{border-color:var(--accent);}
           <p class="hdr-sub" id="info-sub">Utilidades</p>
           <h1 class="hdr-title" id="info-titulo">Info útil</h1>
         </div>
-        <button class="icon-btn" id="info-volver" style="display:none;" onclick="infoMenu()">
-          <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <div class="hd-actions">
+          <button class="icon-btn" id="info-ayuda" style="display:none;" onclick="abrirAyudaInfo()">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/>
+            <circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none"/></svg></button>
+          <button class="icon-btn" id="info-volver" style="display:none;" onclick="infoMenu()">
+            <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        </div>
       </div>
     </div>
     <div class="pad" id="info-body"></div>
+  </div>
+
+  <!-- ============ AYUDA DEL APARTADO ============ -->
+  <div class="overlay" id="ov-ayuda">
+    <div class="sheet" style="max-width:340px;">
+      <div class="sheet-hd">
+        <div><h2 class="sheet-title" id="ayuda-titulo" style="font-size:16px;">—</h2></div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-ayuda')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd" id="ayuda-cuerpo"></div>
+    </div>
   </div>
 
   <!-- ============ DETALLE DE MOVIMIENTO ============ -->
@@ -5201,9 +5242,43 @@ let mfTexto = '', mfTipos = [], mfClases = [], mfPotMin = null, mfGen = '';
 let mfLista = [], mfDibujados = 0;
 const LOTE_MOV = 50;
 
+const AYUDA = {
+  esfuerzo: {
+    t:'Puntos de esfuerzo',
+    p:['Cada pokémon otorga puntos de esfuerzo al ser derrotado. Se acumulan en el que participó en el combate y elevan sus estadísticas al subir de nivel.',
+       'Cada estadística admite hasta <b>252</b> puntos, con un tope de <b>510</b> repartidos entre todas.',
+       'Cuatro puntos equivalen a una unidad de estadística al nivel 100, así que 252 puntos dan 63 de más.']
+  },
+  simulador: {
+    t:'Cobertura de ataque',
+    p:['Eliges los tipos con los que atacas y se calcula contra cuántas combinaciones de tipos llegas a x2 o x4.',
+       'Sin juego elegido se usan todas las combinaciones que existen entre los pokémon. Con un juego, solo las de su pokédex regional, y con la tabla de efectividades de esa época.']
+  },
+  movs: {
+    t:'Buscador de movimientos',
+    p:['Al elegir un juego se descartan los movimientos que aún no existían y se muestran los valores que tenían en esa época, marcados en morado.',
+       'Hasta la 3.ª generación la categoría física o especial dependía del tipo del movimiento, así que filtrar por "físico" da resultados distintos según el juego.']
+  },
+  tipos: {
+    t:'Tabla de tipos',
+    p:['Eliges un tipo y ves qué hace atacando y qué le hacen a él defendiendo.',
+       'La tabla cambió con los años: en 1.ª generación no existían Siniestro ni Acero, y el tipo Hada llegó en la 6.ª.']
+  }
+};
+
+function abrirAyudaInfo(){
+  const a = AYUDA[infoVista];
+  if(!a) return;
+  document.getElementById('ayuda-titulo').textContent = a.t;
+  document.getElementById('ayuda-cuerpo').innerHTML =
+    a.p.map(x=>`<p class="texto">${x}</p>`).join('');
+  openOverlay('ov-ayuda');
+}
+
 function infoMenu(){
   infoVista = 'menu';
   document.getElementById('info-volver').style.display = 'none';
+  document.getElementById('info-ayuda').style.display = 'none';
   document.getElementById('info-sub').textContent = 'Utilidades';
   document.getElementById('info-titulo').textContent = 'Info útil';
   document.getElementById('info-body').innerHTML = `
@@ -5224,6 +5299,12 @@ function infoMenu(){
       <svg viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 4-3 6.5-7 8-4-1.5-7-4-7-8V7z"/></svg>
       <span class="util-main"><span class="util-t">Tabla de tipos</span>
       <span class="util-s">Efectividades atacando y defendiendo, por juego</span></span>
+      <span class="campo-x">›</span>
+    </button>
+    <button class="util" onclick="infoIr('esfuerzo')">
+      <svg viewBox="0 0 24 24"><path d="M4 19V9M9 19V5M14 19v-7M19 19v-11"/></svg>
+      <span class="util-main"><span class="util-t">Puntos de esfuerzo</span>
+      <span class="util-s">Qué otorga cada pokémon al ser derrotado</span></span>
       <span class="campo-x">›</span>
     </button>
     <button class="util" onclick="infoIr('mecanicas')">
@@ -5250,8 +5331,10 @@ function infoMenu(){
 function infoIr(v){
   infoVista = v;
   document.getElementById('info-volver').style.display = 'flex';
+  document.getElementById('info-ayuda').style.display = AYUDA[v] ? 'flex' : 'none';
   const T = {movs:['Movimientos','Buscador'], tipos:['Tabla de tipos','Efectividades'],
              simulador:['Simulador','Cobertura de ataque'],
+             esfuerzo:['Puntos de esfuerzo','Qué otorga cada uno'],
              mecanicas:['Mecánicas','Por generación'], formulas:['Fórmulas','Cómo se calcula'],
              acerca:['Acerca de','PopoDex']};
   document.getElementById('info-titulo').textContent = T[v][0];
@@ -5259,6 +5342,7 @@ function infoIr(v){
   document.getElementById('s-info').scrollTop = 0;
   if(v==='movs') panelMovimientos();
   else if(v==='simulador') panelSimulador();
+  else if(v==='esfuerzo') panelEsfuerzo();
   else if(v==='tipos') panelTipos();
   else if(v==='mecanicas') panelMecanicas();
   else if(v==='formulas') panelFormulas();
@@ -5493,6 +5577,191 @@ async function quienAprende(slug, nombre){
       </div>
       ${ids.length>80 ? `<p class="hint" style="text-align:center;padding-top:8px;">y ${ids.length-80} más</p>`:''}`;
   }catch(e){ cont.innerHTML = '<div class="hint">No se pudo consultar.</div>'; }
+}
+
+/* ---------- Puntos de esfuerzo ---------- */
+const STAT_COLOR = {
+  hp:'#78C850', attack:'#C03028', defense:'#C9A54B',
+  'special-attack':'#6890F0', 'special-defense':'#9E8A2F', speed:'#F85888'
+};
+let esfuerzos = null;          // id -> {stat: puntos}
+let esOrden = 'dex', esJuego = '', esTexto = '';
+let esLista = [], esDibujados = 0;
+const LOTE_ES = 50;
+
+async function cargarEsfuerzo(){
+  if(esfuerzos) return esfuerzos;
+  const guardado = Cache.get('esfuerzo');
+  if(guardado){ esfuerzos = guardado; return esfuerzos; }
+  const d = await gql(`{
+    pokemon(where:{id:{_lte:${MAX_ID}}}, order_by:{id:asc}) {
+      id pokemonstats(where:{effort:{_gt:0}}) { effort stat { name } }
+    }
+  }`);
+  const mapa = {};
+  d.pokemon.forEach(p=>{
+    if(!p.pokemonstats.length) return;
+    const e = {};
+    p.pokemonstats.forEach(x=>{ e[x.stat.name] = x.effort; });
+    mapa[p.id] = e;
+  });
+  esfuerzos = mapa;
+  Cache.set('esfuerzo', mapa);
+  return mapa;
+}
+
+async function panelEsfuerzo(){
+  const body = document.getElementById('info-body');
+  body.innerHTML = '<div class="hint">Cargando puntos de esfuerzo...</div>';
+  try{ await cargarEsfuerzo(); }
+  catch(e){
+    body.innerHTML = `<div class="hint">No se pudo cargar.<br>${e.message||''}</div>
+      <button class="btn btn-s" style="width:100%;margin-top:8px;" onclick="panelEsfuerzo()">Reintentar</button>`;
+    return;
+  }
+
+  body.innerHTML = `
+    <div class="dos-filtros">
+      <button class="campo" id="es-orden" onclick="esElegirOrden()"></button>
+      <button class="campo" id="es-juego" onclick="esElegirJuego()"></button>
+    </div>
+    <div id="es-aviso"></div>
+    <div class="buscador" style="margin:12px 0 0;">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <input type="text" id="es-busca" placeholder="Buscar pokémon..." autocomplete="off" value="${esTexto}">
+    </div>
+    <p class="mi-cuenta" id="es-cuenta" style="margin-top:13px;"></p>
+    <div id="es-lista"></div>`;
+
+  document.getElementById('es-busca').addEventListener('input', e=>{
+    esTexto = e.target.value; filtrarEsfuerzo();
+  });
+  const caja = document.getElementById('s-info');
+  if(!caja.dataset.scrollEs){
+    caja.dataset.scrollEs = '1';
+    caja.addEventListener('scroll', ()=>{
+      if(infoVista!=='esfuerzo') return;
+      if(caja.scrollTop + caja.clientHeight >= caja.scrollHeight - 250) masEsfuerzo();
+    }, {passive:true});
+  }
+  pintarCamposEsfuerzo();
+  filtrarEsfuerzo();
+}
+
+const nombreOrdenEs = () => esOrden==='dex' ? 'N.º Pokédex' : STAT_ES[esOrden];
+
+function pintarCamposEsfuerzo(){
+  const col = esOrden==='dex' ? 'var(--accent)' : STAT_COLOR[esOrden];
+  document.getElementById('es-orden').innerHTML = `
+    <span class="o-punto" style="background:${col}"></span>
+    <span class="campo-main"><span class="campo-val">${nombreOrdenEs()}</span></span>
+    <span class="campo-x">›</span>`;
+
+  const j = esJuego;
+  document.getElementById('es-juego').innerHTML = j
+    ? `<img class="jm" src="${spriteJuego(j)}" alt="">
+       <span class="campo-main"><span class="campo-val">${nombreDeJuego(j)}</span></span>
+       <span class="campo-x">›</span>`
+    : `<span class="campo-main"><span class="campo-val sin">Todos</span></span>
+       <span class="campo-x">›</span>`;
+
+  /* Antes de la 3.ª generación el sistema era otro */
+  const gen = j ? genDeJuego(j) : 9;
+  document.getElementById('es-aviso').innerHTML = (j && gen<=2)
+    ? `<div class="warn" style="margin-top:10px;">En ${nombreDeJuego(j)} no existían los puntos
+       de esfuerzo tal como se conocen hoy: se usaban Puntos de Experiencia, que subían hasta
+       65535 por estadística y sin tope conjunto. Esta tabla no aplica a ese juego.</div>`
+    : '';
+}
+
+function esElegirOrden(){
+  abrirSelector({
+    titulo:'Ordenar por', sub:'Cómo listar los pokémon', buscar:false, actual:esOrden,
+    opciones: [{valor:'dex', nombre:'N.º Pokédex', detalle:'Orden numérico, todos'}]
+      .concat(STATS6.map(k=>({valor:k, nombre:STAT_ES[k],
+        detalle:'Solo los que otorgan '+STAT_ES[k]}))),
+    alElegir: v=>{ esOrden = v; pintarCamposEsfuerzo(); filtrarEsfuerzo(); }
+  });
+}
+
+function esElegirJuego(){
+  abrirSelector({
+    titulo:'Juego', sub:'Limita a los pokémon de ese juego', buscar:true, actual:esJuego,
+    opciones: [{valor:'', nombre:'Todos los juegos', detalle:'Sin filtrar'}]
+      .concat(JUEGOS.map(j=>({valor:j.slug, nombre:j.es, img:spriteJuego(j.slug),
+        detalle:`${j.gen}.ª generación`}))),
+    alElegir: v=>{ esJuego = v; pintarCamposEsfuerzo(); filtrarEsfuerzo(); }
+  });
+}
+
+function filtrarEsfuerzo(){
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const t = norm(esTexto.trim());
+  const gen = esJuego ? genDeJuego(esJuego) : 9;
+  const tope = (GEN_RANGE[gen] || [1, MAX_ID])[1];
+
+  esLista = allMons.filter(m=>{
+    const e = esfuerzos[m.id];
+    if(!e) return false;
+    if(esJuego && m.id > tope) return false;
+    if(esOrden!=='dex' && !e[esOrden]) return false;
+    if(t && !(norm(m.es).includes(t) || m.name.includes(t))) return false;
+    return true;
+  });
+
+  if(esOrden==='dex') esLista.sort((a,b)=>a.id-b.id);
+  else esLista.sort((a,b)=> esfuerzos[b.id][esOrden]-esfuerzos[a.id][esOrden] || a.id-b.id);
+
+  const sufijo = esJuego ? ' · '+nombreDeJuego(esJuego) : '';
+  document.getElementById('es-cuenta').textContent = esOrden==='dex'
+    ? `${esLista.length} pokémon${sufijo}`
+    : `${esLista.length} pokémon dan ${STAT_ES[esOrden]}${sufijo}`;
+
+  esDibujados = 0;
+  document.getElementById('es-lista').innerHTML = '';
+  masEsfuerzo();
+}
+
+function masEsfuerzo(){
+  const cont = document.getElementById('es-lista');
+  if(!cont) return;
+  if(!esLista.length){
+    cont.innerHTML = '<div class="hint" style="padding:24px 12px;text-align:center;">Ningún pokémon coincide.</div>';
+    return;
+  }
+  if(esDibujados >= esLista.length) return;
+
+  const hasta = Math.min(esDibujados + LOTE_ES, esLista.length);
+  let html = '';
+  for(let i=esDibujados; i<hasta; i++){
+    const m = esLista[i];
+    const e = esfuerzos[m.id];
+
+    /* Ordenando por estadística, se separa por cuántos puntos dan */
+    if(esOrden!=='dex'){
+      const n = e[esOrden];
+      const prev = i>0 ? esfuerzos[esLista[i-1].id][esOrden] : null;
+      if(prev !== n)
+        html += `<div class="sm-cab" style="border-left:3px solid ${STAT_COLOR[esOrden]}">
+                   +${n} ${STAT_ES[esOrden]}</div>`;
+    }
+
+    html += `
+      <div class="es-fila" onclick="goTo('pokedex');setTimeout(()=>openDetail(${m.id}),200)">
+        <img src="${SPRITE(m.id)}" alt="" loading="lazy">
+        <div class="es-main">
+          <div class="es-nom">${m.es || m.name}</div>
+          <div class="es-num">N.º ${String(m.id).padStart(3,'0')}</div>
+        </div>
+        <div class="es-evs">
+          ${STATS6.filter(k=>e[k]).map(k=>
+            `<span class="es-ev ${esOrden!=='dex'&&esOrden!==k?'apagado':''}"
+              style="background:${STAT_COLOR[k]}">+${e[k]} ${STAT_ES[k]}</span>`).join('')}
+        </div>
+      </div>`;
+  }
+  cont.insertAdjacentHTML('beforeend', html);
+  esDibujados = hasta;
 }
 
 /* ---------- Simulador de cobertura ---------- */
