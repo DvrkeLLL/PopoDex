@@ -406,6 +406,11 @@ select:focus,input:focus{border-color:var(--accent);}
 .dos-filtros .campo{padding:8px 10px;min-width:0;}
 .dos-filtros .campo-val{font-size:12px;}
 .dos-filtros .jm{width:26px;height:26px;}
+.tres-filtros{display:grid;grid-template-columns:1.1fr 1fr .75fr;gap:6px;}
+.tres-filtros .campo{padding:8px 7px;min-width:0;gap:5px;}
+.tres-filtros .campo-val{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tres-filtros .campo-x{font-size:11px;}
+.tres-filtros .jm{width:22px;height:22px;}
 .o-punto{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
 .texto{font-size:12.5px;color:var(--muted);line-height:1.65;margin:0 0 12px;}
 .texto:last-child{margin-bottom:0;}
@@ -5668,12 +5673,11 @@ async function panelEsfuerzo(){
   }
 
   body.innerHTML = `
-    <div class="dos-filtros">
+    <div class="tres-filtros">
       <button class="campo" id="es-orden" onclick="esElegirOrden()"></button>
       <button class="campo" id="es-juego" onclick="esElegirJuego()"></button>
+      <button class="campo" id="es-gens" onclick="esElegirGens()"></button>
     </div>
-    <button class="campo" id="es-gens" style="width:100%;margin-top:8px;"
-      onclick="esElegirGens()"></button>
     <div id="es-aviso"></div>
     <div class="buscador" style="margin:12px 0 0;">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
@@ -5716,12 +5720,15 @@ function pintarCamposEsfuerzo(){
 
   const cg = document.getElementById('es-gens');
   if(cg){
-    cg.innerHTML = esGens.length
-      ? `<span class="campo-main"><span class="campo-chips">${esGens.map(g=>
-          `<span class="tchip" style="background:${GEN_COLOR[g]}">${g} · ${REGION_ES[g]}</span>`
-        ).join('')}</span></span><span class="campo-x">›</span>`
-      : `<span class="campo-main"><span class="campo-val sin">Todas las generaciones</span></span>
-         <span class="campo-x">›</span>`;
+    cg.innerHTML = !esGens.length
+      ? `<span class="campo-main"><span class="campo-val sin">Gen</span></span>
+         <span class="campo-x">›</span>`
+      : esGens.length===1
+        ? `<span class="o-punto" style="background:${GEN_COLOR[esGens[0]]}"></span>
+           <span class="campo-main"><span class="campo-val">Gen ${esGens[0]}</span></span>
+           <span class="campo-x">›</span>`
+        : `<span class="campo-main"><span class="campo-val">${esGens.length} gens</span></span>
+           <span class="campo-x">›</span>`;
   }
 
   /* Antes de la 3.ª generación el sistema era otro */
@@ -6674,10 +6681,20 @@ function confirmarImportar(){
 const COPIA_VER = 1;
 
 function armarCopia(){
+  const f = new Date();
+  const dosDig = n => String(n).padStart(2,'0');
   return {
     app:'PopoDex',
     version:COPIA_VER,
-    fecha:new Date().toISOString(),
+    /* La fecha viaja dentro del archivo, así el nombre puede ser siempre el mismo */
+    fecha: f.toISOString(),
+    creada: `${dosDig(f.getDate())}/${dosDig(f.getMonth()+1)}/${f.getFullYear()} `+
+            `a las ${dosDig(f.getHours())}:${dosDig(f.getMinutes())}`,
+    resumen: {
+      equipos: equipos.length,
+      pokemon: equipos.reduce((n,e)=>n+e.miembros.length,0),
+      juego: juegoActual ? nombreDeJuego(juegoActual) : 'ninguno fijado'
+    },
     equipos: equipos,
     juego: juegoActual
   };
@@ -6689,10 +6706,8 @@ function descargarCopia(){
     const blob = new Blob([JSON.stringify(datos,null,2)],{type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const f = new Date();
-    const sello = `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}-${String(f.getDate()).padStart(2,'0')}`;
     a.href = url;
-    a.download = `popodex-${sello}.json`;
+    a.download = 'Respaldo_PopoDex.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -6722,7 +6737,8 @@ function leerCopia(archivo){
     const nuevos = datos.equipos.filter(e=>e && typeof e.nombre==='string' && Array.isArray(e.miembros));
     if(!nuevos.length) return infoCopia('La copia no contiene equipos.','err');
     const n = nuevos.reduce((t,e)=>t+e.miembros.length,0);
-    const f = datos.fecha ? new Date(datos.fecha).toLocaleDateString('es') : 'sin fecha';
+    const f = datos.creada || (datos.fecha
+      ? new Date(datos.fecha).toLocaleDateString('es') : 'sin fecha');
 
     confirmarCopia(nuevos, datos.juego, n, f);
   };
@@ -6733,7 +6749,7 @@ function leerCopia(archivo){
 function confirmarCopia(nuevos, juego, n, fecha){
   document.getElementById('cf-titulo').textContent = 'Restaurar copia';
   document.getElementById('cf-texto').innerHTML =
-    `Copia del ${fecha} con <b>${nuevos.length} equipo${nuevos.length===1?'':'s'}</b> y ${n} pokémon.` +
+    `Copia creada el ${fecha}<br>con <b>${nuevos.length} equipo${nuevos.length===1?'':'s'}</b> y ${n} pokémon.` +
     (equipos.length ? `<br><br>Ya tienes ${equipos.length} equipo${equipos.length===1?'':'s'} guardado${equipos.length===1?'':'s'}. ¿Qué prefieres?` : '');
   const ok = document.getElementById('cf-ok');
   ok.textContent = equipos.length ? 'Añadir' : 'Restaurar';
