@@ -1690,6 +1690,7 @@ function genDe(id){
 /* ================= ESTADO ================= */
 let allMons = [];          // {id,name,es,types,stats,total,rank,methods}
 let currentList = [];      // lo que se muestra en la grilla (ya filtrado y ordenado)
+let listaDetalle = null;   // lista por la que navega el detalle abierto
 let openMonId = null;      // pokémon abierto en el panel de detalle
 let detailCache = {};      // id -> datos completos (moves, abilities...)
 let filters = {gens:[],sort:"",mins:{},types:[],cats:[],moves:[],ranks:[],texto:""};
@@ -2268,7 +2269,7 @@ function render(){
   grid.innerHTML = list.map((m,i)=>{
     const nuevaGen = marcarGen && i>0 && genDe(m.id)!==genDe(list[i-1].id);
     return `
-    <div class="pcard${nuevaGen?' gen-start':''}" id="c-${m.id}" onclick="openDetail(${m.id})">
+    <div class="pcard${nuevaGen?' gen-start':''}" id="c-${m.id}" onclick="openDetail(${m.id}, currentList)">
       <span class="num">${String(m.id).padStart(3,'0')}</span>
       <img loading="lazy" src="${SPRITE(m.id)}" alt="${m.es||m.name}">
       <div class="nm">${m.es || m.name.replace(/-/g,' ')}</div>
@@ -2665,10 +2666,12 @@ const EFF_ORDER=[
   {v:0,   lab:'0%',   col:'#3D3A4A'}
 ];
 
-async function openDetail(id){
+async function openDetail(id, lista){
   const m = allMons.find(x=>x.id===id);
   if(!m) return;
   openMonId = id;
+  if(lista) listaDetalle = lista;             // se abrió desde otro apartado
+  else if(!listaDetalle) listaDetalle = currentList;
   const sheet = document.getElementById('detail-sheet');
   openOverlay('ov-detail');
   sheet.innerHTML = `<div class="sheet-bd"><div class="hint">Cargando...</div></div>`;
@@ -2704,7 +2707,7 @@ async function openDetail(id){
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
         <button class="mini-btn" title="Más información" onclick="openInfo(${m.id})">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none"/></svg></button>
-        <button class="mini-btn close" onclick="closeOverlay('ov-detail')">
+        <button class="mini-btn close" onclick="closeOverlay('ov-detail');listaDetalle=null;">
           <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
     </div>
@@ -3088,12 +3091,13 @@ function moverPantalla(paso){
 
 /* Entre pokémon dentro del detalle, siguiendo el orden de la grilla */
 function moverPokemon(paso){
-  if(!openMonId || !currentList.length) return;
-  const i = currentList.findIndex(m=>m.id===openMonId);
+  const lista = listaDetalle && listaDetalle.length ? listaDetalle : currentList;
+  if(!openMonId || !lista.length) return;
+  const i = lista.findIndex(m=>m.id===openMonId);
   if(i===-1) return;
   const j = i + paso;
-  if(j<0 || j>=currentList.length) return;
-  openDetail(currentList[j].id);
+  if(j<0 || j>=lista.length) return;
+  openDetail(lista[j].id);
 }
 
 detectarArrastre(document.getElementById('app'),
@@ -5824,7 +5828,7 @@ function masEsfuerzo(){
     }
 
     html += `
-      <div class="es-fila" onclick="goTo('pokedex');setTimeout(()=>openDetail(${m.id}),200)">
+      <div class="es-fila" onclick="openDetail(${m.id}, esLista)">
         <img src="${SPRITE(m.id)}" alt="" loading="lazy">
         <div class="es-main">
           <div class="es-nom">${m.es || m.name}</div>
