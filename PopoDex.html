@@ -1350,10 +1350,7 @@ select:focus,input:focus{border-color:var(--accent);}
         <div class="imp-grid" id="imp-lista"></div>
         <div id="imp-detalle"></div>
       </div>
-      <div class="sheet-ft">
-        <button class="btn btn-s" onclick="closeOverlay('ov-importar')">Cancelar</button>
-        <button class="btn btn-p" onclick="confirmarImportar()">Importar</button>
-      </div>
+      <div class="sheet-ft" id="imp-pie" style="flex-direction:column;gap:0;"></div>
     </div>
   </div>
 
@@ -6411,8 +6408,13 @@ function leerSav(buffer){
   const cuantos = dv.getUint32(s1 + info.equipo, true);
   if(cuantos < 1 || cuantos > 6) throw new Error('El equipo del guardado no es válido');
 
-  const entrenador = secciones[0] !== undefined
-    ? textoSav(new Uint8Array(buffer, secciones[0], 7)) : '';
+  /* Identificador de la partida: 32 bits fijos desde que se empezó.
+     Es lo único que distingue una aventura de otra de forma fiable. */
+  let entrenador = '', idPartida = 0;
+  if(secciones[0] !== undefined){
+    entrenador = textoSav(new Uint8Array(buffer, secciones[0], 7));
+    idPartida = dv.getUint32(secciones[0] + 0x0A, true);
+  }
 
   const miembros = [];
   for(let i=0; i<cuantos; i++){
@@ -6469,7 +6471,7 @@ function leerSav(buffer){
     });
   }
   if(!miembros.length) throw new Error('No se encontró ningún pokémon en el equipo');
-  return {juego:info.juego, entrenador, miembros};
+  return {juego:info.juego, entrenador, idPartida, miembros};
 }
 
 /* Los movimientos vienen como números; se piden sus nombres a PokeAPI */
@@ -6487,7 +6489,7 @@ async function nombresDeMovs(ids) {
 }
 
 /* ---------- Importar: interfaz ---------- */
-let impDatos = null, impJuego = '';
+let impDatos = null, impJuego = '', impCoincide = -1;
 
 async function abrirImportar(archivo){
   let datos;
@@ -6521,10 +6523,18 @@ async function abrirImportar(archivo){
 
   impDatos = datos;
   impJuego = datos.juego;
-  const nom = datos.entrenador ? 'Partida de '+datos.entrenador : 'Partida importada';
+
+  /* ¿Ya hay un equipo de esta misma partida? */
+  impCoincide = datos.idPartida
+    ? equipos.findIndex(e=>e.idPartida === datos.idPartida) : -1;
+
+  const nom = impCoincide !== -1
+    ? equipos[impCoincide].nombre               // se respeta el nombre que puso el jugador
+    : (datos.entrenador ? 'Partida de '+datos.entrenador : 'Partida importada');
   document.getElementById('imp-nombre').value = nom.slice(0,24);
   document.getElementById('imp-sub').textContent =
     `${datos.miembros.length} pokémon · ${nombreDeJuego(datos.juego)}`;
+  pintarPieImp();
   impSel = null;
   pintarJuegoImpCompacto();
   pintarListaImp();
@@ -6613,9 +6623,30 @@ function pintarDetalleImp(){
     </div>`;
 }
 
-function confirmarImportar(){
+function pintarPieImp(){
+  const pie = document.getElementById('imp-pie');
+  if(impCoincide !== -1){
+    const eq = equipos[impCoincide];
+    pie.innerHTML = `
+      <div style="display:flex;gap:8px;width:100%;">
+        <button class="btn btn-s" onclick="closeOverlay('ov-importar')">Cancelar</button>
+        <button class="btn btn-s" onclick="confirmarImportar(false)">Equipo nuevo</button>
+        <button class="btn btn-p" onclick="confirmarImportar(true)">Actualizar</button>
+      </div>
+      <p class="pie-nota">Esta partida ya está guardada como
+        <b>${eq.nombre}</b>. Al actualizar se reemplazan sus pokémon
+        y se conserva el nombre.</p>`;
+  }else{
+    pie.innerHTML = `
+      <div style="display:flex;gap:8px;width:100%;">
+        <button class="btn btn-s" onclick="closeOverlay('ov-importar')">Cancelar</button>
+        <button class="btn btn-p" onclick="confirmarImportar(false)">Crear equipo</button>
+      </div>`;
+  }
+}
+
+function confirmarImportar(actualizar){
   if(!impDatos) return;
-  const nombre = document.getElementById('imp-nombre').value.trim() || 'Partida importada';
   const gen = genDeJuego(impJuego);
   const t = topesDe(gen);
 
@@ -6630,12 +6661,26 @@ function confirmarImportar(){
             movimientos:[...m.movimientos]};
   });
 
-  equipos.push({nombre, juego:impJuego, miembros});
+  let indice;
+  if(actualizar && impCoincide !== -1){
+    /* Se conserva el nombre que el jugador le puso */
+    const eq = equipos[impCoincide];
+    eq.miembros = miembros;
+    eq.juego = impJuego;
+    indice = impCoincide;
+    aviso(`${eq.nombre} actualizado`);
+  }else{
+    const nombre = document.getElementById('imp-nombre').value.trim() || 'Partida importada';
+    equipos.push({nombre, juego:impJuego, idPartida:impDatos.idPartida || 0, miembros});
+    indice = equipos.length-1;
+    aviso(`${miembros.length} pokémon importados`);
+  }
+
   guardarEquipos();
   closeOverlay('ov-importar');
   impDatos = null;
-  aviso(`${miembros.length} pokémon importados`);
-  abrirEquipo(equipos.length-1);
+  impCoincide = -1;
+  abrirEquipo(indice);
 }
 
 /* ---------- Arrastrar y soltar la partida ---------- */
