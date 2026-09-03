@@ -86,6 +86,15 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
 .mini{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);padding:8px 4px;text-align:center;cursor:pointer;}
 .mini img{width:46px;height:46px;image-rendering:pixelated;}
 .mini div{font-family:var(--mono);font-size:8.5px;color:var(--muted);}
+.imp-fila{
+  display:flex;align-items:center;gap:11px;padding:10px 0;
+  border-bottom:1px solid var(--border);
+}
+.imp-fila:last-child{border-bottom:none;}
+.imp-fila img{width:46px;height:46px;image-rendering:pixelated;flex-shrink:0;}
+.imp-main{flex:1;min-width:0;}
+.imp-nom{font-size:13px;font-weight:600;}
+.imp-dat{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;}
 .copia{
   background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
   padding:13px 14px;
@@ -1213,6 +1222,33 @@ select:focus,input:focus{border-color:var(--accent);}
       </div>
       <div class="sheet-ft">
         <button class="btn btn-s" onclick="quitarFiltroMov()">Sin filtrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ IMPORTAR PARTIDA ============ -->
+  <div class="overlay" id="ov-importar">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="imp-sub">—</div>
+          <h2 class="sheet-title" style="font-size:17px;">Equipo de la partida</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-importar')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd">
+        <div class="f-group" style="border:none;padding:0;margin-bottom:14px;">
+          <label class="f-lab">Nombre del equipo</label>
+          <input type="text" id="imp-nombre" maxlength="24" autocomplete="off">
+        </div>
+        <button class="campo" id="imp-juego" style="width:100%;margin-bottom:14px;"
+          onclick="impElegirJuego()"></button>
+        <div id="imp-lista"></div>
+      </div>
+      <div class="sheet-ft">
+        <button class="btn btn-s" onclick="closeOverlay('ov-importar')">Cancelar</button>
+        <button class="btn btn-p" onclick="confirmarImportar()">Importar</button>
       </div>
     </div>
   </div>
@@ -3072,7 +3108,13 @@ function renderEquipos(){
                                              : 'Empieza por aquí'}</span>
     </button>`;
 
-  if(!equipos.length){ body.innerHTML = nuevo; return; }
+  const importar = `
+    <button class="btn btn-s" style="width:100%;margin-top:9px;"
+      onclick="document.getElementById('archivo-sav').click()">Importar partida (.sav)</button>
+    <input type="file" id="archivo-sav" accept=".sav,.sa1,.srm,application/octet-stream"
+           style="display:none;">`;
+
+  if(!equipos.length){ body.innerHTML = nuevo + importar; conectarArchivoSav(); return; }
 
   body.innerHTML = equipos.map((eq,i)=>{
     const huecos = 6 - eq.miembros.length;
@@ -3090,7 +3132,19 @@ function renderEquipos(){
         ${Array.from({length:huecos},()=>'<span class="hueco"></span>').join('')}
       </div>
     </div>`;
-  }).join('') + nuevo;
+  }).join('') + nuevo + importar;
+  conectarArchivoSav();
+}
+
+function conectarArchivoSav(){
+  const inp = document.getElementById('archivo-sav');
+  if(!inp || inp.dataset.listo) return;
+  inp.dataset.listo = '1';
+  inp.addEventListener('change', e=>{
+    const f = e.target.files[0];
+    if(f) abrirImportar(f);
+    e.target.value = '';
+  });
 }
 
 /* ---------- Crear equipo (panel propio) ---------- */
@@ -5862,6 +5916,280 @@ function panelAcerca(){
       <p class="mec-p">Los sprites son propiedad de sus titulares y se muestran
         únicamente con fines informativos.</p>
     </div>`;
+}
+
+/* ================= IMPORTAR PARTIDA (.sav) ================= */
+/* Los guardados de 3.ª generación ocupan 128 KB divididos en sectores
+   de 4096 bytes. Cada pokémon del equipo va cifrado con una clave que
+   sale de su valor de personalidad y del identificador del entrenador. */
+
+const FIRMA_SAV = 0x08012025;
+
+/* En 3.ª generación el número interno de especie no coincide con el
+   nacional a partir del 252. Esta tabla traduce los de Hoenn. */
+const ESPECIE_HOENN = {
+  277:252,278:253,279:254,280:255,281:256,282:257,283:258,284:259,285:260,
+  286:261,287:262,288:263,289:264,290:265,291:266,292:267,293:268,294:269,
+  295:270,296:271,297:272,298:273,299:274,300:275,301:290,302:291,303:292,
+  304:276,305:277,306:285,307:286,308:327,309:278,310:279,311:283,312:284,
+  313:320,314:321,315:300,316:301,317:352,318:343,319:344,320:299,321:324,
+  322:302,323:339,324:340,325:370,326:341,327:342,328:349,329:350,330:318,
+  331:319,332:328,333:329,334:330,335:296,336:297,337:309,338:310,339:322,
+  340:323,341:363,342:364,343:365,344:331,345:332,346:361,347:362,348:337,
+  349:338,350:298,351:325,352:326,353:311,354:312,355:303,356:307,357:308,
+  358:333,359:334,360:360,361:355,362:356,363:315,364:287,365:288,366:289,
+  367:316,368:317,369:357,370:293,371:294,372:295,373:366,374:367,375:368,
+  376:359,377:353,378:354,379:336,380:335,381:369,382:304,383:305,384:306,
+  385:351,386:313,387:314,388:345,389:346,390:347,391:348,392:280,393:281,
+  394:282,395:371,396:372,397:373,398:374,399:375,400:376,401:377,402:378,
+  403:379,404:382,405:383,406:384,407:380,408:381,409:385,410:386,411:358
+};
+const aNacional = i => (i<=251 ? i : (ESPECIE_HOENN[i] || 0));
+
+/* Juego de origen, deducido del código que guarda la propia partida */
+function juegoDelSav(dv, sec0){
+  const codigo = dv.getUint32(sec0 + 0xAC, true);
+  if(codigo === 0) return {juego:'ruby',    equipo:0x234};
+  if(codigo === 1) return {juego:'firered', equipo:0x034};
+  return {juego:'emerald', equipo:0x234};
+}
+
+/* Alfabeto propio de 3.ª generación, para los apodos */
+const LETRAS_SAV = (()=>{
+  const m = {0x00:' '};
+  const acentos = {0x01:'À',0x02:'Á',0x03:'Â',0x04:'Ç',0x05:'È',0x06:'É',0x07:'Ê',
+    0x08:'Ë',0x09:'Ì',0x0B:'Î',0x0C:'Ï',0x0D:'Ò',0x0E:'Ó',0x0F:'Ô',0x11:'Ù',
+    0x12:'Ú',0x13:'Û',0x14:'Ñ',0x16:'à',0x17:'á',0x19:'ç',0x1A:'è',0x1B:'é',
+    0x1C:'ê',0x1D:'ë',0x1E:'ì',0x20:'î',0x21:'ï',0x22:'ò',0x23:'ó',0x24:'ô',
+    0x26:'ù',0x27:'ú',0x28:'û',0x29:'ñ',0x2A:'º',0x2B:'ª',0x2D:'&',0x2E:'+'};
+  Object.assign(m, acentos);
+  for(let i=0;i<10;i++) m[0xA1+i] = String(i);
+  m[0xAB]='!'; m[0xAC]='?'; m[0xAD]='.'; m[0xAE]='-';
+  m[0xB3]="'"; m[0xB4]="'"; m[0xB5]='♂'; m[0xB6]='♀'; m[0xB8]=','; m[0xBA]='/';
+  for(let i=0;i<26;i++) m[0xBB+i] = String.fromCharCode(65+i);
+  for(let i=0;i<26;i++) m[0xD5+i] = String.fromCharCode(97+i);
+  return m;
+})();
+
+function textoSav(bytes){
+  let t = '';
+  for(const b of bytes){
+    if(b === 0xFF) break;
+    t += LETRAS_SAV[b] ?? '';
+  }
+  return t.trim();
+}
+
+/* Reparto de las cuatro subestructuras según el valor de personalidad */
+const ORDEN_SUB = ['GAEM','GAME','GEAM','GEMA','GMAE','GMEA','AGEM','AGME',
+  'AEGM','AEMG','AMGE','AMEG','EGAM','EGMA','EAGM','EAMG','EMGA','EMAG',
+  'MGAE','MGEA','MAGE','MAEG','MEGA','MEAG'];
+
+function leerSav(buffer){
+  const dv = new DataView(buffer);
+  if(buffer.byteLength < 65536) throw new Error('El archivo es demasiado pequeño');
+
+  /* De los dos bloques de guardado se toma el del contador más alto */
+  let secciones = null, mejor = -1;
+  for(let b=0; b<2; b++){
+    const mapa = {}; let cont = -1;
+    for(let i=b*14; i<b*14+14; i++){
+      const base = i*4096;
+      if(base+4096 > buffer.byteLength) break;
+      if(dv.getUint32(base+0xFF8, true) !== FIRMA_SAV) continue;
+      mapa[dv.getUint16(base+0xFF4, true)] = base;
+      cont = dv.getUint32(base+0xFFC, true);
+    }
+    if(cont > mejor && mapa[1] !== undefined){ secciones = mapa; mejor = cont; }
+  }
+  if(!secciones) throw new Error('No parece un guardado de 3.ª generación');
+
+  const info = juegoDelSav(dv, secciones[0] ?? secciones[1]);
+  const s1 = secciones[1];
+  const cuantos = dv.getUint32(s1 + info.equipo, true);
+  if(cuantos < 1 || cuantos > 6) throw new Error('El equipo del guardado no es válido');
+
+  const entrenador = secciones[0] !== undefined
+    ? textoSav(new Uint8Array(buffer, secciones[0], 7)) : '';
+
+  const miembros = [];
+  for(let i=0; i<cuantos; i++){
+    const p = s1 + info.equipo + 4 + i*100;
+    const pv   = dv.getUint32(p, true);
+    const otid = dv.getUint32(p+4, true);
+    const clave = (pv ^ otid) >>> 0;
+
+    /* Los 48 bytes de datos van cifrados palabra a palabra */
+    const datos = new DataView(new ArrayBuffer(48));
+    for(let j=0; j<48; j+=4)
+      datos.setUint32(j, (dv.getUint32(p+0x20+j, true) ^ clave) >>> 0, true);
+
+    const orden = ORDEN_SUB[pv % 24];
+    const pos = {};
+    for(let k=0; k<4; k++) pos[orden[k]] = k*12;
+
+    const especie = datos.getUint16(pos.G, true);
+    const nacional = aNacional(especie);
+    if(!nacional) continue;                       // huevo o dato ilegible
+
+    const movs = [0,1,2,3].map(k=>datos.getUint16(pos.A + k*2, true));
+    const evsRaw = [0,1,2,3,4,5].map(k=>datos.getUint8(pos.E + k));
+    const ivRaw = datos.getUint32(pos.M + 4, true);
+    const esHuevo = (ivRaw >>> 30) & 1;
+    if(esHuevo) continue;
+    const ivsRaw = [0,1,2,3,4,5].map(k=>(ivRaw >>> (5*k)) & 31);
+    const ranura = (ivRaw >>> 31) & 1;
+
+    /* En el guardado el orden es PS, Ataque, Defensa, Velocidad,
+       At.Especial, Df.Especial: hay que reordenarlo al nuestro */
+    const CLAVES = ['hp','attack','defense','speed','special-attack','special-defense'];
+    const ivs = {}, evs = {};
+    CLAVES.forEach((c,k)=>{ ivs[c] = ivsRaw[k]; evs[c] = evsRaw[k]; });
+
+    miembros.push({
+      pid: nacional,
+      apodo: textoSav(new Uint8Array(buffer, p+8, 10)),
+      nivel: dv.getUint8(p+0x54),
+      naturaleza: (NATURALEZAS[pv % 25] || NATURALEZAS[0]).slug,
+      habilidad: '',
+      ranura,                                   // 0 o 1: cuál de sus habilidades
+      objeto: '',
+      ivs, evs,
+      movimientos: movs,                        // números; se traducen después
+      statsSav: {
+        hp: dv.getUint16(p+0x58, true),
+        attack: dv.getUint16(p+0x5A, true),
+        defense: dv.getUint16(p+0x5C, true),
+        speed: dv.getUint16(p+0x5E, true),
+        'special-attack': dv.getUint16(p+0x60, true),
+        'special-defense': dv.getUint16(p+0x62, true)
+      }
+    });
+  }
+  if(!miembros.length) throw new Error('No se encontró ningún pokémon en el equipo');
+  return {juego:info.juego, entrenador, miembros};
+}
+
+/* Los movimientos vienen como números; se piden sus nombres a PokeAPI */
+async function nombresDeMovs(ids) {
+  const unicos = [...new Set(ids.filter(Boolean))];
+  if(!unicos.length) return {};
+  const ck = 'movid:'+unicos.join(',');
+  const guardado = Cache.get(ck);
+  if(guardado) return guardado;
+  const d = await gql(`{ move(where:{id:{_in:[${unicos.join(',')}]}}) { id name } }`);
+  const mapa = {};
+  d.move.forEach(m=>{ mapa[m.id] = m.name; });
+  Cache.set(ck, mapa);
+  return mapa;
+}
+
+/* ---------- Importar: interfaz ---------- */
+let impDatos = null, impJuego = '';
+
+async function abrirImportar(archivo){
+  let datos;
+  try{
+    const buffer = await archivo.arrayBuffer();
+    datos = leerSav(buffer);
+  }catch(e){
+    aviso('No se pudo leer: '+(e.message||'archivo no válido'));
+    return;
+  }
+
+  /* Los movimientos vienen como números y hay que traducirlos */
+  try{
+    const mapa = await nombresDeMovs(datos.miembros.flatMap(m=>m.movimientos));
+    datos.miembros.forEach(m=>{
+      m.movimientos = m.movimientos.map(id=>mapa[id] || '').slice(0,4);
+      while(m.movimientos.length < 4) m.movimientos.push('');
+    });
+  }catch(e){
+    datos.miembros.forEach(m=>{ m.movimientos = ['','','','']; });
+  }
+
+  /* La habilidad depende de la ranura guardada */
+  for(const m of datos.miembros){
+    try{
+      const habs = await habilidadesDe(m.pid);
+      m.habilidad = (habs[m.ranura] || habs[0] || {}).slug || '';
+    }catch(e){ m.habilidad = ''; }
+    delete m.ranura;
+  }
+
+  impDatos = datos;
+  impJuego = datos.juego;
+  const nom = datos.entrenador ? 'Partida de '+datos.entrenador : 'Partida importada';
+  document.getElementById('imp-nombre').value = nom.slice(0,24);
+  document.getElementById('imp-sub').textContent =
+    `${datos.miembros.length} pokémon · ${nombreDeJuego(datos.juego)}`;
+  pintarJuegoImp();
+  pintarListaImp();
+  openOverlay('ov-importar');
+}
+
+function pintarJuegoImp(){
+  const g = genDeJuego(impJuego);
+  document.getElementById('imp-juego').innerHTML = `
+    <img class="jm" src="${spriteJuego(impJuego)}" alt="">
+    <span class="campo-main">
+      <span class="campo-val">${nombreDeJuego(impJuego)}</span>
+      <span class="campo-sub">${g}.ª generación · detectado del archivo</span>
+    </span><span class="campo-x">›</span>`;
+}
+
+function impElegirJuego(){
+  abrirSelector({
+    titulo:'Juego', sub:'Corrige si no acertó la detección', buscar:true, actual:impJuego,
+    opciones: JUEGOS.filter(j=>j.gen===3).map(j=>({valor:j.slug, nombre:j.es,
+      img:spriteJuego(j.slug), detalle:'3.ª generación'}))
+      .concat(JUEGOS.filter(j=>j.gen!==3).map(j=>({valor:j.slug, nombre:j.es,
+        img:spriteJuego(j.slug), detalle:`${j.gen}.ª generación`}))),
+    alElegir: v=>{ impJuego = v; pintarJuegoImp(); }
+  });
+}
+
+function pintarListaImp(){
+  document.getElementById('imp-lista').innerHTML = impDatos.miembros.map(m=>{
+    const mon = allMons.find(x=>x.id===m.pid) || {};
+    const nat = NATURALEZAS.find(n=>n.slug===m.naturaleza) || {es:'—'};
+    const movs = m.movimientos.filter(Boolean).length;
+    return `
+      <div class="imp-fila">
+        <img src="${SPRITE(m.pid)}" alt="">
+        <div class="imp-main">
+          <div class="imp-nom">${m.apodo || mon.es || '?'}</div>
+          <div class="imp-dat">Nv. ${m.nivel} · ${nat.es} · ${movs} movimiento${movs===1?'':'s'}</div>
+          <div class="imp-dat">${['hp','attack','defense','special-attack','special-defense','speed']
+            .map(k=>`${STAT_ES[k]} ${m.statsSav[k]}`).join('  ')}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function confirmarImportar(){
+  if(!impDatos) return;
+  const nombre = document.getElementById('imp-nombre').value.trim() || 'Partida importada';
+  const gen = genDeJuego(impJuego);
+  const t = topesDe(gen);
+
+  const miembros = impDatos.miembros.map(m=>{
+    const ivs = {}, evs = {};
+    STATS6.forEach(k=>{
+      ivs[k] = Math.min(m.ivs[k] ?? t.iv, t.iv);
+      evs[k] = Math.min(m.evs[k] ?? 0, t.ev);
+    });
+    return {pid:m.pid, apodo:m.apodo, nivel:m.nivel, naturaleza:m.naturaleza,
+            habilidad:m.habilidad, objeto:'', ivs, evs,
+            movimientos:[...m.movimientos]};
+  });
+
+  equipos.push({nombre, juego:impJuego, miembros});
+  guardarEquipos();
+  closeOverlay('ov-importar');
+  impDatos = null;
+  aviso(`${miembros.length} pokémon importados`);
+  abrirEquipo(equipos.length-1);
 }
 
 /* ================= COPIA DE SEGURIDAD ================= */
