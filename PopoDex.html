@@ -86,15 +86,68 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
 .mini{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);padding:8px 4px;text-align:center;cursor:pointer;}
 .mini img{width:46px;height:46px;image-rendering:pixelated;}
 .mini div{font-family:var(--mono);font-size:8.5px;color:var(--muted);}
-.imp-fila{
-  display:flex;align-items:center;gap:11px;padding:10px 0;
-  border-bottom:1px solid var(--border);
+/* Zona que aparece al arrastrar un archivo */
+.soltar{
+  position:absolute;inset:0;z-index:90;background:rgba(34,31,51,.55);
+  display:none;align-items:center;justify-content:center;padding:22px;
 }
-.imp-fila:last-child{border-bottom:none;}
-.imp-fila img{width:46px;height:46px;image-rendering:pixelated;flex-shrink:0;}
-.imp-main{flex:1;min-width:0;}
-.imp-nom{font-size:13px;font-weight:600;}
+.soltar.activa{display:flex;}
+.soltar-caja{
+  width:100%;height:100%;border:3px dashed var(--accent-dim);border-radius:8px;
+  background:var(--bg-panel);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:9px;text-align:center;padding:24px;
+}
+.soltar-caja svg{width:44px;height:44px;stroke:var(--accent);fill:none;
+  stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+.soltar-t{font-size:16px;font-weight:700;}
+.soltar-s{font-family:var(--mono);font-size:10.5px;color:var(--muted);line-height:1.5;}
+
+/* Panel de importación */
+.pie-nota{font-family:var(--mono);font-size:9px;color:var(--muted);
+  line-height:1.5;margin:9px 0 0;text-align:center;}
+.imp-cab{display:flex;gap:8px;align-items:stretch;margin-bottom:13px;}
+.imp-cab input{flex:1;min-width:0;}
+.imp-juego{
+  display:flex;align-items:center;gap:6px;flex-shrink:0;background:var(--bg-panel);
+  border:1px solid var(--border);border-radius:var(--r);padding:6px 10px 6px 6px;
+  cursor:pointer;font-family:var(--body);font-size:11.5px;font-weight:600;
+  color:var(--text);white-space:nowrap;
+}
+.imp-juego .jm{width:26px;height:26px;}
+.imp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.imp-celda{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px 6px;cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:2px;font-family:var(--body);
+}
+.imp-celda.sel{border-color:var(--accent);}
+.imp-celda img{width:52px;height:52px;image-rendering:pixelated;}
+.imp-nom{font-size:12px;font-weight:600;line-height:1.2;text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+.imp-nv{font-family:var(--mono);font-size:9.5px;color:var(--muted);}
 .imp-dat{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;}
+.imp-det{
+  background:var(--bg-panel);border:1px solid var(--accent);border-radius:var(--r);
+  padding:13px;margin-top:11px;
+}
+.imp-det-hd{display:flex;align-items:center;gap:11px;margin-bottom:11px;}
+.imp-det-hd img{width:56px;height:56px;image-rendering:pixelated;flex-shrink:0;}
+.imp-det-nom{font-size:14px;font-weight:700;}
+.imp-st-cab{
+  display:flex;gap:7px;font-family:var(--mono);font-size:8.5px;color:var(--dim);
+  text-transform:uppercase;letter-spacing:.06em;margin:11px 0 5px;
+}
+.imp-st-cab span:nth-child(1){flex:1;}
+.imp-st-cab span:nth-child(2),.imp-st-cab span:nth-child(3){width:32px;text-align:center;}
+.imp-st-cab span:nth-child(4){width:38px;text-align:right;}
+.imp-st{display:flex;gap:7px;align-items:center;padding:3px 0;}
+.imp-st-lab{font-family:var(--mono);font-size:9.5px;color:var(--muted);flex:1;text-transform:uppercase;}
+.imp-st-n{font-family:var(--mono);font-size:10.5px;width:32px;text-align:center;color:var(--muted);}
+.imp-st-tot{font-family:var(--mono);font-size:11.5px;width:38px;text-align:right;font-weight:700;}
+.imp-movs{display:flex;flex-wrap:wrap;gap:4px;margin-top:11px;
+  border-top:1px solid var(--border);padding-top:11px;}
+.imp-mov{font-family:var(--mono);font-size:9px;background:var(--bg-screen);
+  border-radius:2px;padding:4px 8px;text-transform:capitalize;color:var(--muted);}
 .copia{
   background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r);
   padding:13px 14px;
@@ -1099,9 +1152,14 @@ select:focus,input:focus{border-color:var(--accent);}
           <div class="juegos" id="crear-juegos"></div>
         </div>
       </div>
-      <div class="sheet-ft">
-        <button class="btn btn-s" onclick="closeOverlay('ov-crear')">Cancelar</button>
-        <button class="btn btn-p" id="btn-crear-eq" onclick="confirmarCrearEquipo()" disabled>Crear equipo</button>
+      <div class="sheet-ft" style="flex-direction:column;gap:0;">
+        <div style="display:flex;gap:8px;width:100%;">
+          <button class="btn btn-s" onclick="closeOverlay('ov-crear')">Cancelar</button>
+          <button class="btn btn-s" onclick="document.getElementById('archivo-sav').click()">Cargar partida</button>
+          <button class="btn btn-p" id="btn-crear-eq" onclick="confirmarCrearEquipo()" disabled>Crear equipo</button>
+        </div>
+        <p class="pie-nota">Cargar partida solo admite guardados de 3.ª generación:
+          Rubí, Zafiro, Esmeralda, Rojo Fuego y Verde Hoja.</p>
       </div>
     </div>
   </div>
@@ -1238,13 +1296,13 @@ select:focus,input:focus{border-color:var(--accent);}
           <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div class="sheet-bd">
-        <div class="f-group" style="border:none;padding:0;margin-bottom:14px;">
-          <label class="f-lab">Nombre del equipo</label>
-          <input type="text" id="imp-nombre" maxlength="24" autocomplete="off">
+        <div class="imp-cab">
+          <input type="text" id="imp-nombre" maxlength="24" autocomplete="off"
+                 placeholder="Nombre del equipo">
+          <button class="imp-juego" id="imp-juego" onclick="impElegirJuego()"></button>
         </div>
-        <button class="campo" id="imp-juego" style="width:100%;margin-bottom:14px;"
-          onclick="impElegirJuego()"></button>
-        <div id="imp-lista"></div>
+        <div class="imp-grid" id="imp-lista"></div>
+        <div id="imp-detalle"></div>
       </div>
       <div class="sheet-ft">
         <button class="btn btn-s" onclick="closeOverlay('ov-importar')">Cancelar</button>
@@ -1345,6 +1403,18 @@ select:focus,input:focus{border-color:var(--accent);}
       </div>
     </div>
   </div>
+
+  <!-- ============ ARRASTRAR PARTIDA ============ -->
+  <div class="soltar" id="zona-soltar">
+    <div class="soltar-caja">
+      <svg viewBox="0 0 24 24"><path d="M12 16V4M12 4L7 9M12 4l5 5"/>
+        <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+      <div class="soltar-t">Suelta aquí tu partida</div>
+      <div class="soltar-s">Archivo .sav de tu emulador · 3.ª generación</div>
+    </div>
+  </div>
+  <input type="file" id="archivo-sav" accept=".sav,.sa1,.srm,application/octet-stream"
+         style="display:none;">
 
   <!-- ============ AVISO ============ -->
   <div class="toast" id="toast">
@@ -3108,13 +3178,7 @@ function renderEquipos(){
                                              : 'Empieza por aquí'}</span>
     </button>`;
 
-  const importar = `
-    <button class="btn btn-s" style="width:100%;margin-top:9px;"
-      onclick="document.getElementById('archivo-sav').click()">Importar partida (.sav)</button>
-    <input type="file" id="archivo-sav" accept=".sav,.sa1,.srm,application/octet-stream"
-           style="display:none;">`;
-
-  if(!equipos.length){ body.innerHTML = nuevo + importar; conectarArchivoSav(); return; }
+  if(!equipos.length){ body.innerHTML = nuevo; return; }
 
   body.innerHTML = equipos.map((eq,i)=>{
     const huecos = 6 - eq.miembros.length;
@@ -3132,19 +3196,7 @@ function renderEquipos(){
         ${Array.from({length:huecos},()=>'<span class="hueco"></span>').join('')}
       </div>
     </div>`;
-  }).join('') + nuevo + importar;
-  conectarArchivoSav();
-}
-
-function conectarArchivoSav(){
-  const inp = document.getElementById('archivo-sav');
-  if(!inp || inp.dataset.listo) return;
-  inp.dataset.listo = '1';
-  inp.addEventListener('change', e=>{
-    const f = e.target.files[0];
-    if(f) abrirImportar(f);
-    e.target.value = '';
-  });
+  }).join('') + nuevo;
 }
 
 /* ---------- Crear equipo (panel propio) ---------- */
@@ -6123,19 +6175,10 @@ async function abrirImportar(archivo){
   document.getElementById('imp-nombre').value = nom.slice(0,24);
   document.getElementById('imp-sub').textContent =
     `${datos.miembros.length} pokémon · ${nombreDeJuego(datos.juego)}`;
-  pintarJuegoImp();
+  impSel = null;
+  pintarJuegoImpCompacto();
   pintarListaImp();
   openOverlay('ov-importar');
-}
-
-function pintarJuegoImp(){
-  const g = genDeJuego(impJuego);
-  document.getElementById('imp-juego').innerHTML = `
-    <img class="jm" src="${spriteJuego(impJuego)}" alt="">
-    <span class="campo-main">
-      <span class="campo-val">${nombreDeJuego(impJuego)}</span>
-      <span class="campo-sub">${g}.ª generación · detectado del archivo</span>
-    </span><span class="campo-x">›</span>`;
 }
 
 function impElegirJuego(){
@@ -6145,26 +6188,79 @@ function impElegirJuego(){
       img:spriteJuego(j.slug), detalle:'3.ª generación'}))
       .concat(JUEGOS.filter(j=>j.gen!==3).map(j=>({valor:j.slug, nombre:j.es,
         img:spriteJuego(j.slug), detalle:`${j.gen}.ª generación`}))),
-    alElegir: v=>{ impJuego = v; pintarJuegoImp(); }
+    alElegir: v=>{ impJuego = v; pintarJuegoImpCompacto(); pintarListaImp(); }
   });
 }
 
+let impSel = null;
+
+function pintarJuegoImpCompacto(){
+  document.getElementById('imp-juego').innerHTML = `
+    <img class="jm" src="${spriteJuego(impJuego)}" alt="">
+    <span>${nombreDeJuego(impJuego)}</span>`;
+}
+
 function pintarListaImp(){
-  document.getElementById('imp-lista').innerHTML = impDatos.miembros.map(m=>{
+  document.getElementById('imp-lista').innerHTML = impDatos.miembros.map((m,i)=>{
     const mon = allMons.find(x=>x.id===m.pid) || {};
-    const nat = NATURALEZAS.find(n=>n.slug===m.naturaleza) || {es:'—'};
-    const movs = m.movimientos.filter(Boolean).length;
     return `
-      <div class="imp-fila">
+      <button class="imp-celda ${impSel===i?'sel':''}" onclick="impVer(${i})">
         <img src="${SPRITE(m.pid)}" alt="">
-        <div class="imp-main">
-          <div class="imp-nom">${m.apodo || mon.es || '?'}</div>
-          <div class="imp-dat">Nv. ${m.nivel} · ${nat.es} · ${movs} movimiento${movs===1?'':'s'}</div>
-          <div class="imp-dat">${['hp','attack','defense','special-attack','special-defense','speed']
-            .map(k=>`${STAT_ES[k]} ${m.statsSav[k]}`).join('  ')}</div>
-        </div>
+        <span class="imp-nom">${m.apodo || mon.es || '?'}</span>
+        <span class="imp-nv">Nv. ${m.nivel}</span>
+      </button>`;
+  }).join('');
+  pintarDetalleImp();
+}
+
+function impVer(i){
+  impSel = (impSel===i) ? null : i;
+  pintarListaImp();
+}
+
+function pintarDetalleImp(){
+  const cont = document.getElementById('imp-detalle');
+  if(impSel===null){ cont.innerHTML = ''; return; }
+  const m = impDatos.miembros[impSel];
+  const mon = allMons.find(x=>x.id===m.pid) || {};
+  const nat = NATURALEZAS.find(n=>n.slug===m.naturaleza) || {es:'—'};
+  const gen = genDeJuego(impJuego);
+
+  const filas = STATS6.map(k=>{
+    const base = mon.stats ? (mon.stats[k]||0) : 0;
+    const calc = base ? calcularStat(k, base, m.ivs[k], m.evs[k], m.nivel, gen, m.naturaleza) : null;
+    return `
+      <div class="imp-st">
+        <span class="imp-st-lab">${STAT_ES[k]}</span>
+        <span class="imp-st-n">${m.ivs[k]}</span>
+        <span class="imp-st-n">${m.evs[k]}</span>
+        <span class="imp-st-tot">${calc ?? m.statsSav[k]}</span>
       </div>`;
   }).join('');
+
+  const movs = m.movimientos.filter(Boolean);
+
+  cont.innerHTML = `
+    <div class="imp-det">
+      <div class="imp-det-hd">
+        <img src="${SPRITE(m.pid)}" alt="">
+        <div>
+          <div class="imp-det-nom">${m.apodo || mon.es || '?'}</div>
+          <div class="imp-dat">${mon.es || ''} · Nv. ${m.nivel}</div>
+          <div class="tipos" style="margin-top:5px;">${(mon.types||[]).map(t=>
+            `<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</div>
+        </div>
+      </div>
+      <div class="kv"><span>Naturaleza</span><span>${nat.es}${
+        nat.sube?` (▲${STAT_ES[nat.sube]} ▼${STAT_ES[nat.baja]})`:''}</span></div>
+      <div class="kv"><span>Habilidad</span><span>${m.habilidad
+        ? m.habilidad.replace(/-/g,' ') : '—'}</span></div>
+      <div class="imp-st-cab"><span>Stat</span><span>IV</span><span>EV</span><span>Total</span></div>
+      ${filas}
+      ${movs.length ? `
+        <div class="imp-movs">${movs.map(x=>
+          `<span class="imp-mov">${x.replace(/-/g,' ')}</span>`).join('')}</div>` : ''}
+    </div>`;
 }
 
 function confirmarImportar(){
@@ -6191,6 +6287,49 @@ function confirmarImportar(){
   aviso(`${miembros.length} pokémon importados`);
   abrirEquipo(equipos.length-1);
 }
+
+/* ---------- Arrastrar y soltar la partida ---------- */
+(function(){
+  const inp = document.getElementById('archivo-sav');
+  inp.addEventListener('change', e=>{
+    const f = e.target.files[0];
+    if(f) abrirImportar(f);
+    e.target.value = '';
+  });
+
+  const zona = document.getElementById('zona-soltar');
+  let dentro = 0;                       // cuenta entradas y salidas anidadas
+
+  const mostrar = v=>zona.classList.toggle('activa', v);
+
+  ['dragenter','dragover'].forEach(ev=>{
+    document.addEventListener(ev, e=>{
+      if(!e.dataTransfer || ![...e.dataTransfer.types].includes('Files')) return;
+      e.preventDefault();
+      if(ev==='dragenter') dentro++;
+      mostrar(true);
+    });
+  });
+
+  document.addEventListener('dragleave', e=>{
+    dentro = Math.max(0, dentro-1);
+    if(!dentro) mostrar(false);
+  });
+
+  document.addEventListener('drop', e=>{
+    if(!e.dataTransfer) return;
+    e.preventDefault();
+    dentro = 0;
+    mostrar(false);
+    const f = e.dataTransfer.files[0];
+    if(!f) return;
+    if(!/\.(sav|sa1|srm)$/i.test(f.name) && f.size !== 131072 && f.size !== 65536){
+      aviso('Ese archivo no parece una partida');
+      return;
+    }
+    abrirImportar(f);
+  });
+})();
 
 /* ================= COPIA DE SEGURIDAD ================= */
 const COPIA_VER = 1;
