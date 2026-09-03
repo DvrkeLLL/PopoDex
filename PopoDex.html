@@ -1379,6 +1379,25 @@ select:focus,input:focus{border-color:var(--accent);}
     </div>
   </div>
 
+  <!-- ============ SELECTOR DE GENERACIONES ============ -->
+  <div class="overlay" id="ov-selgens">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="sg-sub">—</div>
+          <h2 class="sheet-title" style="font-size:17px;">Generaciones</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-selgens')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd"><div class="grid3" id="sg-botones"></div></div>
+      <div class="sheet-ft">
+        <button class="btn btn-s" onclick="sgQuitar()">Quitar todas</button>
+        <button class="btn btn-p" onclick="sgListo()">Listo</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ SELECTOR DE TIPOS ============ -->
   <div class="overlay" id="ov-seltipos">
     <div class="sheet">
@@ -5579,13 +5598,41 @@ async function quienAprende(slug, nombre){
   }catch(e){ cont.innerHTML = '<div class="hint">No se pudo consultar.</div>'; }
 }
 
+/* ---------- Selector de generaciones reutilizable ---------- */
+const REGION_ES = {1:'Kanto',2:'Johto',3:'Hoenn',4:'Sinnoh',5:'Teselia',
+                   6:'Kalos',7:'Alola',8:'Galar',9:'Paldea'};
+let sgSel = [], sgCb = null;
+
+function abrirGens(cfg){
+  sgSel = [...(cfg.actual||[])];
+  sgCb = cfg.alElegir;
+  document.getElementById('sg-sub').textContent = cfg.sub || '';
+  pintarBotonesGens();
+  openOverlay('ov-selgens');
+}
+function pintarBotonesGens(){
+  document.getElementById('sg-botones').innerHTML = [1,2,3,4,5,6,7,8,9].map(g=>
+    `<button class="pill ${sgSel.includes(g)?'on':''}" data-sg="${g}"
+      style="--gc:${GEN_COLOR[g]}">${g} · ${REGION_ES[g]}</button>`).join('');
+  document.querySelectorAll('[data-sg]').forEach(b=>b.addEventListener('click',()=>{
+    const g = Number(b.dataset.sg);
+    sgSel = sgSel.includes(g) ? sgSel.filter(x=>x!==g) : [...sgSel, g];
+    b.classList.toggle('on');
+  }));
+}
+function sgQuitar(){ sgSel = []; pintarBotonesGens(); }
+function sgListo(){
+  closeOverlay('ov-selgens');
+  if(sgCb) sgCb([...sgSel].sort((a,b)=>a-b));
+}
+
 /* ---------- Puntos de esfuerzo ---------- */
 const STAT_COLOR = {
   hp:'#78C850', attack:'#C03028', defense:'#C9A54B',
   'special-attack':'#6890F0', 'special-defense':'#9E8A2F', speed:'#F85888'
 };
 let esfuerzos = null;          // id -> {stat: puntos}
-let esOrden = 'dex', esJuego = '', esTexto = '';
+let esOrden = 'dex', esJuego = '', esTexto = '', esGens = [];
 let esLista = [], esDibujados = 0;
 const LOTE_ES = 50;
 
@@ -5625,6 +5672,8 @@ async function panelEsfuerzo(){
       <button class="campo" id="es-orden" onclick="esElegirOrden()"></button>
       <button class="campo" id="es-juego" onclick="esElegirJuego()"></button>
     </div>
+    <button class="campo" id="es-gens" style="width:100%;margin-top:8px;"
+      onclick="esElegirGens()"></button>
     <div id="es-aviso"></div>
     <div class="buscador" style="margin:12px 0 0;">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
@@ -5665,6 +5714,16 @@ function pintarCamposEsfuerzo(){
     : `<span class="campo-main"><span class="campo-val sin">Todos</span></span>
        <span class="campo-x">›</span>`;
 
+  const cg = document.getElementById('es-gens');
+  if(cg){
+    cg.innerHTML = esGens.length
+      ? `<span class="campo-main"><span class="campo-chips">${esGens.map(g=>
+          `<span class="tchip" style="background:${GEN_COLOR[g]}">${g} · ${REGION_ES[g]}</span>`
+        ).join('')}</span></span><span class="campo-x">›</span>`
+      : `<span class="campo-main"><span class="campo-val sin">Todas las generaciones</span></span>
+         <span class="campo-x">›</span>`;
+  }
+
   /* Antes de la 3.ª generación el sistema era otro */
   const gen = j ? genDeJuego(j) : 9;
   document.getElementById('es-aviso').innerHTML = (j && gen<=2)
@@ -5694,6 +5753,13 @@ function esElegirJuego(){
   });
 }
 
+function esElegirGens(){
+  abrirGens({
+    sub:'De qué generación son los pokémon', actual:esGens,
+    alElegir: v=>{ esGens = v; pintarCamposEsfuerzo(); filtrarEsfuerzo(); }
+  });
+}
+
 function filtrarEsfuerzo(){
   const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const t = norm(esTexto.trim());
@@ -5704,6 +5770,7 @@ function filtrarEsfuerzo(){
     const e = esfuerzos[m.id];
     if(!e) return false;
     if(esJuego && m.id > tope) return false;
+    if(esGens.length && !esGens.includes(genDe(m.id))) return false;
     if(esOrden!=='dex' && !e[esOrden]) return false;
     if(t && !(norm(m.es).includes(t) || m.name.includes(t))) return false;
     return true;
@@ -5712,7 +5779,10 @@ function filtrarEsfuerzo(){
   if(esOrden==='dex') esLista.sort((a,b)=>a.id-b.id);
   else esLista.sort((a,b)=> esfuerzos[b.id][esOrden]-esfuerzos[a.id][esOrden] || a.id-b.id);
 
-  const sufijo = esJuego ? ' · '+nombreDeJuego(esJuego) : '';
+  const partes = [];
+  if(esJuego) partes.push(nombreDeJuego(esJuego));
+  if(esGens.length) partes.push('gen '+esGens.join(', '));
+  const sufijo = partes.length ? ' · '+partes.join(' · ') : '';
   document.getElementById('es-cuenta').textContent = esOrden==='dex'
     ? `${esLista.length} pokémon${sufijo}`
     : `${esLista.length} pokémon dan ${STAT_ES[esOrden]}${sufijo}`;
