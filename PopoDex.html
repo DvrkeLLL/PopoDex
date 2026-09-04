@@ -425,6 +425,14 @@ select:focus,input:focus{border-color:var(--accent);}
 .cr-huevo{background:var(--bg-panel);border:1px solid var(--border);
   border-radius:var(--r);padding:11px;margin-bottom:9px;}
 .cr-huevo.bueno{border-color:#2E7D6B;}
+.cr-huevo.perfecto{border-color:#1F6B57;box-shadow:0 0 0 1px #1F6B57;}
+.cr-aviso.perfecto{background:#DFF0E8;border-color:#1F6B57;}
+.cr-aviso.perfecto .cr-aviso-t{color:#14503F;}
+.cr-etq{
+  font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.06em;
+  background:var(--accent);color:#fff;padding:2px 6px;border-radius:2px;margin-left:4px;
+  vertical-align:middle;
+}
 .cr-h-top{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
 .cr-h-top img{width:46px;height:46px;image-rendering:pixelated;flex-shrink:0;}
 .cr-h-main{flex:1;min-width:0;}
@@ -5858,6 +5866,7 @@ function sgListo(){
 let crianzaDatos = null;      // resultado del último .sav analizado
 let crEspecie = '';           // filtro por especie
 let crSoloBuenos = false;
+let crSoloHuevos = true;      // por defecto solo huevos
 
 const IV_ALTO = 30;           // a partir de aquí se considera destacado
 
@@ -5900,17 +5909,28 @@ async function analizarCrianza(archivo){
   }
   try{ await cargarGeneros(); }catch(e){}
 
-  datos.huevos.forEach(h=>{
-    h.genero = generoDe(h.pid, h.pvb);
-    h.altos = STATS6.filter(k=>h.ivs[k] >= IV_ALTO);
-    h.perfectos = STATS6.filter(k=>h.ivs[k] === 31);
-    h.suma = STATS6.reduce((n,k)=>n+h.ivs[k], 0);
+  /* Se analizan todos, no solo los huevos: así se pueden comparar
+     las crías con los padres que ya tienes guardados */
+  const todos = [...datos.miembros, ...datos.huevos, ...datos.cajas];
+  const vistos = new Set();
+  datos.todos = todos.filter(x=>{
+    const clave = x.donde+':'+x.caja+':'+x.pos;
+    if(vistos.has(clave)) return false;
+    vistos.add(clave);
+    return true;
   });
-  datos.huevos.sort((a,b)=> b.altos.length-a.altos.length || b.suma-a.suma);
+
+  datos.todos.forEach(x=>{
+    x.genero = generoDe(x.pid, x.pvb);
+    x.altos = STATS6.filter(k=>x.ivs[k] >= IV_ALTO);
+    x.perfectos = STATS6.filter(k=>x.ivs[k] === 31);
+    x.suma = STATS6.reduce((n,k)=>n+x.ivs[k], 0);
+  });
+  datos.todos.sort((a,b)=>
+    b.perfectos.length-a.perfectos.length || b.altos.length-a.altos.length || b.suma-a.suma);
 
   crianzaDatos = datos;
-  crEspecie = '';
-  crSoloBuenos = false;
+  crEspecie = ''; crSoloBuenos = false; crSoloHuevos = true;
   pintarCrianza();
 }
 
@@ -5924,72 +5944,81 @@ function pintarCrianza(){
   const d = crianzaDatos;
   const body = document.getElementById('info-body');
 
-  let lista = d.huevos;
-  if(crEspecie) lista = lista.filter(h=>String(h.pid)===crEspecie);
-  if(crSoloBuenos) lista = lista.filter(h=>h.altos.length>=3);
+  let lista = d.todos;
+  if(crSoloHuevos) lista = lista.filter(x=>x.esHuevo);
+  if(crEspecie)    lista = lista.filter(x=>String(x.pid)===crEspecie);
+  if(crSoloBuenos) lista = lista.filter(x=>x.altos.length>=3 || x.perfectos.length);
 
-  /* Especies presentes entre los huevos, para el filtro */
-  const especies = [...new Set(d.huevos.map(h=>h.pid))].map(id=>{
-    const mon = allMons.find(x=>x.id===id) || {};
-    return {id, es:mon.es || ('#'+id), cuantos:d.huevos.filter(h=>h.pid===id).length};
-  }).sort((a,b)=>b.cuantos-a.cuantos);
+  const huevos = d.todos.filter(x=>x.esHuevo);
+  /* Los avisos miran siempre todo, esté filtrado o no */
+  const conPerfecta = d.todos.filter(x=>x.perfectos.length);
+  const destacados  = d.todos.filter(x=>x.altos.length>=3);
 
-  const destacados = d.huevos.filter(h=>h.altos.length>=3);
+  const nombreDe = id => (allMons.find(x=>x.id===id)||{}).es || ('#'+id);
+
+  const aviso = (lista, titulo, clase, texto) => !lista.length ? '' : `
+    <div class="cr-aviso ${clase}">
+      <div class="cr-aviso-t">${titulo}</div>
+      ${lista.slice(0,6).map(x=>`
+        <div class="cr-aviso-l">${nombreDe(x.pid)}${x.esHuevo?' (huevo)':''} · ${texto(x)}
+          · <b>${ubicacionHuevo(x)}</b></div>`).join('')}
+      ${lista.length>6 ? `<div class="cr-aviso-l">y ${lista.length-6} más</div>` : ''}
+    </div>`;
 
   body.innerHTML = `
     <div class="cr-cab">
       <div>
         <div class="cr-ent">${d.entrenador || 'Partida'}</div>
         <div class="mi-cuenta" style="margin:2px 0 0;">${nombreDeJuego(d.juego)} ·
-          ${d.huevos.length} huevo${d.huevos.length===1?'':'s'} ·
-          ${d.cajas.length} en cajas</div>
+          ${d.todos.length} pokémon · ${huevos.length} huevo${huevos.length===1?'':'s'}</div>
       </div>
       <button class="btn btn-s" style="width:auto;padding:8px 12px;flex:0 0 auto;"
         onclick="crianzaDatos=null;panelCrianza()">Otro</button>
     </div>
 
-    ${destacados.length ? `
-      <div class="cr-aviso">
-        <div class="cr-aviso-t">${destacados.length} huevo${destacados.length===1?'':'s'} destacado${destacados.length===1?'':'s'}</div>
-        ${destacados.map(h=>{
-          const mon = allMons.find(x=>x.id===h.pid) || {};
-          return `<div class="cr-aviso-l">${mon.es||'#'+h.pid} · ${h.altos.length} estadísticas
-            sobre ${IV_ALTO} · <b>${ubicacionHuevo(h)}</b></div>`;
-        }).join('')}
-      </div>` : ''}
+    ${aviso(conPerfecta,
+      `${conPerfecta.length} con estadística perfecta`,
+      'perfecto',
+      x=>x.perfectos.map(k=>STAT_ES[k]).join(', ')+' a 31')}
 
-    ${!d.huevos.length
-      ? '<div class="eq-vacio" style="padding:34px 14px;"><p>No hay huevos en esta partida.</p></div>'
+    ${aviso(destacados.filter(x=>!x.perfectos.length),
+      `${destacados.filter(x=>!x.perfectos.length).length} destacado${destacados.filter(x=>!x.perfectos.length).length===1?'':'s'}`,
+      '',
+      x=>x.altos.length+' estadísticas sobre '+IV_ALTO)}
+
+    ${!d.todos.length
+      ? '<div class="eq-vacio" style="padding:34px 14px;"><p>No hay pokémon en esta partida.</p></div>'
       : `
-      <div class="dos-filtros" style="margin-bottom:11px;">
+      <div class="tres-filtros" style="margin-bottom:11px;">
         <button class="campo" onclick="crElegirEspecie()">
           <span class="campo-main"><span class="campo-val ${crEspecie?'':'sin'}">${
-            crEspecie ? (allMons.find(x=>x.id===Number(crEspecie))||{}).es || 'Especie'
-                      : 'Todas'}</span></span>
+            crEspecie ? nombreDe(Number(crEspecie)) : 'Especie'}</span></span>
           <span class="campo-x">›</span></button>
+        <button class="campo" onclick="crSoloHuevos=!crSoloHuevos;pintarCrianza()">
+          <span class="campo-main"><span class="campo-val">${
+            crSoloHuevos ? 'Huevos' : 'Todos'}</span></span>
+          <span class="campo-x">⇄</span></button>
         <button class="campo" onclick="crSoloBuenos=!crSoloBuenos;pintarCrianza()">
-          <span class="campo-main"><span class="campo-val ${crSoloBuenos?'':'sin'}">${
-            crSoloBuenos ? 'Solo buenos' : 'Todos'}</span></span>
+          <span class="campo-main"><span class="campo-val ${crSoloBuenos?'':'sin'}">Buenos</span></span>
           <span class="campo-x">${crSoloBuenos?'✓':'›'}</span></button>
       </div>
-      <p class="mi-cuenta">${lista.length} de ${d.huevos.length} huevos</p>
+      <p class="mi-cuenta">${lista.length} de ${crSoloHuevos?huevos.length:d.todos.length}
+        ${crSoloHuevos?'huevos':'pokémon'}</p>
       ${lista.map(fichaHuevo).join('') ||
-        '<div class="hint" style="padding:22px;text-align:center;">Ninguno coincide.</div>'}`}
-
-    ${especies.length>1 ? `<p class="mi-cuenta" style="margin-top:14px;">Especies:
-      ${especies.map(e=>`${e.es} (${e.cuantos})`).join(' · ')}</p>` : ''}`;
+        '<div class="hint" style="padding:22px;text-align:center;">Ninguno coincide.</div>'}`}`;
 }
 
 function fichaHuevo(h){
   const mon = allMons.find(x=>x.id===h.pid) || {};
   const nat = NATURALEZAS.find(n=>n.slug===h.naturaleza) || {es:'—'};
-  const bueno = h.altos.length >= 3;
+  const marca = h.perfectos.length ? 'perfecto' : h.altos.length>=3 ? 'bueno' : '';
   return `
-    <div class="cr-huevo ${bueno?'bueno':''}">
+    <div class="cr-huevo ${marca}">
       <div class="cr-h-top">
         <img src="${SPRITE(h.pid)}" alt="">
         <div class="cr-h-main">
           <div class="cr-h-nom">${mon.es || '#'+h.pid}
+            ${h.esHuevo?'<span class="cr-etq">huevo</span>':''}
             ${h.genero!=='N'?`<b style="color:${GENERO_COLOR[h.genero]}">${GENERO_SIMBOLO[h.genero]}</b>`:''}
           </div>
           <div class="cr-h-loc">${ubicacionHuevo(h)}</div>
@@ -6013,15 +6042,17 @@ function fichaHuevo(h){
 }
 
 function crElegirEspecie(){
-  const especies = [...new Set(crianzaDatos.huevos.map(h=>h.pid))];
+  const base = crSoloHuevos ? crianzaDatos.todos.filter(x=>x.esHuevo) : crianzaDatos.todos;
+  const especies = [...new Set(base.map(x=>x.pid))];
   abrirSelector({
-    titulo:'Especie', sub:'Filtrar los huevos', buscar:false, actual:crEspecie,
-    opciones: [{valor:'', nombre:'Todas las especies', detalle:crianzaDatos.huevos.length+' huevos'}]
+    titulo:'Especie', sub:'Filtrar la lista', buscar:false, actual:crEspecie,
+    opciones: [{valor:'', nombre:'Todas las especies', detalle:base.length+' pokémon'}]
       .concat(especies.map(id=>{
         const mon = allMons.find(x=>x.id===id) || {};
-        const n = crianzaDatos.huevos.filter(h=>h.pid===id).length;
+        const n = base.filter(x=>x.pid===id).length;
+        const hv = base.filter(x=>x.pid===id && x.esHuevo).length;
         return {valor:String(id), nombre:mon.es || '#'+id, img:SPRITE(id),
-                detalle:`${n} huevo${n===1?'':'s'}`};
+                detalle:`${n} en total${hv?` · ${hv} huevo${hv===1?'':'s'}`:''}`};
       })),
     alElegir: v=>{ crEspecie = v; pintarCrianza(); }
   });
@@ -6868,7 +6899,8 @@ function leerSav(buffer, opciones){
   for(let i=0; i<cuantos; i++){
     const m = leerMon(dv, buffer, s1 + info.equipo + 4 + i*100, true);
     if(!m) continue;
-    if(m.esHuevo) huevos.push({...m, donde:'equipo', caja:0, pos:i+1});
+    m.donde = 'equipo'; m.caja = 0; m.pos = i+1;
+    if(m.esHuevo) huevos.push(m);
     else miembros.push(m);
   }
 
