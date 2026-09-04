@@ -415,6 +415,36 @@ select:focus,input:focus{border-color:var(--accent);}
 .texto{font-size:12.5px;color:var(--muted);line-height:1.65;margin:0 0 12px;}
 .texto:last-child{margin-bottom:0;}
 .texto b{color:var(--text);}
+.cr-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.cr-ent{font-size:14px;font-weight:700;}
+.cr-aviso{background:#E4F3ED;border:1px solid #A7D6C4;border-radius:var(--r);
+  padding:11px 13px;margin-bottom:14px;}
+.cr-aviso-t{font-size:12.5px;font-weight:700;color:#1F6B57;margin-bottom:6px;}
+.cr-aviso-l{font-family:var(--mono);font-size:9.5px;color:#2E7D6B;line-height:1.6;}
+.cr-huevo{background:var(--bg-panel);border:1px solid var(--border);
+  border-radius:var(--r);padding:11px;margin-bottom:9px;}
+.cr-huevo.bueno{border-color:#2E7D6B;}
+.cr-h-top{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.cr-h-top img{width:46px;height:46px;image-rendering:pixelated;flex-shrink:0;}
+.cr-h-main{flex:1;min-width:0;}
+.cr-h-nom{font-size:13px;font-weight:600;}
+.cr-h-loc{font-family:var(--mono);font-size:9px;color:var(--accent);margin-top:2px;}
+.cr-h-nat{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;}
+.cr-h-suma{text-align:right;flex-shrink:0;}
+.cr-h-suma b{font-family:var(--mono);font-size:18px;display:block;line-height:1;}
+.cr-h-suma span{font-family:var(--mono);font-size:8.5px;color:var(--muted);}
+.cr-ivs{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;}
+.cr-iv{background:var(--bg-screen);border-radius:2px;padding:5px 2px;text-align:center;}
+.cr-iv-lab{font-family:var(--mono);font-size:7.5px;color:var(--muted);display:block;
+  text-transform:uppercase;}
+.cr-iv-n{font-family:var(--mono);font-size:12px;font-weight:700;display:block;margin-top:2px;}
+.cr-iv.medio .cr-iv-n{color:var(--text);}
+.cr-iv.alto{background:#E4F3ED;}
+.cr-iv.alto .cr-iv-n{color:#2E7D6B;}
+.cr-iv.perfecto{background:#2E7D6B;}
+.cr-iv.perfecto .cr-iv-lab{color:rgba(255,255,255,.7);}
+.cr-iv.perfecto .cr-iv-n{color:#fff;}
 .es-fila{
   display:flex;align-items:center;gap:10px;padding:9px 8px;cursor:pointer;
   border-bottom:1px solid var(--border);
@@ -747,6 +777,11 @@ select:focus,input:focus{border-color:var(--accent);}
 .ed-fila label{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:56px;flex-shrink:0;text-transform:uppercase;}
 .ed-fila input,.ed-fila select{flex:1;padding:8px 10px;font-size:12px;}
 .ed-num{width:58px !important;flex:0 0 58px !important;text-align:center;}
+.gen-btn{
+  width:34px;height:34px;flex:0 0 34px;border:1px solid var(--border);
+  background:var(--bg-panel);border-radius:var(--r);cursor:pointer;
+  font-size:16px;font-weight:700;line-height:1;padding:0;
+}
 
 .iv-fila{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
 .iv-lab{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:46px;flex-shrink:0;text-transform:uppercase;}
@@ -2554,6 +2589,41 @@ async function whoLearns(slug){
   }
 }
 
+/* ================= GÉNERO ================= */
+/* La proporción de géneros va por especie. El byte bajo del valor de
+   personalidad decide: por debajo del umbral es hembra, por encima macho. */
+let generoRate = null;
+
+const UMBRAL = {0:0, 1:31, 2:63, 4:127, 6:191, 8:254};
+
+async function cargarGeneros(){
+  if(generoRate) return generoRate;
+  const guardado = Cache.get('generos');
+  if(guardado){ generoRate = guardado; return generoRate; }
+  const d = await gql(`{
+    pokemonspecies(where:{id:{_lte:${MAX_ID}}}, order_by:{id:asc}) { id gender_rate }
+  }`);
+  const mapa = {};
+  d.pokemonspecies.forEach(x=>{ mapa[x.id] = x.gender_rate; });
+  generoRate = mapa;
+  Cache.set('generos', mapa);
+  return mapa;
+}
+
+/* 'M' macho · 'F' hembra · 'N' sin género */
+function generoDe(pid, pvb){
+  const r = generoRate ? generoRate[pid] : undefined;
+  if(r === undefined) return 'N';
+  if(r === -1) return 'N';
+  if(r === 0) return 'M';
+  if(r === 8) return 'F';
+  return pvb < (UMBRAL[r] ?? 127) ? 'F' : 'M';
+}
+
+const GENERO_SIMBOLO = {M:'♂', F:'♀', N:'—'};
+const GENERO_COLOR   = {M:'#4A6FA5', F:'#D96BA0', N:'#8A8296'};
+const GENERO_ES      = {M:'Macho', F:'Hembra', N:'Sin género'};
+
 /* ================= GRUPO HUEVO ================= */
 /* PokeAPI solo guarda los grupos actuales: no hay historial.
    En la 6.ª generación se reorganizaron y en la 8.ª varios pokémon
@@ -3352,7 +3422,7 @@ function miembroNuevo(pid, gen){
   const ivs={}, evs={};
   STATS6.forEach(s=>{ ivs[s] = t.iv; evs[s] = 0; });
   return {pid, apodo:'', nivel:50, naturaleza:'hardy', habilidad:'', objeto:'',
-          ivs, evs, movimientos:['','','','']};
+          genero:'N', ivs, evs, movimientos:['','','','']};
 }
 
 /* ---------- Lista de equipos ---------- */
@@ -3475,7 +3545,10 @@ function renderEquipo(){
         return `<div class="slot" onclick="editarSlot(${i})">
           <img src="${SPRITE(m.pid)}" alt="">
           <span class="s-nom">${m.apodo || mon.es}</span>
-          <span class="s-nv">Nv. ${m.nivel}</span>
+          <span class="s-nv">Nv. ${m.nivel}
+            ${m.genero && m.genero!=='N'
+              ? `<b style="color:${GENERO_COLOR[m.genero]}">${GENERO_SIMBOLO[m.genero]}</b>` : ''}
+          </span>
           <span class="slot-tipos">${mon.types.map(t=>`<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
         </div>`;
       }).join('')}
@@ -3621,6 +3694,8 @@ async function pantallaEditor(){
             <label>Nivel</label>
             <input class="ed-num" type="number" min="1" max="100" value="${m.nivel}"
                    onchange="setCampo('nivel',this.value)">
+            <button class="gen-btn" onclick="alternarGenero()"
+              style="color:${GENERO_COLOR[m.genero||'N']}">${GENERO_SIMBOLO[m.genero||'N']}</button>
             <span class="slot-tipos">${mon.types.map(x=>`<span class="tchip" style="background:${TCOLOR[x]}">${TES[x]}</span>`).join('')}</span>
           </div>
         </div>
@@ -4113,6 +4188,14 @@ async function fijarJuego(slug){
 
 /* ---------- Cambios en el editor ---------- */
 function _m(){ return equipos[equipoAbierto].miembros[slotAbierto]; }
+
+function alternarGenero(){
+  const m = _m();
+  const ciclo = {M:'F', F:'N', N:'M'};
+  m.genero = ciclo[m.genero || 'N'];
+  guardarEquipos();
+  pantallaEditor();
+}
 
 function setCampo(campo, valor){
   const m = _m();
@@ -5456,6 +5539,13 @@ function infoMenu(){
       <span class="util-s">Efectividades atacando y defendiendo, por juego</span></span>
       <span class="campo-x">›</span>
     </button>
+    <button class="util" onclick="infoIr('crianza')">
+      <svg viewBox="0 0 24 24"><ellipse cx="12" cy="14" rx="7" ry="8"/>
+      <path d="M8 14c0-3 1.6-5.5 4-6.5"/></svg>
+      <span class="util-main"><span class="util-t">Crianza</span>
+      <span class="util-s">Analiza los huevos de tu partida, en el equipo y en las cajas</span></span>
+      <span class="campo-x">›</span>
+    </button>
     <button class="util" onclick="infoIr('esfuerzo')">
       <svg viewBox="0 0 24 24"><path d="M4 19V9M9 19V5M14 19v-7M19 19v-11"/></svg>
       <span class="util-main"><span class="util-t">Puntos de esfuerzo</span>
@@ -5490,6 +5580,7 @@ function infoIr(v){
   const T = {movs:['Movimientos','Buscador'], tipos:['Tabla de tipos','Efectividades'],
              simulador:['Simulador','Cobertura de ataque'],
              esfuerzo:['Puntos de esfuerzo','Qué otorga cada uno'],
+             crianza:['Crianza','Huevos de tu partida'],
              mecanicas:['Mecánicas','Por generación'], formulas:['Fórmulas','Cómo se calcula'],
              acerca:['Acerca de','PopoDex']};
   document.getElementById('info-titulo').textContent = T[v][0];
@@ -5498,6 +5589,7 @@ function infoIr(v){
   if(v==='movs') panelMovimientos();
   else if(v==='simulador') panelSimulador();
   else if(v==='esfuerzo') panelEsfuerzo();
+  else if(v==='crianza') panelCrianza();
   else if(v==='tipos') panelTipos();
   else if(v==='mecanicas') panelMecanicas();
   else if(v==='formulas') panelFormulas();
@@ -5760,6 +5852,179 @@ function sgQuitar(){ sgSel = []; pintarBotonesGens(); }
 function sgListo(){
   closeOverlay('ov-selgens');
   if(sgCb) sgCb([...sgSel].sort((a,b)=>a-b));
+}
+
+/* ---------- Crianza ---------- */
+let crianzaDatos = null;      // resultado del último .sav analizado
+let crEspecie = '';           // filtro por especie
+let crSoloBuenos = false;
+
+const IV_ALTO = 30;           // a partir de aquí se considera destacado
+
+function panelCrianza(){
+  const body = document.getElementById('info-body');
+  if(!crianzaDatos){
+    body.innerHTML = `
+      <button class="rival-vacio" onclick="document.getElementById('archivo-cria').click()">
+        <span class="rv-mas">+</span>
+        <span class="rv-txt">Cargar partida</span>
+        <span class="rv-sub">Se revisan el equipo y las 14 cajas</span>
+      </button>
+      <input type="file" id="archivo-cria" accept=".sav,.sa1,.srm,application/octet-stream"
+             style="display:none;">
+      <p class="mi-cuenta" style="text-align:center;line-height:1.6;">
+        También puedes arrastrar el archivo a la pantalla.<br>
+        Solo guardados de 3.ª generación.</p>`;
+    const inp = document.getElementById('archivo-cria');
+    inp.addEventListener('change', e=>{
+      const f = e.target.files[0];
+      if(f) analizarCrianza(f);
+      e.target.value = '';
+    });
+    return;
+  }
+  pintarCrianza();
+}
+
+async function analizarCrianza(archivo){
+  const body = document.getElementById('info-body');
+  body.innerHTML = '<div class="hint">Leyendo la partida...</div>';
+  let datos;
+  try{
+    datos = leerSav(await archivo.arrayBuffer(), {conCajas:true});
+  }catch(e){
+    body.innerHTML = `<div class="hint">No se pudo leer: ${e.message||''}</div>
+      <button class="btn btn-s" style="width:100%;margin-top:9px;"
+        onclick="crianzaDatos=null;panelCrianza()">Volver a intentar</button>`;
+    return;
+  }
+  try{ await cargarGeneros(); }catch(e){}
+
+  datos.huevos.forEach(h=>{
+    h.genero = generoDe(h.pid, h.pvb);
+    h.altos = STATS6.filter(k=>h.ivs[k] >= IV_ALTO);
+    h.perfectos = STATS6.filter(k=>h.ivs[k] === 31);
+    h.suma = STATS6.reduce((n,k)=>n+h.ivs[k], 0);
+  });
+  datos.huevos.sort((a,b)=> b.altos.length-a.altos.length || b.suma-a.suma);
+
+  crianzaDatos = datos;
+  crEspecie = '';
+  crSoloBuenos = false;
+  pintarCrianza();
+}
+
+function ubicacionHuevo(h){
+  return h.donde==='equipo'
+    ? `Equipo · puesto ${h.pos}`
+    : `${h.cajaNombre || 'Caja '+h.caja} · posición ${h.pos}`;
+}
+
+function pintarCrianza(){
+  const d = crianzaDatos;
+  const body = document.getElementById('info-body');
+
+  let lista = d.huevos;
+  if(crEspecie) lista = lista.filter(h=>String(h.pid)===crEspecie);
+  if(crSoloBuenos) lista = lista.filter(h=>h.altos.length>=3);
+
+  /* Especies presentes entre los huevos, para el filtro */
+  const especies = [...new Set(d.huevos.map(h=>h.pid))].map(id=>{
+    const mon = allMons.find(x=>x.id===id) || {};
+    return {id, es:mon.es || ('#'+id), cuantos:d.huevos.filter(h=>h.pid===id).length};
+  }).sort((a,b)=>b.cuantos-a.cuantos);
+
+  const destacados = d.huevos.filter(h=>h.altos.length>=3);
+
+  body.innerHTML = `
+    <div class="cr-cab">
+      <div>
+        <div class="cr-ent">${d.entrenador || 'Partida'}</div>
+        <div class="mi-cuenta" style="margin:2px 0 0;">${nombreDeJuego(d.juego)} ·
+          ${d.huevos.length} huevo${d.huevos.length===1?'':'s'} ·
+          ${d.cajas.length} en cajas</div>
+      </div>
+      <button class="btn btn-s" style="width:auto;padding:8px 12px;flex:0 0 auto;"
+        onclick="crianzaDatos=null;panelCrianza()">Otro</button>
+    </div>
+
+    ${destacados.length ? `
+      <div class="cr-aviso">
+        <div class="cr-aviso-t">${destacados.length} huevo${destacados.length===1?'':'s'} destacado${destacados.length===1?'':'s'}</div>
+        ${destacados.map(h=>{
+          const mon = allMons.find(x=>x.id===h.pid) || {};
+          return `<div class="cr-aviso-l">${mon.es||'#'+h.pid} · ${h.altos.length} estadísticas
+            sobre ${IV_ALTO} · <b>${ubicacionHuevo(h)}</b></div>`;
+        }).join('')}
+      </div>` : ''}
+
+    ${!d.huevos.length
+      ? '<div class="eq-vacio" style="padding:34px 14px;"><p>No hay huevos en esta partida.</p></div>'
+      : `
+      <div class="dos-filtros" style="margin-bottom:11px;">
+        <button class="campo" onclick="crElegirEspecie()">
+          <span class="campo-main"><span class="campo-val ${crEspecie?'':'sin'}">${
+            crEspecie ? (allMons.find(x=>x.id===Number(crEspecie))||{}).es || 'Especie'
+                      : 'Todas'}</span></span>
+          <span class="campo-x">›</span></button>
+        <button class="campo" onclick="crSoloBuenos=!crSoloBuenos;pintarCrianza()">
+          <span class="campo-main"><span class="campo-val ${crSoloBuenos?'':'sin'}">${
+            crSoloBuenos ? 'Solo buenos' : 'Todos'}</span></span>
+          <span class="campo-x">${crSoloBuenos?'✓':'›'}</span></button>
+      </div>
+      <p class="mi-cuenta">${lista.length} de ${d.huevos.length} huevos</p>
+      ${lista.map(fichaHuevo).join('') ||
+        '<div class="hint" style="padding:22px;text-align:center;">Ninguno coincide.</div>'}`}
+
+    ${especies.length>1 ? `<p class="mi-cuenta" style="margin-top:14px;">Especies:
+      ${especies.map(e=>`${e.es} (${e.cuantos})`).join(' · ')}</p>` : ''}`;
+}
+
+function fichaHuevo(h){
+  const mon = allMons.find(x=>x.id===h.pid) || {};
+  const nat = NATURALEZAS.find(n=>n.slug===h.naturaleza) || {es:'—'};
+  const bueno = h.altos.length >= 3;
+  return `
+    <div class="cr-huevo ${bueno?'bueno':''}">
+      <div class="cr-h-top">
+        <img src="${SPRITE(h.pid)}" alt="">
+        <div class="cr-h-main">
+          <div class="cr-h-nom">${mon.es || '#'+h.pid}
+            ${h.genero!=='N'?`<b style="color:${GENERO_COLOR[h.genero]}">${GENERO_SIMBOLO[h.genero]}</b>`:''}
+          </div>
+          <div class="cr-h-loc">${ubicacionHuevo(h)}</div>
+          <div class="cr-h-nat">${nat.es}${nat.sube
+            ? ` · ▲${STAT_ES[nat.sube]} ▼${STAT_ES[nat.baja]}` : ' · neutra'}</div>
+        </div>
+        <div class="cr-h-suma">
+          <b>${h.altos.length}</b><span>de 6</span>
+        </div>
+      </div>
+      <div class="cr-ivs">
+        ${STATS6.map(k=>{
+          const v = h.ivs[k];
+          const cls = v===31 ? 'perfecto' : v>=IV_ALTO ? 'alto' : v>=20 ? 'medio' : '';
+          return `<div class="cr-iv ${cls}">
+            <span class="cr-iv-lab">${STAT_ES[k]}</span>
+            <span class="cr-iv-n">${v}</span></div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+function crElegirEspecie(){
+  const especies = [...new Set(crianzaDatos.huevos.map(h=>h.pid))];
+  abrirSelector({
+    titulo:'Especie', sub:'Filtrar los huevos', buscar:false, actual:crEspecie,
+    opciones: [{valor:'', nombre:'Todas las especies', detalle:crianzaDatos.huevos.length+' huevos'}]
+      .concat(especies.map(id=>{
+        const mon = allMons.find(x=>x.id===id) || {};
+        const n = crianzaDatos.huevos.filter(h=>h.pid===id).length;
+        return {valor:String(id), nombre:mon.es || '#'+id, img:SPRITE(id),
+                detalle:`${n} huevo${n===1?'':'s'}`};
+      })),
+    alElegir: v=>{ crEspecie = v; pintarCrianza(); }
+  });
 }
 
 /* ---------- Puntos de esfuerzo ---------- */
@@ -6514,7 +6779,60 @@ const ORDEN_SUB = ['GAEM','GAME','GEAM','GEMA','GMAE','GMEA','AGEM','AGME',
   'AEGM','AEMG','AMGE','AMEG','EGAM','EGMA','EAGM','EAMG','EMGA','EMAG',
   'MGAE','MGEA','MAGE','MAEG','MEGA','MEAG'];
 
-function leerSav(buffer){
+/* Descifra un pokémon a partir de su posición en el archivo */
+function leerMon(dv, buffer, p, conCombate){
+  const pv   = dv.getUint32(p, true);
+  const otid = dv.getUint32(p+4, true);
+  if(!pv && !otid) return null;
+  const clave = (pv ^ otid) >>> 0;
+
+  const datos = new DataView(new ArrayBuffer(48));
+  for(let j=0; j<48; j+=4)
+    datos.setUint32(j, (dv.getUint32(p+0x20+j, true) ^ clave) >>> 0, true);
+
+  const orden = ORDEN_SUB[pv % 24];
+  const pos = {};
+  for(let k=0; k<4; k++) pos[orden[k]] = k*12;
+
+  const especie = datos.getUint16(pos.G, true);
+  const nacional = aNacional(especie);
+  if(!nacional) return null;
+
+  const ivRaw = datos.getUint32(pos.M + 4, true);
+  const CLAVES = ['hp','attack','defense','speed','special-attack','special-defense'];
+  const ivsRaw = [0,1,2,3,4,5].map(k=>(ivRaw >>> (5*k)) & 31);
+  const evsRaw = [0,1,2,3,4,5].map(k=>datos.getUint8(pos.E + k));
+  const ivs = {}, evs = {};
+  CLAVES.forEach((c,k)=>{ ivs[c] = ivsRaw[k]; evs[c] = evsRaw[k]; });
+
+  const m = {
+    pid: nacional,
+    apodo: textoSav(new Uint8Array(buffer, p+8, 10)),
+    naturaleza: (NATURALEZAS[pv % 25] || NATURALEZAS[0]).slug,
+    pvb: pv & 0xFF,                       // decide el género según la especie
+    ranura: (ivRaw >>> 31) & 1,
+    esHuevo: !!((ivRaw >>> 30) & 1),
+    ivs, evs,
+    movimientos: [0,1,2,3].map(k=>datos.getUint16(pos.A + k*2, true)),
+    habilidad: '', objeto: ''
+  };
+
+  if(conCombate){
+    m.nivel = dv.getUint8(p+0x54);
+    m.statsSav = {
+      hp: dv.getUint16(p+0x58, true),
+      attack: dv.getUint16(p+0x5A, true),
+      defense: dv.getUint16(p+0x5C, true),
+      speed: dv.getUint16(p+0x5E, true),
+      'special-attack': dv.getUint16(p+0x60, true),
+      'special-defense': dv.getUint16(p+0x62, true)
+    };
+  }
+  return m;
+}
+
+function leerSav(buffer, opciones){
+  const conCajas = opciones && opciones.conCajas;
   const dv = new DataView(buffer);
   if(buffer.byteLength < 65536) throw new Error('El archivo es demasiado pequeño');
 
@@ -6546,62 +6864,44 @@ function leerSav(buffer){
     idPartida = dv.getUint32(secciones[0] + 0x0A, true);
   }
 
-  const miembros = [];
+  const miembros = [], huevos = [];
   for(let i=0; i<cuantos; i++){
-    const p = s1 + info.equipo + 4 + i*100;
-    const pv   = dv.getUint32(p, true);
-    const otid = dv.getUint32(p+4, true);
-    const clave = (pv ^ otid) >>> 0;
-
-    /* Los 48 bytes de datos van cifrados palabra a palabra */
-    const datos = new DataView(new ArrayBuffer(48));
-    for(let j=0; j<48; j+=4)
-      datos.setUint32(j, (dv.getUint32(p+0x20+j, true) ^ clave) >>> 0, true);
-
-    const orden = ORDEN_SUB[pv % 24];
-    const pos = {};
-    for(let k=0; k<4; k++) pos[orden[k]] = k*12;
-
-    const especie = datos.getUint16(pos.G, true);
-    const nacional = aNacional(especie);
-    if(!nacional) continue;                       // huevo o dato ilegible
-
-    const movs = [0,1,2,3].map(k=>datos.getUint16(pos.A + k*2, true));
-    const evsRaw = [0,1,2,3,4,5].map(k=>datos.getUint8(pos.E + k));
-    const ivRaw = datos.getUint32(pos.M + 4, true);
-    const esHuevo = (ivRaw >>> 30) & 1;
-    if(esHuevo) continue;
-    const ivsRaw = [0,1,2,3,4,5].map(k=>(ivRaw >>> (5*k)) & 31);
-    const ranura = (ivRaw >>> 31) & 1;
-
-    /* En el guardado el orden es PS, Ataque, Defensa, Velocidad,
-       At.Especial, Df.Especial: hay que reordenarlo al nuestro */
-    const CLAVES = ['hp','attack','defense','speed','special-attack','special-defense'];
-    const ivs = {}, evs = {};
-    CLAVES.forEach((c,k)=>{ ivs[c] = ivsRaw[k]; evs[c] = evsRaw[k]; });
-
-    miembros.push({
-      pid: nacional,
-      apodo: textoSav(new Uint8Array(buffer, p+8, 10)),
-      nivel: dv.getUint8(p+0x54),
-      naturaleza: (NATURALEZAS[pv % 25] || NATURALEZAS[0]).slug,
-      habilidad: '',
-      ranura,                                   // 0 o 1: cuál de sus habilidades
-      objeto: '',
-      ivs, evs,
-      movimientos: movs,                        // números; se traducen después
-      statsSav: {
-        hp: dv.getUint16(p+0x58, true),
-        attack: dv.getUint16(p+0x5A, true),
-        defense: dv.getUint16(p+0x5C, true),
-        speed: dv.getUint16(p+0x5E, true),
-        'special-attack': dv.getUint16(p+0x60, true),
-        'special-defense': dv.getUint16(p+0x62, true)
-      }
-    });
+    const m = leerMon(dv, buffer, s1 + info.equipo + 4 + i*100, true);
+    if(!m) continue;
+    if(m.esHuevo) huevos.push({...m, donde:'equipo', caja:0, pos:i+1});
+    else miembros.push(m);
   }
-  if(!miembros.length) throw new Error('No se encontró ningún pokémon en el equipo');
-  return {juego:info.juego, entrenador, idPartida, miembros};
+
+  /* Almacenamiento del PC: las secciones 5 a 13 encadenadas */
+  const cajas = [];
+  if(conCajas){
+    const TAM = {5:3968,6:3968,7:3968,8:3968,9:3968,10:3968,11:3968,12:3968,13:2000};
+    let total = 0;
+    for(let i=5; i<=13; i++) if(secciones[i]!==undefined) total += TAM[i];
+    const pc = new Uint8Array(total);
+    let off = 0;
+    for(let i=5; i<=13; i++){
+      if(secciones[i]===undefined) continue;
+      pc.set(new Uint8Array(buffer, secciones[i], TAM[i]), off);
+      off += TAM[i];
+    }
+    const pcDv = new DataView(pc.buffer);
+    const BASE = 4, NOMBRES = 4 + 14*30*80;
+
+    for(let c=0; c<14; c++){
+      const nombre = textoSav(pc.subarray(NOMBRES + c*9, NOMBRES + c*9 + 9)) || ('CAJA '+(c+1));
+      for(let r=0; r<30; r++){
+        const m = leerMon(pcDv, pc.buffer, BASE + (c*30+r)*80, false);
+        if(!m) continue;
+        const ficha = {...m, donde:'caja', caja:c+1, cajaNombre:nombre, pos:r+1};
+        if(m.esHuevo) huevos.push(ficha);
+        cajas.push(ficha);
+      }
+    }
+  }
+
+  if(!miembros.length && !cajas.length) throw new Error('No se encontró ningún pokémon');
+  return {juego:info.juego, entrenador, idPartida, miembros, huevos, cajas};
 }
 
 /* Los movimientos vienen como números; se piden sus nombres a PokeAPI */
@@ -6641,6 +6941,12 @@ async function abrirImportar(archivo){
   }catch(e){
     datos.miembros.forEach(m=>{ m.movimientos = ['','','','']; });
   }
+
+  /* El género sale de la proporción de la especie */
+  try{
+    await cargarGeneros();
+    datos.miembros.forEach(m=>{ m.genero = generoDe(m.pid, m.pvb); });
+  }catch(e){ datos.miembros.forEach(m=>{ m.genero = 'N'; }); }
 
   /* La habilidad depende de la ranura guardada */
   for(const m of datos.miembros){
@@ -6697,7 +7003,9 @@ function pintarListaImp(){
       <button class="imp-celda ${impSel===i?'sel':''}" onclick="impVer(${i})">
         <img src="${SPRITE(m.pid)}" alt="">
         <span class="imp-nom">${m.apodo || mon.es || '?'}</span>
-        <span class="imp-nv">Nv. ${m.nivel}</span>
+        <span class="imp-nv">Nv. ${m.nivel}
+          ${m.genero && m.genero!=='N'
+            ? `<b style="color:${GENERO_COLOR[m.genero]}">${GENERO_SIMBOLO[m.genero]}</b>` : ''}</span>
       </button>`;
   }).join('');
   pintarDetalleImp();
@@ -6787,7 +7095,7 @@ function confirmarImportar(actualizar){
       evs[k] = Math.min(m.evs[k] ?? 0, t.ev);
     });
     return {pid:m.pid, apodo:m.apodo, nivel:m.nivel, naturaleza:m.naturaleza,
-            habilidad:m.habilidad, objeto:'', ivs, evs,
+            habilidad:m.habilidad, objeto:'', genero:m.genero||'N', ivs, evs,
             movimientos:[...m.movimientos]};
   });
 
