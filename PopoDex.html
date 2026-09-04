@@ -1381,6 +1381,25 @@ select:focus,input:focus{border-color:var(--accent);}
     </div>
   </div>
 
+  <!-- ============ SELECTOR DE GRUPO HUEVO ============ -->
+  <div class="overlay" id="ov-huevos">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="hv-sub">—</div>
+          <h2 class="sheet-title" style="font-size:17px;">Grupo huevo</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-huevos')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd"><div id="hv-lista"></div></div>
+      <div class="sheet-ft">
+        <button class="btn btn-s" onclick="hvQuitar()">Quitar todos</button>
+        <button class="btn btn-p" onclick="hvListo()">Listo</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ SELECTOR DE GENERACIONES ============ -->
   <div class="overlay" id="ov-selgens">
     <div class="sheet">
@@ -1523,6 +1542,12 @@ select:focus,input:focus{border-color:var(--accent);}
             <button class="pill" data-rank="mythical">Singular</button>
             <button class="pill" data-rank="common">Común</button>
           </div>
+        </div>
+
+        <div class="f-group">
+          <label class="f-lab">Grupo huevo</label>
+          <button class="campo" id="f-huevo" style="width:100%;" onclick="abrirHuevos()"></button>
+          <div id="huevo-aviso"></div>
         </div>
 
         <div class="f-group">
@@ -1690,7 +1715,7 @@ let currentList = [];      // lo que se muestra en la grilla (ya filtrado y orde
 let listaDetalle = null;   // lista por la que navega el detalle abierto
 let openMonId = null;      // pokémon abierto en el panel de detalle
 let detailCache = {};      // id -> datos completos (moves, abilities...)
-let filters = {gens:[],sort:"",mins:{},types:[],cats:[],moves:[],ranks:[],texto:""};
+let filters = {gens:[],sort:"",mins:{},types:[],cats:[],moves:[],ranks:[],texto:"",huevos:[]};
 let dataReady = false;
 
 /* ================= JUEGO ACTUAL ================= */
@@ -2071,6 +2096,7 @@ document.querySelectorAll('.overlay').forEach(ov=>{
 document.getElementById('btn-filters').addEventListener('click',()=>{
   openOverlay('ov-filters');
   pintarCampoMov();
+  pintarCampoHuevo();
 });
 
 /* ================= CARGA DE DATOS ================= */
@@ -2219,6 +2245,10 @@ function passesFilters(m){
     if(!inAny) return false;
   }
   if(filters.ranks.length && !filters.ranks.includes(m.rank||'common')) return false;
+  if(filters.huevos.length){
+    const g = huevosPorMon ? huevosPorMon[m.id] : null;
+    if(!g || !filters.huevos.some(h=>g.includes(h))) return false;
+  }
   for(const k in filters.mins){
     const v = filters.mins[k];
     const val = k==='total'? m.total : (m.stats[k]??0);
@@ -2524,7 +2554,104 @@ async function whoLearns(slug){
   }
 }
 
-/* ================= FILTROS ================= *//* ================= FILTROS ================= */
+/* ================= GRUPO HUEVO ================= */
+/* PokeAPI solo guarda los grupos actuales: no hay historial.
+   En la 6.ª generación se reorganizaron y en la 8.ª varios pokémon
+   ganaron un segundo grupo, así que en juegos antiguos puede diferir. */
+let huevosPorMon = null;      // id -> [grupos]
+let huevosCatalogo = [];      // {slug, es, cuantos}
+let hvSel = [];
+
+async function cargarHuevos(){
+  if(huevosPorMon) return huevosPorMon;
+  const guardado = Cache.get('huevos');
+  if(guardado){
+    huevosPorMon = guardado.mons;
+    huevosCatalogo = guardado.cat;
+    return huevosPorMon;
+  }
+  const d = await gql(`{
+    pokemonspecies(where:{id:{_lte:${MAX_ID}}}, order_by:{id:asc}) {
+      id pokemonegggroups { egggroup {
+        name egggroupnames(where:{language_id:{_eq:${ES}}}) { name } } }
+    }
+  }`);
+  const mons = {}, nombres = {}, cuenta = {};
+  d.pokemonspecies.forEach(sp=>{
+    const gs = sp.pokemonegggroups.map(g=>{
+      const e = g.egggroup;
+      nombres[e.name] = e.egggroupnames[0]?.name || e.name.replace(/-/g,' ');
+      cuenta[e.name] = (cuenta[e.name]||0)+1;
+      return e.name;
+    });
+    if(gs.length) mons[sp.id] = gs;
+  });
+  huevosCatalogo = Object.keys(nombres)
+    .map(k=>({slug:k, es:nombres[k], cuantos:cuenta[k]}))
+    .sort((a,b)=>a.es.localeCompare(b.es));
+  huevosPorMon = mons;
+  Cache.set('huevos', {mons, cat:huevosCatalogo});
+  return mons;
+}
+
+function pintarCampoHuevo(){
+  const el = document.getElementById('f-huevo');
+  if(!el) return;
+  el.innerHTML = !hvSel.length
+    ? `<span class="campo-main"><span class="campo-val sin">Cualquiera</span></span>
+       <span class="campo-x">›</span>`
+    : `<span class="campo-main"><span class="campo-chips">${hvSel.map(k=>{
+        const g = huevosCatalogo.find(x=>x.slug===k);
+        return `<span class="tchip" style="background:var(--accent)">${g?g.es:k}</span>`;
+      }).join('')}</span></span><span class="campo-x">›</span>`;
+
+  /* En 1.ª generación no había crianza */
+  const gen = juegoActual ? genActual() : 9;
+  const av = document.getElementById('huevo-aviso');
+  if(av) av.innerHTML = (juegoActual && gen===1)
+    ? `<div class="warn">En ${nombreDeJuego(juegoActual)} todavía no existía la crianza:
+       los grupos huevo llegaron con la 2.ª generación.</div>`
+    : (juegoActual && gen<8
+       ? `<div class="mv-state">Los grupos mostrados son los actuales. En la 6.ª y la 8.ª
+          generación cambiaron algunos, así que en ${nombreDeJuego(juegoActual)} pueden diferir.</div>`
+       : '');
+}
+
+async function abrirHuevos(){
+  const cont = document.getElementById('hv-lista');
+  cont.innerHTML = '<div class="hint" style="padding:14px;">Cargando...</div>';
+  openOverlay('ov-huevos');
+  try{ await cargarHuevos(); }
+  catch(e){ cont.innerHTML = '<div class="hint" style="padding:14px;">No se pudo cargar.</div>'; return; }
+
+  hvSel = [...filters.huevos];
+  document.getElementById('hv-sub').textContent = `${huevosCatalogo.length} grupos`;
+  pintarListaHuevos();
+}
+
+function pintarListaHuevos(){
+  document.getElementById('hv-lista').innerHTML = huevosCatalogo.map(g=>`
+    <div class="el-item ${hvSel.includes(g.slug)?'on':''}" onclick="hvAlternar('${g.slug}')">
+      <div class="el-main">
+        <div class="el-nom">${g.es}</div>
+        <div class="el-sub">${g.cuantos} pokémon</div>
+      </div>
+      ${hvSel.includes(g.slug)?'<span class="el-tick">✓</span>':''}
+    </div>`).join('');
+}
+
+function hvAlternar(k){
+  hvSel = hvSel.includes(k) ? hvSel.filter(x=>x!==k) : [...hvSel, k];
+  pintarListaHuevos();
+}
+function hvQuitar(){ hvSel = []; pintarListaHuevos(); }
+function hvListo(){
+  closeOverlay('ov-huevos');
+  filters.huevos = [...hvSel];
+  pintarCampoHuevo();
+}
+
+/* ================= FILTROS ================= */
 function buildTypeChips(){
   document.getElementById('f-types').innerHTML = TYPES.map(t=>
     `<button class="chip" data-type="${t}" style="background:${TCOLOR[t]}">${TES[t]}</button>`
@@ -2605,7 +2732,7 @@ async function applyFilters(){
 
   const n = filters.gens.length+filters.ranks.length+(filters.sort?1:0)+
             Object.keys(filters.mins).length+filters.types.length+
-            filters.cats.length+(moveOn||filters.moves.length);
+            filters.cats.length+filters.huevos.length+(moveOn||filters.moves.length);
   const badge = document.getElementById('f-count');
   badge.style.display = n? 'flex':'none';
   badge.textContent = n;
@@ -2627,6 +2754,9 @@ function clearFilters(){
   document.querySelectorAll('[data-sort]').forEach((b,i)=>b.classList.toggle('on', i===0));
   movElegido = null;
   pintarCampoMov();
+  filters.huevos = [];
+  hvSel = [];
+  pintarCampoHuevo();
   document.querySelectorAll('.stat-inputs input').forEach(i=>i.value='');
   document.querySelectorAll('#f-types .chip.on,[data-cat].on,[data-mv].on,[data-gen].on,[data-rank].on')
     .forEach(c=>c.classList.remove('on'));
