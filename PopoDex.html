@@ -479,16 +479,40 @@ select:focus,input:focus{border-color:var(--accent);}
 .cr-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;
   margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
 .cr-ent{font-size:14px;font-weight:700;}
-.cr-aviso{background:#E4F3ED;border:1px solid #A7D6C4;border-radius:var(--r);
-  padding:11px 13px;margin-bottom:14px;}
-.cr-aviso-t{font-size:12.5px;font-weight:700;color:#1F6B57;margin-bottom:6px;}
-.cr-aviso-l{font-family:var(--mono);font-size:9.5px;color:#2E7D6B;line-height:1.6;}
 .cr-huevo{background:var(--bg-panel);border:1px solid var(--border);
   border-radius:var(--r);padding:11px;margin-bottom:9px;}
 .cr-huevo.bueno{border-color:#2E7D6B;}
 .cr-huevo.perfecto{border-color:#1F6B57;box-shadow:0 0 0 1px #1F6B57;}
-.cr-aviso.perfecto{background:#DFF0E8;border-color:#1F6B57;}
-.cr-aviso.perfecto .cr-aviso-t{color:#14503F;}
+.cr-cols{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.cr-col{min-width:0;}
+.cr-col-hd{
+  display:flex;justify-content:space-between;align-items:center;gap:5px;
+  color:#fff;border-radius:var(--r) var(--r) 0 0;padding:6px 8px;
+  font-family:var(--mono);font-size:9.5px;font-weight:700;text-transform:uppercase;
+}
+.cr-col-nat{
+  width:100%;background:var(--bg-screen);border:1px solid var(--border);border-top:none;
+  border-radius:0 0 var(--r) var(--r);padding:6px 7px;cursor:pointer;margin-bottom:7px;
+  font-family:var(--mono);font-size:9px;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;gap:5px;
+}
+.cr-col-nat.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+.cr-col-nat i{font-style:normal;font-size:8px;opacity:.75;}
+
+/* Ficha reducida para las columnas */
+.cr-huevo.mini{padding:8px;margin-bottom:7px;}
+.cr-huevo.mini .cr-h-top{gap:6px;margin-bottom:7px;}
+.cr-huevo.mini .cr-h-top img{width:34px;height:34px;}
+.cr-huevo.mini .cr-h-nom{font-size:11px;line-height:1.2;}
+.cr-huevo.mini .cr-enlace{font-size:8px;}
+.cr-huevo.mini .cr-gen-g{font-size:17px;}
+.cr-huevo.mini .cr-h-suma{font-size:8.5px;}
+.cr-huevo.mini .cr-h-suma b{font-size:12px;}
+.cr-huevo.mini .cr-etq{font-size:7px;padding:1px 4px;}
+.cr-huevo.mini .cr-ivs{grid-template-columns:repeat(3,1fr);gap:2px;}
+.cr-huevo.mini .cr-iv{padding:3px 1px;}
+.cr-huevo.mini .cr-iv-lab{font-size:6.5px;}
+.cr-huevo.mini .cr-iv-n{font-size:10px;margin-top:1px;}
 .cr-gen-hd{
   display:flex;align-items:center;gap:8px;margin:14px 0 9px;padding-left:8px;
   font-size:12.5px;font-weight:700;
@@ -5948,7 +5972,7 @@ let crianzaDatos = null;
 let crEspecie = '';                       // filtros comunes a los tres bloques
 let crIgnorar = '';                       // estadística que no se tiene en cuenta
 let crPorGenero = false;
-let crNatMadre = '';                      // solo si hay hembra con Piedra Eterna
+let crNat = {F:'', M:''};                 // naturaleza, independiente por columna
 let crPadreAbierto = null;
 /* Cada bloque lleva sus propios ajustes */
 let crCfg = {
@@ -5998,7 +6022,7 @@ function panelCrianza(){
   pintarCrianza();
 }
 
-async function analizarCrianza(archivo){
+async function analizarCrianza(archivo, conservar){
   const body = document.getElementById('info-body');
   body.innerHTML = '<div class="hint">Leyendo la partida...</div>';
   let d;
@@ -6022,10 +6046,17 @@ async function analizarCrianza(archivo){
   d.pc     = d.cajas.map(marcar);
 
   crianzaDatos = d;
-  crEspecie = ''; crIgnorar = ''; crPorGenero = false; crNatMadre = '';
   crPadreAbierto = null;
-  crCfg = {equipo:{huevo:true,mon:true,orden:'pos'},
-           caja:{huevo:true,mon:true,orden:'pos'}};
+  if(!conservar){
+    crEspecie = ''; crIgnorar = ''; crPorGenero = false;
+    crNat = {F:'', M:''};
+    crCfg = {equipo:{huevo:true,mon:true,orden:'pos'},
+             caja:{huevo:true,mon:true,orden:'pos'}};
+  }else{
+    /* Si la especie filtrada no está en la nueva partida, se quita */
+    const hay = [...d.padres, ...d.equipo, ...d.pc].some(x=>String(x.pid)===crEspecie);
+    if(crEspecie && !hay) crEspecie = '';
+  }
   pintarCrianza();
 }
 
@@ -6056,7 +6087,6 @@ function pintarCrianza(){
   const pd = crEspecie ? d.padres.filter(x=>String(x.pid)===crEspecie) : d.padres;
 
   const todos = [...d.padres, ...d.equipo, ...d.pc];
-  const destacados = todos.filter(x=>calidad(x).altos.length>=3);
   const ks = statsContadas();
 
   document.getElementById('info-body').innerHTML = `
@@ -6067,7 +6097,9 @@ function pintarCrianza(){
           ${todos.length} pokémon</div>
       </div>
       <button class="btn btn-s" style="width:auto;padding:8px 12px;flex:0 0 auto;"
-        onclick="crianzaDatos=null;panelCrianza()">Otro</button>
+        onclick="document.getElementById('archivo-cria2').click()">Otro</button>
+      <input type="file" id="archivo-cria2" accept=".sav,.sa1,.srm,application/octet-stream"
+             style="display:none;" onchange="cargarOtra(this)">
     </div>
 
     <button class="campo" style="width:100%;margin-bottom:8px;" onclick="crElegirEspecie()">
@@ -6091,21 +6123,15 @@ function pintarCrianza(){
       ${STAT_ES[crIgnorar]} no cuenta: los marcadores van sobre ${ks.length}
       estadísticas.</div>` : ''}
 
-    ${!destacados.length ? '' : `
-      <div class="cr-aviso">
-        <div class="cr-aviso-t">${destacados.length} destacado${destacados.length===1?'':'s'}</div>
-        ${destacados.slice(0,6).map(x=>{
-          const c = calidad(x);
-          return `<div class="cr-aviso-l">${nombreCr(x.pid)}${x.esHuevo?' (huevo)':''} ·
-            ${c.altos.length} de ${c.total} sobre ${IV_ALTO} ·
-            <b>${ubicacionHuevo(x)}</b></div>`;
-        }).join('')}
-        ${destacados.length>6 ? `<div class="cr-aviso-l">y ${destacados.length-6} más</div>` : ''}
-      </div>`}
-
     ${bloquePadres(pd)}
     ${bloqueLista('equipo','Equipo', eq, d.equipo.length)}
     ${bloqueLista('caja','Computador', pc, d.pc.length)}`;
+}
+
+function cargarOtra(inp){
+  const f = inp.files[0];
+  inp.value = '';
+  if(f) analizarCrianza(f, true);        // se mantienen los filtros actuales
 }
 
 function bloquePadres(lista){
@@ -6146,7 +6172,7 @@ function bloqueLista(clave, titulo, lista, total){
     </div>`;
 }
 
-/* División por género. La columna de sin género solo aparece si hace falta,
+/* Dos columnas, hembras y machos. Los sin género van debajo a lo ancho,
    y si la especie elegida no tiene géneros se muestra en una sola lista. */
 function porGenero(lista){
   const h = lista.filter(x=>x.genero==='F');
@@ -6155,45 +6181,42 @@ function porGenero(lista){
 
   if(!h.length && !m.length) return lista.map(fichaHuevo).join('');
 
-  /* La naturaleza solo se hereda si la madre lleva Piedra Eterna */
-  const conEterna = h.filter(x=>x.eterna);
-  let hembras = h;
-  if(crNatMadre) hembras = hembras.filter(x=>x.naturaleza===crNatMadre);
-
-  const cabecera = (txt, col, cuantos) => `
-    <div class="cr-gen-hd" style="border-left:3px solid ${col}">
-      <span>${txt}</span><span class="cr-frame-n">${cuantos}</span>
-    </div>`;
+  const columna = (sexo, todos) => {
+    const eterna = todos.filter(x=>x.eterna).length;
+    const sel = crNat[sexo];
+    const vistos = sel ? todos.filter(x=>x.naturaleza===sel) : todos;
+    const nat = NATURALEZAS.find(x=>x.slug===sel);
+    return `
+      <div class="cr-col">
+        <div class="cr-col-hd" style="background:${GENERO_COLOR[sexo]}">
+          <span>${sexo==='F'?'Hembras':'Machos'}</span>
+          <span>${vistos.length}${sel?' / '+todos.length:''}</span>
+        </div>
+        <button class="cr-col-nat ${sel?'on':''}" onclick="crElegirNaturaleza('${sexo}')">
+          ${sel ? nat.es : 'Naturaleza'}
+          ${eterna ? `<i title="con Piedra Eterna">${eterna}◆</i>` : ''}
+        </button>
+        ${vistos.length ? vistos.map(x=>fichaHuevo(x, true)).join('')
+          : '<div class="hint" style="padding:12px 4px;font-size:10px;">Ninguno.</div>'}
+      </div>`;
+  };
 
   return `
-    ${cabecera('Hembras', GENERO_COLOR.F, hembras.length)}
-    ${conEterna.length ? `
-      <button class="campo" style="width:100%;margin-bottom:9px;" onclick="crElegirNaturaleza()">
-        <span class="campo-main">
-          <span class="campo-val ${crNatMadre?'':'sin'}">${crNatMadre
-            ? (NATURALEZAS.find(x=>x.slug===crNatMadre)||{}).es : 'Cualquier naturaleza'}</span>
-          <span class="campo-sub">${conEterna.length} con Piedra Eterna</span>
-        </span><span class="campo-x">›</span></button>`
-      : `<div class="mv-state" style="margin-bottom:9px;">Ninguna lleva Piedra Eterna: sin ella
-         la naturaleza de la cría sale al azar, así que no se filtra por ella.</div>`}
-    ${hembras.length ? hembras.map(fichaHuevo).join('')
-      : '<div class="hint" style="padding:12px 2px;">Ninguna coincide.</div>'}
-
-    ${cabecera('Machos', GENERO_COLOR.M, m.length)}
-    ${m.length ? m.map(fichaHuevo).join('')
-      : '<div class="hint" style="padding:12px 2px;">Ninguno.</div>'}
-
-    ${n.length ? cabecera('Sin género', GENERO_COLOR.N, n.length) + n.map(fichaHuevo).join('') : ''}`;
+    <div class="cr-cols">${columna('F', h)}${columna('M', m)}</div>
+    ${n.length ? `
+      <div class="cr-gen-hd" style="border-left:3px solid ${GENERO_COLOR.N}">
+        <span>Sin género</span><span class="cr-frame-n">${n.length}</span>
+      </div>${n.map(x=>fichaHuevo(x)).join('')}` : ''}`;
 }
 
-function crElegirNaturaleza(){
+function crElegirNaturaleza(sexo){
   abrirSelector({
-    titulo:'Naturaleza de la madre', sub:'Se hereda solo con Piedra Eterna',
-    buscar:true, actual:crNatMadre,
+    titulo:'Naturaleza', sub: sexo==='F' ? 'Hembras' : 'Machos',
+    buscar:true, actual:crNat[sexo],
     opciones: [{valor:'', nombre:'Cualquiera', detalle:'Sin filtrar'}]
       .concat(NATURALEZAS.map(n=>({valor:n.slug, nombre:n.es,
         detalle: n.sube ? `▲ ${STAT_ES[n.sube]} · ▼ ${STAT_ES[n.baja]}` : 'Neutra'}))),
-    alElegir: v=>{ crNatMadre = v; pintarCrianza(); }
+    alElegir: v=>{ crNat[sexo] = v; pintarCrianza(); }
   });
 }
 
@@ -6208,13 +6231,13 @@ function crElegirIgnorar(){
   });
 }
 
-function fichaHuevo(h){
+function fichaHuevo(h, compacta){
   const mon = allMons.find(x=>x.id===h.pid) || {};
   const nat = NATURALEZAS.find(n=>n.slug===h.naturaleza) || {es:'—'};
   const c = calidad(h);
   const marca = c.perfectos.length ? 'perfecto' : c.altos.length>=3 ? 'bueno' : '';
   return `
-    <div class="cr-huevo ${marca}">
+    <div class="cr-huevo ${marca} ${compacta?'mini':''}">
       <div class="cr-h-top">
         <img src="${SPRITE(h.pid)}" alt="">
         <div class="cr-h-main">
