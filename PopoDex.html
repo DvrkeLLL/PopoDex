@@ -483,6 +483,17 @@ select:focus,input:focus{border-color:var(--accent);}
   border-radius:var(--r);padding:11px;margin-bottom:9px;}
 .cr-huevo.bueno{border-color:#2E7D6B;}
 .cr-huevo.perfecto{border-color:#1F6B57;box-shadow:0 0 0 1px #1F6B57;}
+.elegido-btn{width:100%;margin-bottom:14px;}
+.ele-cifra{text-align:center;padding:6px 0 11px;}
+.ele-cifra b{font-family:var(--mono);font-size:36px;line-height:1;display:block;}
+.ele-cifra span{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.ele-otro{display:flex;align-items:center;gap:9px;padding:7px 0;
+  border-bottom:1px solid var(--border);}
+.ele-otro:last-child{border-bottom:none;}
+.ele-pos{font-family:var(--mono);font-size:10px;color:var(--dim);width:12px;}
+.ele-otro img{width:34px;height:34px;image-rendering:pixelated;}
+.ele-nom{flex:1;min-width:0;font-size:12px;font-weight:600;}
+.ele-n{font-family:var(--mono);font-size:13px;font-weight:700;}
 .cr-exig{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:12px;}
 .cr-exig-t{font-family:var(--mono);font-size:9px;color:var(--muted);
   text-transform:uppercase;letter-spacing:.06em;}
@@ -1297,6 +1308,25 @@ select:focus,input:focus{border-color:var(--accent);}
       </div>
     </div>
     <div class="pad" id="info-body"></div>
+  </div>
+
+  <!-- ============ EL ELEGIDO ============ -->
+  <div class="overlay" id="ov-elegido">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="ele-sub">—</div>
+          <h2 class="sheet-title" style="font-size:17px;">El elegido</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-elegido')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd" id="ele-cuerpo"></div>
+      <div class="sheet-ft">
+        <button class="btn btn-p" style="width:100%;" onclick="eleCambiarModo()"
+          id="ele-modo">—</button>
+      </div>
+    </div>
   </div>
 
   <!-- ============ MAPA DE UBICACIÓN ============ -->
@@ -6005,6 +6035,8 @@ let crianzaDatos = null;
 let crEspecie = '';                       // filtros comunes a los tres bloques
 let crIgnorar = '';                       // estadística que no se tiene en cuenta
 let crExigidas = [];                      // deben estar en 31 sí o sí
+let crNatGlobal = '';                     // naturaleza, para todos los bloques
+let eleModo = 'suma';                     // suma · perfectas
 let crPorGenero = false;
 let crNat = {F:'', M:''};                 // naturaleza, independiente por columna
 let crPadreAbierto = null;
@@ -6083,7 +6115,7 @@ async function analizarCrianza(archivo, conservar){
   crPadreAbierto = null;
   if(!conservar){
     crEspecie = ''; crIgnorar = ''; crPorGenero = false; crExigidas = [];
-    crNat = {F:'', M:''};
+    crNatGlobal = ''; crNat = {F:'', M:''};
     crCfg = {equipo:{huevo:true,mon:true,orden:'pos'},
              caja:{huevo:true,mon:true,orden:'pos'}};
   }else{
@@ -6108,6 +6140,7 @@ function filtrarBloque(lista, cfg){
   if(crEspecie) r = r.filter(x=>String(x.pid)===crEspecie);
   /* Deben tener 31 en todas las exigidas; el resto da igual */
   if(crExigidas.length) r = r.filter(x=>crExigidas.every(k=>x.ivs[k]===31));
+  if(crNatGlobal) r = r.filter(x=>x.naturaleza===crNatGlobal);
   if(cfg.orden!=='stats') return r.slice().sort((a,b)=> (a.caja-b.caja) || (a.pos-b.pos));
   return r.slice().sort((a,b)=>{
     const ca = calidad(a), cb = calidad(b);
@@ -6122,6 +6155,7 @@ function pintarCrianza(){
   const pc = filtrarBloque(d.pc, crCfg.caja);
   let pd = crEspecie ? d.padres.filter(x=>String(x.pid)===crEspecie) : d.padres;
   if(crExigidas.length) pd = pd.filter(x=>crExigidas.every(k=>x.ivs[k]===31));
+  if(crNatGlobal) pd = pd.filter(x=>x.naturaleza===crNatGlobal);
 
   const todos = [...d.padres, ...d.equipo, ...d.pc];
   const ks = statsContadas();
@@ -6139,11 +6173,18 @@ function pintarCrianza(){
              style="display:none;" onchange="cargarOtra(this)">
     </div>
 
-    <button class="campo" style="width:100%;margin-bottom:8px;" onclick="crElegirEspecie()">
-      ${crEspecie?`<img class="jm" src="${SPRITE(Number(crEspecie))}" alt="">`:''}
-      <span class="campo-main"><span class="campo-val ${crEspecie?'':'sin'}">${
-        crEspecie ? nombreCr(Number(crEspecie)) : 'Todas las especies'}</span></span>
-      <span class="campo-x">›</span></button>
+    <div class="dos-filtros" style="margin-bottom:8px;">
+      <button class="campo" onclick="crElegirEspecie()">
+        ${crEspecie?`<img class="jm" src="${SPRITE(Number(crEspecie))}" alt="">`:''}
+        <span class="campo-main"><span class="campo-val ${crEspecie?'':'sin'}">${
+          crEspecie ? nombreCr(Number(crEspecie)) : 'Especie'}</span></span>
+        <span class="campo-x">›</span></button>
+      <button class="campo" onclick="crElegirNatGlobal()">
+        <span class="campo-main"><span class="campo-val ${crNatGlobal?'':'sin'}">${
+          crNatGlobal ? (NATURALEZAS.find(x=>x.slug===crNatGlobal)||{}).es
+                      : 'Naturaleza'}</span></span>
+        <span class="campo-x">›</span></button>
+    </div>
 
     <div class="tres-filtros" style="margin-bottom:8px;">
       <button class="campo" onclick="crElegirIgnorar()">
@@ -6166,9 +6207,11 @@ function pintarCrianza(){
         >${STAT_ES[k]} ✕</button>`).join('')}
     </div>` : ''}
 
-    ${crIgnorar ? `<div class="mv-state" style="margin-bottom:12px;">
+    ${crIgnorar ? `<div class="mv-state" style="margin-bottom:10px;">
       ${STAT_ES[crIgnorar]} no cuenta: los marcadores van sobre ${ks.length}
       estadísticas.</div>` : ''}
+
+    <button class="btn btn-p elegido-btn" onclick="abrirElegido()">El elegido</button>
 
     ${bloquePadres(pd)}
     ${bloqueLista('equipo','Equipo', eq, d.equipo.length)}
@@ -6301,6 +6344,103 @@ function ssListo(){
 function crQuitarExigida(k){
   crExigidas = crExigidas.filter(x=>x!==k);
   pintarCrianza();
+}
+
+/* Reúne lo que pasa los filtros en los tres bloques */
+function candidatosElegido(){
+  const d = crianzaDatos;
+  if(!d) return [];
+  let pd = crEspecie ? d.padres.filter(x=>String(x.pid)===crEspecie) : d.padres;
+  if(crExigidas.length) pd = pd.filter(x=>crExigidas.every(k=>x.ivs[k]===31));
+  if(crNatGlobal) pd = pd.filter(x=>x.naturaleza===crNatGlobal);
+  return [...pd,
+          ...filtrarBloque(d.equipo, crCfg.equipo),
+          ...filtrarBloque(d.pc, crCfg.caja)];
+}
+
+function abrirElegido(){
+  pintarElegido();
+  openOverlay('ov-elegido');
+}
+
+function eleCambiarModo(){
+  eleModo = eleModo==='suma' ? 'perfectas' : 'suma';
+  pintarElegido();
+}
+
+function pintarElegido(){
+  const lista = candidatosElegido();
+  const cuerpo = document.getElementById('ele-cuerpo');
+  const ks = statsContadas();
+
+  document.getElementById('ele-modo').textContent =
+    eleModo==='suma' ? 'Ver el de más IVs perfectos' : 'Ver el de mayor suma';
+  document.getElementById('ele-sub').textContent =
+    (eleModo==='suma' ? 'Mayor suma de IVs' : 'Más estadísticas a 31') +
+    (crIgnorar ? ' · sin '+STAT_ES[crIgnorar] : '');
+
+  if(!lista.length){
+    cuerpo.innerHTML = '<div class="hint" style="padding:26px 12px;text-align:center;">' +
+      'Ningún pokémon pasa los filtros actuales.</div>';
+    return;
+  }
+
+  const orden = eleModo==='suma'
+    ? (a,b)=>{ const ca=calidad(a), cb=calidad(b);
+               return cb.suma-ca.suma || cb.perfectos.length-ca.perfectos.length; }
+    : (a,b)=>{ const ca=calidad(a), cb=calidad(b);
+               return cb.perfectos.length-ca.perfectos.length || cb.suma-ca.suma; };
+
+  const ord = lista.slice().sort(orden);
+  const g = ord[0], c = calidad(g);
+  const maximo = ks.length * 31;
+
+  /* Los que empatan con el ganador */
+  const empatan = ord.filter(x=>{
+    const cx = calidad(x);
+    return eleModo==='suma'
+      ? cx.suma === c.suma
+      : cx.perfectos.length === c.perfectos.length && cx.suma === c.suma;
+  }).length - 1;
+
+  cuerpo.innerHTML = `
+    <div class="ele-cifra">
+      <b>${eleModo==='suma' ? c.suma : c.perfectos.length}</b>
+      <span>${eleModo==='suma' ? `de ${maximo} posibles`
+        : `estadística${c.perfectos.length===1?'':'s'} a 31 de ${ks.length}`}</span>
+    </div>
+    <div class="res-barra" style="margin-bottom:14px;">
+      <i style="width:${eleModo==='suma' ? (c.suma/maximo*100)
+                                         : (c.perfectos.length/ks.length*100)}%"></i>
+    </div>
+    ${fichaHuevo(g)}
+    <p class="mi-cuenta" style="line-height:1.6;">
+      Elegido entre ${lista.length} pokémon que pasan los filtros.
+      ${empatan>0 ? `Hay ${empatan} más con el mismo resultado.` : ''}
+      ${crIgnorar ? `${STAT_ES[crIgnorar]} queda fuera del cálculo.` : ''}
+    </p>
+    ${ord.length>1 ? `
+      <p class="section-label" style="margin:16px 0 8px;">Siguientes</p>
+      ${ord.slice(1,4).map((x,i)=>{
+        const cx = calidad(x);
+        return `<div class="ele-otro">
+          <span class="ele-pos">${i+2}</span>
+          <img src="${SPRITE(x.pid)}" alt="">
+          <span class="ele-nom">${nombreCr(x.pid)}${x.esHuevo?' (huevo)':''}
+            <span class="cr-h-loc">${ubicacionHuevo(x)}</span></span>
+          <span class="ele-n">${eleModo==='suma' ? cx.suma : cx.perfectos.length+'×31'}</span>
+        </div>`;
+      }).join('')}` : ''}`;
+}
+
+function crElegirNatGlobal(){
+  abrirSelector({
+    titulo:'Naturaleza', sub:'Filtra los tres bloques', buscar:true, actual:crNatGlobal,
+    opciones: [{valor:'', nombre:'Cualquiera', detalle:'Sin filtrar'}]
+      .concat(NATURALEZAS.map(n=>({valor:n.slug, nombre:n.es,
+        detalle: n.sube ? `▲ ${STAT_ES[n.sube]} · ▼ ${STAT_ES[n.baja]}` : 'Neutra'}))),
+    alElegir: v=>{ crNatGlobal = v; pintarCrianza(); }
+  });
 }
 
 function crElegirIgnorar(){
