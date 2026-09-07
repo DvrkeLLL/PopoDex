@@ -483,6 +483,15 @@ select:focus,input:focus{border-color:var(--accent);}
   border-radius:var(--r);padding:11px;margin-bottom:9px;}
 .cr-huevo.bueno{border-color:#2E7D6B;}
 .cr-huevo.perfecto{border-color:#1F6B57;box-shadow:0 0 0 1px #1F6B57;}
+.cr-exig{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:12px;}
+.cr-exig-t{font-family:var(--mono);font-size:9px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;}
+.cr-exig-c{
+  font-family:var(--mono);font-size:9px;background:#1F6B57;color:#fff;border:none;
+  border-radius:2px;padding:4px 8px;cursor:pointer;text-transform:uppercase;
+}
+.ss-p{display:flex;align-items:center;justify-content:center;gap:5px;}
+.ss-p i{font-style:normal;font-size:8.5px;opacity:.6;}
 .cr-cols{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
 .cr-col{min-width:0;}
 .cr-col-hd{
@@ -1544,6 +1553,30 @@ select:focus,input:focus{border-color:var(--accent);}
       <div class="sheet-ft">
         <button class="btn btn-s" onclick="hvQuitar()">Quitar todos</button>
         <button class="btn btn-p" onclick="hvListo()">Listo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SELECTOR DE ESTADÍSTICAS ============ -->
+  <div class="overlay" id="ov-selstats">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num">Deben estar en 31</div>
+          <h2 class="sheet-title" style="font-size:17px;">Estadísticas exigidas</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-selstats')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd">
+        <div class="grid3" id="ss-botones"></div>
+        <p class="mi-cuenta" style="margin-top:12px;line-height:1.6;">
+          Se muestran solo los que tengan 31 en todas las marcadas.
+          Si además tienen otras a 31, siguen apareciendo.</p>
+      </div>
+      <div class="sheet-ft">
+        <button class="btn btn-s" onclick="ssQuitar()">Quitar todas</button>
+        <button class="btn btn-p" onclick="ssListo()">Listo</button>
       </div>
     </div>
   </div>
@@ -5971,6 +6004,7 @@ function sgListo(){
 let crianzaDatos = null;
 let crEspecie = '';                       // filtros comunes a los tres bloques
 let crIgnorar = '';                       // estadística que no se tiene en cuenta
+let crExigidas = [];                      // deben estar en 31 sí o sí
 let crPorGenero = false;
 let crNat = {F:'', M:''};                 // naturaleza, independiente por columna
 let crPadreAbierto = null;
@@ -6048,7 +6082,7 @@ async function analizarCrianza(archivo, conservar){
   crianzaDatos = d;
   crPadreAbierto = null;
   if(!conservar){
-    crEspecie = ''; crIgnorar = ''; crPorGenero = false;
+    crEspecie = ''; crIgnorar = ''; crPorGenero = false; crExigidas = [];
     crNat = {F:'', M:''};
     crCfg = {equipo:{huevo:true,mon:true,orden:'pos'},
              caja:{huevo:true,mon:true,orden:'pos'}};
@@ -6072,6 +6106,8 @@ function ubicacionHuevo(h){
 function filtrarBloque(lista, cfg){
   let r = lista.filter(x=>(x.esHuevo ? cfg.huevo : cfg.mon));
   if(crEspecie) r = r.filter(x=>String(x.pid)===crEspecie);
+  /* Deben tener 31 en todas las exigidas; el resto da igual */
+  if(crExigidas.length) r = r.filter(x=>crExigidas.every(k=>x.ivs[k]===31));
   if(cfg.orden!=='stats') return r.slice().sort((a,b)=> (a.caja-b.caja) || (a.pos-b.pos));
   return r.slice().sort((a,b)=>{
     const ca = calidad(a), cb = calidad(b);
@@ -6084,7 +6120,8 @@ function pintarCrianza(){
   const d = crianzaDatos;
   const eq = filtrarBloque(d.equipo, crCfg.equipo);
   const pc = filtrarBloque(d.pc, crCfg.caja);
-  const pd = crEspecie ? d.padres.filter(x=>String(x.pid)===crEspecie) : d.padres;
+  let pd = crEspecie ? d.padres.filter(x=>String(x.pid)===crEspecie) : d.padres;
+  if(crExigidas.length) pd = pd.filter(x=>crExigidas.every(k=>x.ivs[k]===31));
 
   const todos = [...d.padres, ...d.equipo, ...d.pc];
   const ks = statsContadas();
@@ -6108,16 +6145,26 @@ function pintarCrianza(){
         crEspecie ? nombreCr(Number(crEspecie)) : 'Todas las especies'}</span></span>
       <span class="campo-x">›</span></button>
 
-    <div class="dos-filtros" style="margin-bottom:14px;">
+    <div class="tres-filtros" style="margin-bottom:8px;">
       <button class="campo" onclick="crElegirIgnorar()">
         <span class="campo-main"><span class="campo-val ${crIgnorar?'':'sin'}">${
-          crIgnorar ? 'Sin '+STAT_ES[crIgnorar] : 'Las 6 stats'}</span></span>
+          crIgnorar ? 'Sin '+STAT_ES[crIgnorar] : 'Las 6'}</span></span>
+        <span class="campo-x">›</span></button>
+      <button class="campo" onclick="crElegirExigidas()">
+        <span class="campo-main"><span class="campo-val ${crExigidas.length?'':'sin'}">${
+          crExigidas.length ? crExigidas.length+' a 31' : 'Exigir 31'}</span></span>
         <span class="campo-x">›</span></button>
       <button class="campo" onclick="crPorGenero=!crPorGenero;pintarCrianza()">
         <span class="campo-main"><span class="campo-val ${crPorGenero?'':'sin'}">${
-          crPorGenero ? 'Por género' : 'Sin dividir'}</span></span>
+          crPorGenero ? 'Género' : 'Junto'}</span></span>
         <span class="campo-x">${crPorGenero?'✓':'›'}</span></button>
     </div>
+
+    ${crExigidas.length ? `<div class="cr-exig">
+      <span class="cr-exig-t">Con 31 en</span>
+      ${crExigidas.map(k=>`<button class="cr-exig-c" onclick="crQuitarExigida('${k}')"
+        >${STAT_ES[k]} ✕</button>`).join('')}
+    </div>` : ''}
 
     ${crIgnorar ? `<div class="mv-state" style="margin-bottom:12px;">
       ${STAT_ES[crIgnorar]} no cuenta: los marcadores van sobre ${ks.length}
@@ -6218,6 +6265,42 @@ function crElegirNaturaleza(sexo){
         detalle: n.sube ? `▲ ${STAT_ES[n.sube]} · ▼ ${STAT_ES[n.baja]}` : 'Neutra'}))),
     alElegir: v=>{ crNat[sexo] = v; pintarCrianza(); }
   });
+}
+
+let ssSel = [];
+
+function crElegirExigidas(){
+  ssSel = [...crExigidas];
+  pintarBotonesStats();
+  openOverlay('ov-selstats');
+}
+
+function pintarBotonesStats(){
+  const cont = document.getElementById('ss-botones');
+  const total = crianzaDatos
+    ? [...crianzaDatos.padres, ...crianzaDatos.equipo, ...crianzaDatos.pc] : [];
+  cont.innerHTML = STATS6.map(k=>{
+    const n = total.filter(x=>x.ivs[k]===31).length;
+    return `<button class="pill ss-p ${ssSel.includes(k)?'on':''}" data-ex="${k}">
+      ${STAT_ES[k]}<i>${n}</i></button>`;
+  }).join('');
+  cont.querySelectorAll('[data-ex]').forEach(b=>b.addEventListener('click',()=>{
+    const k = b.dataset.ex;
+    ssSel = ssSel.includes(k) ? ssSel.filter(x=>x!==k) : [...ssSel, k];
+    b.classList.toggle('on');
+  }));
+}
+
+function ssQuitar(){ ssSel = []; pintarBotonesStats(); }
+function ssListo(){
+  closeOverlay('ov-selstats');
+  crExigidas = STATS6.filter(k=>ssSel.includes(k));   // orden estable
+  pintarCrianza();
+}
+
+function crQuitarExigida(k){
+  crExigidas = crExigidas.filter(x=>x!==k);
+  pintarCrianza();
 }
 
 function crElegirIgnorar(){
