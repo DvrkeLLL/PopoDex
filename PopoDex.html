@@ -230,23 +230,6 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
 .sttotal{border-top:1px solid var(--border);margin-top:8px;padding-top:8px;}
 .sttotal .stlab,.sttotal .stnum{color:var(--text);font-weight:700;}
 
-.acc{border-top:1px solid var(--border);}
-.acc-hd{
-  width:100%;background:none;border:none;padding:13px 2px;display:flex;justify-content:space-between;
-  align-items:center;cursor:pointer;font-family:var(--body);font-size:12.5px;font-weight:600;color:var(--text);text-align:left;
-}
-.acc-hd .chev{font-family:var(--mono);color:var(--accent);font-size:13px;transition:transform .2s;}
-.acc.open .chev{transform:rotate(90deg);}
-.acc-bd{display:none;padding:0 2px 14px;}
-.acc.open .acc-bd{display:block;}
-
-.eff-grid{display:flex;flex-direction:column;gap:9px;}
-.eff-row{display:flex;gap:6px;align-items:flex-start;}
-.eff-mult{
-  font-family:var(--mono);font-size:10px;font-weight:700;min-width:42px;padding:3px 5px;
-  border-radius:2px;text-align:center;flex-shrink:0;color:#fff;
-}
-.eff-types{display:flex;gap:4px;flex-wrap:wrap;}
 
 .kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;}
 .kv:last-child{border-bottom:none;}
@@ -1308,6 +1291,24 @@ select:focus,input:focus{border-color:var(--accent);}
       </div>
     </div>
     <div class="pad" id="info-body"></div>
+  </div>
+
+  <!-- ============ SECCIÓN DE LA FICHA ============ -->
+  <div class="overlay" id="ov-seccion">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="sc-sub">—</div>
+          <h2 class="sheet-title" id="sc-titulo" style="font-size:17px;">—</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-seccion')">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-bd">
+        <div id="sc-extra"></div>
+        <div id="sc-cuerpo"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ============ EL ELEGIDO ============ -->
@@ -3030,14 +3031,6 @@ function effectiveness(types, tabla){
   return res;
 }
 
-const EFF_ORDER=[
-  {v:4,   lab:'400%', col:'#7E2F4F'},
-  {v:2,   lab:'200%', col:'#C0392B'},
-  {v:1,   lab:'100%', col:'#8A8296'},
-  {v:.5,  lab:'50%',  col:'#2E7D6B'},
-  {v:.25, lab:'25%',  col:'#1F5A66'},
-  {v:0,   lab:'0%',   col:'#3D3A4A'}
-];
 
 async function openDetail(id, lista){
   const m = allMons.find(x=>x.id===id);
@@ -3050,23 +3043,12 @@ async function openDetail(id, lista){
   sheet.innerHTML = `<div class="sheet-bd"><div class="hint">Cargando...</div></div>`;
 
   const tips = tiposDe(m);
-  const eff = effectiveness(tips, tablaPara(genActual()));
   const statsHTML = ['hp','attack','defense','special-attack','special-defense','speed'].map(k=>{
     const v = m.stats[k]??0;
     return `<div class="strow">
       <span class="stlab">${STAT_ES[k]}</span>
       <span class="sttrack"><i class="stfill" style="background:${statColor(v)}" data-w="${Math.min(v,180)/180*100}"></i></span>
       <span class="stnum">${v}</span></div>`;
-  }).join('');
-
-  const tiposAtk = tiposValidos(genActual());
-  const effHTML = EFF_ORDER.map(o=>{
-    const list = tiposAtk.filter(t=>eff[t]===o.v);
-    if(!list.length) return '';
-    return `<div class="eff-row">
-      <span class="eff-mult" style="background:${o.col}">${o.lab}</span>
-      <span class="eff-types">${list.map(t=>`<span class="tchip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</span>
-    </div>`;
   }).join('');
 
   sheet.innerHTML = `
@@ -3096,29 +3078,34 @@ async function openDetail(id, lista){
         <span class="stnum">${m.total}</span>
       </div>
 
-      <div class="acc" id="acc-loc">
-        <button class="acc-hd" onclick="toggleAcc('acc-loc',()=>loadLocations(${m.id}))">
-          Localizaciones <span class="chev">›</span></button>
-        <div class="acc-bd"><div class="hint">Cargando...</div></div>
-      </div>
+      <button class="util" onclick="abrirSeccion('loc',${m.id})">
+        <svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/>
+        <circle cx="12" cy="10" r="2.5"/></svg>
+        <span class="util-main"><span class="util-t">Localizaciones</span>
+        <span class="util-s">Dónde encontrarlo</span></span>
+        <span class="campo-x">›</span>
+      </button>
 
-      <div class="acc" id="acc-mov">
-        <button class="acc-hd" onclick="toggleAcc('acc-mov',()=>loadMoves(${m.id}))">
-          Movimientos aprendidos <span class="chev">›</span></button>
-        <div class="acc-bd"><div class="hint">Cargando...</div></div>
-      </div>
+      <button class="util" onclick="abrirSeccion('mov',${m.id})">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        <span class="util-main"><span class="util-t">Movimientos</span>
+        <span class="util-s">Por nivel, MT, huevo y tutor</span></span>
+        <span class="campo-x">›</span>
+      </button>
 
-      <div class="acc" id="acc-evo">
-        <button class="acc-hd" onclick="toggleAcc('acc-evo',()=>loadEvolutions(${m.id}))">
-          Evoluciones <span class="chev">›</span></button>
-        <div class="acc-bd"><div class="hint">Cargando...</div></div>
-      </div>
+      <button class="util" onclick="abrirSeccion('evo',${m.id})">
+        <svg viewBox="0 0 24 24"><path d="M4 8h11l-3-3M20 16H9l3 3"/></svg>
+        <span class="util-main"><span class="util-t">Evoluciones</span>
+        <span class="util-s">Su línea evolutiva y condiciones</span></span>
+        <span class="campo-x">›</span>
+      </button>
 
-      <div class="acc" id="acc-deb">
-        <button class="acc-hd" onclick="toggleAcc('acc-deb')">
-          Debilidades <span class="chev">›</span></button>
-        <div class="acc-bd"><div class="eff-grid">${effHTML}</div></div>
-      </div>
+      <button class="util" onclick="abrirSeccion('deb',${m.id})">
+        <svg viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 4-3 6.5-7 8-4-1.5-7-4-7-8V7z"/></svg>
+        <span class="util-main"><span class="util-t">Debilidades</span>
+        <span class="util-s">Qué le hace más y menos daño</span></span>
+        <span class="campo-x">›</span>
+      </button>
     </div>`;
 
   const bd = sheet.querySelector('.sheet-bd');
@@ -3128,19 +3115,74 @@ async function openDetail(id, lista){
   },60));
 }
 
-function toggleAcc(id, loader){
-  const acc = document.getElementById(id);
-  const wasOpen = acc.classList.contains('open');
-  acc.classList.toggle('open');
-  if(!wasOpen && loader && !acc.dataset.loaded){
-    acc.dataset.loaded='1';
-    loader();
-  }
+/* Cada sección de la ficha se abre en su propio panel */
+const SECCIONES = {
+  loc: {t:'Localizaciones', s:'Dónde encontrarlo'},
+  mov: {t:'Movimientos',    s:'Los que puede aprender'},
+  evo: {t:'Evoluciones',    s:'Su línea evolutiva'},
+  deb: {t:'Debilidades',    s:'Efectividad contra él'}
+};
+
+function abrirSeccion(cual, id){
+  const mon = allMons.find(x=>x.id===id) || {};
+  const info = SECCIONES[cual];
+  document.getElementById('sc-titulo').textContent = info.t;
+  document.getElementById('sc-sub').textContent = (mon.es || '') + ' · ' + info.s;
+  document.getElementById('sc-extra').innerHTML = '';
+  document.getElementById('sc-cuerpo').innerHTML = '<div class="hint">Cargando...</div>';
+  openOverlay('ov-seccion');
+
+  if(cual==='loc') loadLocations(id);
+  else if(cual==='mov') loadMoves(id);
+  else if(cual==='evo') loadEvolutions(id);
+  else pintarDebilidades(id);
+}
+
+function pintarDebilidades(id){
+  const mon = allMons.find(x=>x.id===id);
+  if(!mon) return;
+  const gen = genActual();
+  const tips = tiposEnGen(mon, gen);
+  const tb = tablaPara(gen);
+  const validos = tiposValidos(gen);
+
+  const grupos = [
+    {v:4,    lab:'x4',    col:'#B34A3A', txt:'Daño cuádruple'},
+    {v:2,    lab:'x2',    col:'#C8683A', txt:'Daño doble'},
+    {v:1,    lab:'x1',    col:'#8A8296', txt:'Daño normal'},
+    {v:0.5,  lab:'x0.5',  col:'#3E9B6C', txt:'Lo resiste'},
+    {v:0.25, lab:'x0.25', col:'#2E7D6B', txt:'Lo resiste mucho'},
+    {v:0,    lab:'x0',    col:'#3D3A4A', txt:'Inmune'}
+  ];
+  const efe = {};
+  validos.forEach(t=>{ efe[t] = tips.reduce((n,d)=>n*(tb[t]?.[d] ?? 1), 1); });
+
+  document.getElementById('sc-extra').innerHTML = `
+    <div class="det-types" style="margin-bottom:14px;justify-content:center;">
+      ${tips.map(t=>`<span class="tchip" style="background:${TCOLOR[t]};font-size:10px;
+        padding:4px 11px;">${TES[t]}</span>`).join('')}
+    </div>
+    ${juegoActual ? `<div class="mv-state" style="margin-bottom:12px;">
+      Tabla de ${nombreDeJuego(juegoActual)}.</div>` : ''}`;
+
+  document.getElementById('sc-cuerpo').innerHTML = grupos.map(g=>{
+    const lista = validos.filter(t=>efe[t]===g.v);
+    if(!lista.length) return '';
+    return `
+      <div class="cb-grupo">
+        <div class="cb-hd">
+          <span class="cb-mult" style="background:${g.col}">${g.lab}</span>
+          <span class="cb-n">${g.txt}</span>
+        </div>
+        <div class="cb-tipos">${lista.map(t=>
+          `<span class="cb-chip" style="background:${TCOLOR[t]}">${TES[t]}</span>`).join('')}</div>
+      </div>`;
+  }).join('');
 }
 
 /* --- Localizaciones --- */
 async function loadLocations(id){
-  const bd = document.querySelector('#acc-loc .acc-bd');
+  const bd = document.getElementById('sc-cuerpo');
   try{
     await Promise.all([cargarLugares(), cargarJuegos()]);
     const ckLoc = 'loc:'+id;
@@ -3179,8 +3221,10 @@ async function loadLocations(id){
 const CLASE_ES = {physical:'Físico', special:'Especial', status:'Estado'};
 const CLASE_COL = {physical:'#C0392B', special:'#2E6FA3', status:'#7C7593'};
 
+let dexMovs = [], dexMetodo = 'level-up', dexTexto = '';
+
 async function loadMoves(id){
-  const bd = document.querySelector('#acc-mov .acc-bd');
+  const bd = document.getElementById('sc-cuerpo');
   try{
     const d = await movsDe(id, grupoActual());
     if(!d.pokemonmove.length){
@@ -3189,58 +3233,73 @@ async function loadMoves(id){
       return;
     }
     if(juegoActual) await cargarCambiosMov();
-    const genJ = genActual();
-    const lista = armarMovs(d, juegoActual ? genJ : 9);
+    dexMovs = armarMovs(d, juegoActual ? genActual() : 9);
+    dexTexto = '';
 
-    const LABELS={'level-up':'Nivel','egg':'Huevo','machine':'MT/MO','tutor':'Tutor'};
-    const groups = {};
-    Object.keys(LABELS).forEach(k=>{
-      groups[k] = lista.filter(m=>m.metodos[k]);
-      groups[k].sort((a,b)=> k==='level-up'
-        ? (a.nivel??999)-(b.nivel??999) || a.es.localeCompare(b.es)
-        : a.es.localeCompare(b.es));
+    const disponibles = Object.keys(MET_ES).filter(k=>dexMovs.some(m=>m.metodos[k]));
+    if(!disponibles.includes(dexMetodo)) dexMetodo = disponibles[0] || 'level-up';
+
+    document.getElementById('sc-extra').innerHTML = `
+      <div class="buscador" style="margin:0 0 10px;">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        <input type="text" id="dexmov-busca" placeholder="Buscar movimiento..." autocomplete="off">
+      </div>
+      <div class="pick-tabs" id="dexmov-tabs">
+        ${disponibles.map(k=>{
+          const n = dexMovs.filter(m=>m.metodos[k]).length;
+          return `<button class="pick-tab ${k===dexMetodo?'on':''}"
+            onclick="dexSetMetodo('${k}')">${MET_ES[k]} (${n})</button>`;
+        }).join('')}
+      </div>
+      <div class="mi-cab"><span class="a">Movimiento</span><span class="b">Pot</span>
+        <span class="b">Prec</span><span class="b">PP</span></div>
+      ${juegoActual && d.filtrado ? `<div class="mv-state" style="margin-bottom:6px;">
+        Movimientos de ${nombreDeJuego(juegoActual)}. En morado, los valores propios
+        de ese juego.</div>` : ''}`;
+
+    document.getElementById('dexmov-busca').addEventListener('input', e=>{
+      dexTexto = e.target.value; pintarDexMovs();
     });
-    const avail = Object.keys(groups).filter(k=>groups[k].length);
-    if(!avail.length){ bd.innerHTML='<div class="hint">Sin datos de movimientos.</div>'; return; }
-
-    bd.innerHTML = `
-      <div class="mv-tabs">${avail.map((k,i)=>
-        `<button class="mv-tab ${i===0?'on':''}" data-g="${k}">${LABELS[k]} (${groups[k].length})</button>`).join('')}
-      </div>
-      <div class="mv-head">
-        <span class="mv-h-nm">Movimiento</span>
-        <span class="mv-h-n">Pot</span><span class="mv-h-n">Prec</span><span class="mv-h-n">PP</span>
-      </div>
-      <div id="mv-list"></div>
-      ${juegoActual && d.filtrado ? `<div class="hint" style="padding-top:9px;font-size:9.5px;">
-        Movimientos de ${nombreDeJuego(juegoActual)}. En morado, los valores propios de ese juego.</div>`
-        : juegoActual ? `<div class="hint" style="padding-top:9px;font-size:9.5px;">
-        No se pudo filtrar por juego: se muestran todos los movimientos.</div>` : ''}`;
-
-    const paint = k=>{
-      document.getElementById('mv-list').innerHTML = groups[k].map(m=>`
-        <div class="mv-row2">
-          <div class="mv-main">
-            <div class="mv-nm">${m.es}</div>
-            <div class="mv-meta">
-              <span class="tchip" style="background:${TCOLOR[m.tipo]}">${TES[m.tipo]||m.tipo}</span>
-              <span class="mv-cls" style="color:${CLASE_COL[m.clase]}">${CLASE_ES[m.clase]}</span>
-              ${k==='level-up' ? `<span class="mv-lvl">${m.nivel>0?'Nv. '+m.nivel:'—'}</span>` : ''}
-            </div>
-          </div>
-          <span class="mv-n ${m.cambiado?'hist':''}">${m.pot ?? '—'}</span>
-          <span class="mv-n ${m.cambiado?'hist':''}">${m.prec ?? '—'}</span>
-          <span class="mv-n ${m.cambiado?'hist':''}">${m.pp ?? '—'}</span>
-        </div>`).join('');
-    };
-    paint(avail[0]);
-    bd.querySelectorAll('.mv-tab').forEach(t=>t.addEventListener('click',()=>{
-      bd.querySelectorAll('.mv-tab').forEach(x=>x.classList.remove('on'));
-      t.classList.add('on'); paint(t.dataset.g);
-    }));
+    pintarDexMovs();
   }catch(e){
-    bd.innerHTML=`<div class="hint">No se pudieron cargar los movimientos.<br>${e.message||''}</div>`;
+    bd.innerHTML = `<div class="hint">No se pudieron cargar los movimientos.<br>${e.message||''}</div>`;
   }
+}
+
+function dexSetMetodo(k){
+  dexMetodo = k;
+  document.querySelectorAll('#dexmov-tabs .pick-tab').forEach(b=>
+    b.classList.toggle('on', b.textContent.trim().startsWith(MET_ES[k])));
+  pintarDexMovs();
+}
+
+function pintarDexMovs(){
+  const cont = document.getElementById('sc-cuerpo');
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const t = norm(dexTexto.trim());
+
+  let lista = t ? dexMovs.filter(m=>norm(m.es).includes(t))
+                : dexMovs.filter(m=>m.metodos[dexMetodo]);
+  lista.sort((a,b)=>
+    (dexMetodo==='level-up' && !t) ? ((a.nivel??999)-(b.nivel??999) || a.es.localeCompare(b.es))
+                                   : a.es.localeCompare(b.es));
+
+  if(!lista.length){ cont.innerHTML='<div class="hint" style="padding:16px;">Sin resultados.</div>'; return; }
+
+  cont.innerHTML = lista.map(m=>`
+    <div class="mi-fila" style="cursor:default;">
+      <div class="mi-main">
+        <div class="mi-nom">${m.es}</div>
+        <div class="mi-sub">
+          <span class="tchip" style="background:${TCOLOR[m.tipo]}">${TES[m.tipo]}</span>
+          <span class="mv-cls" style="color:${CLASE_COL[m.clase]}">${CLASE_ES[m.clase]}</span>
+          ${m.nivel && dexMetodo==='level-up' && !t ? `<span class="mv-h-dat">Nv. ${m.nivel}</span>`:''}
+        </div>
+      </div>
+      <span class="mi-n ${m.cambiado?'hist':''}">${m.pot ?? '—'}</span>
+      <span class="mi-n ${m.cambiado?'hist':''}">${m.prec ?? '—'}</span>
+      <span class="mi-n ${m.cambiado?'hist':''}">${m.pp ?? '—'}</span>
+    </div>`).join('');
 }
 
 /* --- Evoluciones --- */
@@ -3296,7 +3355,7 @@ function evoCondition(d){
 }
 
 async function loadEvolutions(id){
-  const bd = document.querySelector('#acc-evo .acc-bd');
+  const bd = document.getElementById('sc-cuerpo');
   try{
     const sp = await fetchJSON(`${API}/pokemon-species/${id}`);
     const chain = await fetchJSON(sp.evolution_chain.url);
