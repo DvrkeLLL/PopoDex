@@ -459,6 +459,18 @@ select:focus,input:focus{border-color:var(--accent);}
   0%,100%{box-shadow:0 0 0 0 rgba(108,92,231,.55);}
   50%{box-shadow:0 0 0 7px rgba(108,92,231,0);}
 }
+.en-fila{display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;
+  border-bottom:1px solid var(--border);}
+.en-fila:last-child{border-bottom:none;}
+.en-fila:active{background:var(--bg-screen);}
+.en-fila img{width:42px;height:42px;image-rendering:pixelated;flex-shrink:0;}
+.en-main{flex:1;min-width:0;}
+.en-nom{font-size:12.5px;font-weight:600;}
+.en-nv{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:1px;}
+.en-rara{width:62px;flex-shrink:0;text-align:right;}
+.en-rara span{font-family:var(--mono);font-size:11px;font-weight:700;display:block;}
+.en-rara i{display:block;height:3px;background:var(--accent);border-radius:2px;
+  margin-top:3px;margin-left:auto;}
 .cr-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;
   margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
 .cr-ent{font-size:14px;font-weight:700;}
@@ -5774,6 +5786,13 @@ function infoMenu(){
       <span class="util-s">Efectividades atacando y defendiendo, por juego</span></span>
       <span class="campo-x">›</span>
     </button>
+    <button class="util" onclick="infoIr('encuentros')">
+      <svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/>
+      <circle cx="12" cy="10" r="2.5"/></svg>
+      <span class="util-main"><span class="util-t">Encuentros salvajes</span>
+      <span class="util-s">Qué aparece en cada zona, juego por juego</span></span>
+      <span class="campo-x">›</span>
+    </button>
     <button class="util" onclick="infoIr('crianza')">
       <svg viewBox="0 0 24 24"><ellipse cx="12" cy="14" rx="7" ry="8"/>
       <path d="M8 14c0-3 1.6-5.5 4-6.5"/></svg>
@@ -5816,6 +5835,7 @@ function infoIr(v){
              simulador:['Simulador','Cobertura de ataque'],
              esfuerzo:['Puntos de esfuerzo','Qué otorga cada uno'],
              crianza:['Crianza','Huevos de tu partida'],
+             encuentros:['Encuentros','Pokémon salvajes por zona'],
              mecanicas:['Mecánicas','Por generación'], formulas:['Fórmulas','Cómo se calcula'],
              acerca:['Acerca de','PopoDex']};
   document.getElementById('info-titulo').textContent = T[v][0];
@@ -5825,6 +5845,7 @@ function infoIr(v){
   else if(v==='simulador') panelSimulador();
   else if(v==='esfuerzo') panelEsfuerzo();
   else if(v==='crianza') panelCrianza();
+  else if(v==='encuentros') panelEncuentros();
   else if(v==='tipos') panelTipos();
   else if(v==='mecanicas') panelMecanicas();
   else if(v==='formulas') panelFormulas();
@@ -6087,6 +6108,251 @@ function sgQuitar(){ sgSel = []; pintarBotonesGens(); }
 function sgListo(){
   closeOverlay('ov-selgens');
   if(sgCb) sgCb([...sgSel].sort((a,b)=>a-b));
+}
+
+/* ---------- Encuentros salvajes ---------- */
+let enJuego = '';
+let enZonas = null;          // zonas del juego elegido
+let enZona = null;           // zona abierta
+let enTexto = '';
+let enGrupo = '';            // filtro por tipo de zona
+
+const GRUPOS_ZONA = [
+  {k:'ruta',   es:'Rutas',              prueba: n=>/^ruta\b/i.test(n)},
+  {k:'pueblo', es:'Ciudades y pueblos', prueba: n=>/^(ciudad|pueblo|aldea|villa|arrecípolis|meseta)/i.test(n)},
+  {k:'cueva',  es:'Cuevas y montes',    prueba: n=>/^(cueva|caverna|monte|túnel|gruta|cañón|pozo)/i.test(n)},
+  {k:'agua',   es:'Mar y ríos',         prueba: n=>/^(mar|isla|islas|lago|río|playa|cabo|cataratas|bahía)/i.test(n)},
+  {k:'otro',   es:'Otros lugares',      prueba: ()=>true}
+];
+const grupoDeZona = n => (GRUPOS_ZONA.find(g=>g.prueba(n)) || GRUPOS_ZONA[4]).k;
+
+/* Probabilidad y método vienen de la propia consulta */
+const METODO_ES = {
+  walk:'Hierba alta o cueva', surf:'Surf', 'old-rod':'Caña vieja',
+  'good-rod':'Caña buena', 'super-rod':'Supercaña', 'rock-smash':'Golpe Roca',
+  headbutt:'Golpe Cabeza', 'dark-grass':'Hierba oscura', 'grass-spots':'Matorrales',
+  'cave-spots':'Polvo de cueva', 'bridge-spots':'Sombras en puentes',
+  'super-rod-spots':'Burbujas', 'surf-spots':'Burbujas al surfear',
+  'yellow-flowers':'Flores amarillas', 'purple-flowers':'Flores moradas',
+  'red-flowers':'Flores rojas', 'rough-terrain':'Terreno agreste',
+  'gift':'Regalo', 'only-one':'Encuentro único', seaweed:'Algas'
+};
+const nombreMetodo = k => METODO_ES[k] || (k||'').replace(/-/g,' ');
+
+async function idDeVersion(slug){
+  const ck = 'vid:'+slug;
+  const g = Cache.get(ck);
+  if(g) return g;
+  const d = await gql(`{ version(where:{name:{_eq:"${slug}"}}) { id } }`);
+  if(!d.version.length) throw new Error('Ese juego no tiene datos de encuentros');
+  Cache.set(ck, d.version[0].id);
+  return d.version[0].id;
+}
+
+async function cargarZonas(slug){
+  const ck = 'zonas:'+slug;
+  const g = Cache.get(ck);
+  if(g) return g;
+  const vid = await idDeVersion(slug);
+  const d = await gql(`{
+    encounter(where:{version_id:{_eq:${vid}}},
+              distinct_on:[location_area_id], order_by:[{location_area_id:asc}]) {
+      location_area_id
+      locationarea { name location { name
+        locationnames(where:{language_id:{_in:[${ES},9]}}) { name language_id } } }
+    }
+  }`);
+  const zonas = d.encounter.map(e=>{
+    const la = e.locationarea, loc = la.location || {};
+    const nombres = loc.locationnames || [];
+    const es = (nombres.find(n=>n.language_id===ES)||{}).name || '';
+    const en = (nombres.find(n=>n.language_id===9)||{}).name || '';
+    const nombre = window.PopoTrad.traducirLugar(la.name, es, en, loc.name);
+    return {id:e.location_area_id, slug:la.name, nombre};
+  }).sort((a,b)=>a.nombre.localeCompare(b.nombre, 'es', {numeric:true}));
+  Cache.set(ck, zonas);
+  return zonas;
+}
+
+async function cargarEncuentros(slug, areaId){
+  const ck = 'enc:'+slug+':'+areaId;
+  const g = Cache.get(ck);
+  if(g) return g;
+  const vid = await idDeVersion(slug);
+  const d = await gql(`{
+    encounter(where:{version_id:{_eq:${vid}}, location_area_id:{_eq:${areaId}}}) {
+      pokemon_id min_level max_level
+      encounterslot { rarity encountermethod { name } }
+    }
+  }`);
+  /* Se agrupa por método y por pokémon, sumando probabilidades */
+  const porMetodo = {};
+  d.encounter.forEach(e=>{
+    const met = e.encounterslot?.encountermethod?.name || 'walk';
+    porMetodo[met] = porMetodo[met] || {};
+    const k = e.pokemon_id;
+    const p = porMetodo[met][k] || {pid:e.pokemon_id, min:99, max:0, rareza:0};
+    p.min = Math.min(p.min, e.min_level);
+    p.max = Math.max(p.max, e.max_level);
+    p.rareza += (e.encounterslot?.rarity || 0);
+    porMetodo[met][k] = p;
+  });
+  const r = Object.entries(porMetodo).map(([met, mons])=>({
+    metodo: met,
+    mons: Object.values(mons).sort((a,b)=>b.rareza-a.rareza || a.pid-b.pid)
+  })).sort((a,b)=>a.metodo.localeCompare(b.metodo));
+  Cache.set(ck, r);
+  return r;
+}
+
+async function panelEncuentros(){
+  const body = document.getElementById('info-body');
+
+  if(!enJuego){
+    body.innerHTML = `
+      <p class="mi-cuenta" style="line-height:1.6;margin-bottom:12px;">
+        Elige un juego para ver sus zonas y qué pokémon salvajes aparecen en cada una.</p>
+      <div class="equipos-grid">
+        ${JUEGOS.map(j=>`
+          <button class="eq-t" onclick="enElegirJuego('${j.slug}')">
+            <span class="eq-t-top">
+              <span class="eq-t-gen" style="background:${GEN_COLOR[j.gen]}"></span>
+              <span class="eq-t-cont">${j.gen}.ª</span>
+            </span>
+            <span class="eq-t-sprites" style="grid-template-columns:1fr;grid-template-rows:1fr;">
+              <span class="eq-t-celda"><img src="${spriteJuego(j.slug)}" alt="" loading="lazy"></span>
+            </span>
+            <span class="eq-t-pie"><span class="eq-t-nom">${j.es}</span></span>
+          </button>`).join('')}
+      </div>`;
+    return;
+  }
+
+  if(enZona) return pintarZona();
+
+  body.innerHTML = '<div class="hint">Cargando zonas...</div>';
+  try{ enZonas = await cargarZonas(enJuego); }
+  catch(e){
+    body.innerHTML = `<div class="hint">No se pudieron cargar las zonas.<br>${e.message||''}</div>
+      <button class="btn btn-s" style="width:100%;margin-top:9px;" onclick="panelEncuentros()">Reintentar</button>
+      <button class="btn btn-s" style="width:100%;margin-top:8px;" onclick="enJuego='';panelEncuentros()">Cambiar de juego</button>`;
+    return;
+  }
+  pintarZonas();
+}
+
+function enElegirJuego(slug){
+  enJuego = slug; enZona = null; enTexto = ''; enGrupo = '';
+  panelEncuentros();
+}
+
+function pintarZonas(){
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const t = norm(enTexto.trim());
+  let lista = enZonas.filter(z=>{
+    if(enGrupo && grupoDeZona(z.nombre)!==enGrupo) return false;
+    if(t && !norm(z.nombre).includes(t)) return false;
+    return true;
+  });
+
+  const cuenta = {};
+  enZonas.forEach(z=>{ const k=grupoDeZona(z.nombre); cuenta[k]=(cuenta[k]||0)+1; });
+
+  document.getElementById('info-body').innerHTML = `
+    <button class="campo" style="width:100%;margin-bottom:10px;" onclick="enJuego='';panelEncuentros()">
+      <img class="jm" src="${spriteJuego(enJuego)}" alt="">
+      <span class="campo-main"><span class="campo-val">${nombreDeJuego(enJuego)}</span>
+      <span class="campo-sub">${enZonas.length} zonas con encuentros</span></span>
+      <span class="campo-x">⇄</span></button>
+
+    <div class="buscador" style="margin:0 0 10px;">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <input type="text" id="en-busca" placeholder="Buscar zona..." autocomplete="off" value="${enTexto}">
+    </div>
+
+    <div class="chips" style="justify-content:center;margin-bottom:12px;">
+      <button class="chip ${enGrupo===''?'on':''}" onclick="enSetGrupo('')"
+        style="background:var(--accent)">Todas</button>
+      ${GRUPOS_ZONA.filter(g=>cuenta[g.k]).map(g=>
+        `<button class="chip ${enGrupo===g.k?'on':''}" onclick="enSetGrupo('${g.k}')"
+          style="background:var(--muted)">${g.es} ${cuenta[g.k]}</button>`).join('')}
+    </div>
+
+    <p class="mi-cuenta">${lista.length} zona${lista.length===1?'':'s'}</p>
+    <div class="mi-lista">
+      ${lista.length ? lista.map(z=>`
+        <div class="mi-fila" onclick="enAbrirZona(${z.id})">
+          <div class="mi-main"><div class="mi-nom">${z.nombre}</div></div>
+          <span class="campo-x">›</span>
+        </div>`).join('')
+        : '<div class="hint" style="padding:20px;text-align:center;">Ninguna coincide.</div>'}
+    </div>`;
+
+  document.getElementById('en-busca').addEventListener('input', e=>{
+    enTexto = e.target.value; pintarZonas();
+  });
+}
+
+function enSetGrupo(k){ enGrupo = k; pintarZonas(); }
+
+async function enAbrirZona(id){
+  enZona = enZonas.find(z=>z.id===id);
+  const body = document.getElementById('info-body');
+  body.innerHTML = '<div class="hint">Cargando encuentros...</div>';
+  try{ enZona.datos = await cargarEncuentros(enJuego, id); }
+  catch(e){
+    body.innerHTML = `<div class="hint">No se pudieron cargar.<br>${e.message||''}</div>
+      <button class="btn btn-s" style="width:100%;margin-top:9px;"
+        onclick="enZona=null;panelEncuentros()">Volver</button>`;
+    return;
+  }
+  pintarZona();
+}
+
+function pintarZona(){
+  const z = enZona;
+  const total = z.datos.reduce((n,g)=>n+g.mons.length, 0);
+  document.getElementById('info-body').innerHTML = `
+    <button class="btn btn-s" style="width:100%;margin-bottom:12px;"
+      onclick="enZona=null;panelEncuentros()">‹ Volver a las zonas</button>
+
+    <div class="cr-cab">
+      <div>
+        <div class="cr-ent">${z.nombre}</div>
+        <div class="mi-cuenta" style="margin:2px 0 0;">${nombreDeJuego(enJuego)} ·
+          ${total} encuentro${total===1?'':'s'}</div>
+      </div>
+      <img class="jm" src="${spriteJuego(enJuego)}" alt="">
+    </div>
+
+    ${!z.datos.length
+      ? '<div class="hint" style="padding:26px;text-align:center;">Sin encuentros registrados.</div>'
+      : z.datos.map(g=>{
+        const suma = g.mons.reduce((n,m)=>n+m.rareza, 0) || 1;
+        return `
+          <div class="cr-frame">
+            <div class="cr-frame-hd">
+              <span class="cr-frame-t">${nombreMetodo(g.metodo)}</span>
+              <span class="cr-frame-n">${g.mons.length}</span>
+            </div>
+            ${g.mons.map(m=>{
+              const mon = allMons.find(x=>x.id===m.pid) || {};
+              const pc = Math.round(m.rareza/suma*100);
+              return `
+                <div class="en-fila" onclick="openDetail(${m.pid})">
+                  <img src="${SPRITE(m.pid)}" alt="" loading="lazy">
+                  <div class="en-main">
+                    <div class="en-nom">${mon.es || '#'+m.pid}</div>
+                    <div class="en-nv">Nv. ${m.min===m.max ? m.min : m.min+'–'+m.max}</div>
+                  </div>
+                  <div class="en-rara">
+                    <span>${pc}%</span>
+                    <i style="width:${Math.min(pc,100)}%"></i>
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>`;
+      }).join('')}`;
 }
 
 /* ---------- Crianza ---------- */
