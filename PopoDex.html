@@ -459,6 +459,31 @@ select:focus,input:focus{border-color:var(--accent);}
   0%,100%{box-shadow:0 0 0 0 rgba(108,92,231,.55);}
   50%{box-shadow:0 0 0 7px rgba(108,92,231,0);}
 }
+/* Mapa de zonas */
+.mapa-caja{position:relative;background:var(--bg-screen);border:1px solid var(--border);
+  border-radius:var(--r);height:300px;overflow:hidden;margin-bottom:9px;}
+.mapa-svg{width:100%;height:100%;display:block;touch-action:none;}
+.mc{cursor:pointer;}
+.mb{stroke:var(--bg-void);stroke-width:.09;stroke-linecap:square;}
+.mm{fill:none;stroke:var(--text);stroke-width:.14;pointer-events:none;}
+.mh{fill:#fff;opacity:.9;pointer-events:none;}
+.mapa-globo{
+  position:absolute;pointer-events:none;z-index:5;opacity:0;transition:opacity .12s;
+  background:var(--text);color:#fff;border-radius:var(--r);padding:6px 9px;
+  font-family:var(--mono);font-size:9.5px;line-height:1.45;white-space:nowrap;
+  transform:translate(-50%,-125%);box-shadow:0 3px 10px rgba(34,31,51,.3);
+}
+.mapa-globo.ver{opacity:1;}
+.mapa-globo b{font-family:var(--body);font-size:11px;font-weight:600;display:block;}
+.mapa-globo i{font-style:normal;color:var(--accent-dim);font-size:8.5px;}
+.mapa-zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:5px;}
+.mapa-zoom button{width:30px;height:30px;border:1px solid var(--border);background:#fff;
+  border-radius:var(--r);cursor:pointer;font-size:15px;font-weight:600;
+  color:var(--text);line-height:1;padding:0;}
+.mapa-leyenda{display:flex;flex-wrap:wrap;gap:4px 10px;margin-bottom:9px;}
+.mapa-leyenda span{display:flex;align-items:center;gap:5px;
+  font-family:var(--mono);font-size:8.5px;color:var(--muted);}
+.mapa-leyenda i{width:9px;height:9px;border-radius:2px;display:block;}
 .en-fila{display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;
   border-bottom:1px solid var(--border);}
 .en-fila:last-child{border-bottom:none;}
@@ -6111,11 +6136,70 @@ function sgListo(){
 }
 
 /* ---------- Encuentros salvajes ---------- */
+/* Cuadrícula de Kanto: cada casilla lista las zonas que hay en ella.
+   Las conexiones no se declaran: si dos casillas se tocan, conectan. */
+const MAPA_KANTO = [
+  [[], [], [], [], [], [], [], [], [], [], [], [], ["Ruta 24"], ["Ruta 25"], ["Ruta 25"], [], []],
+  [[], [], [], [], [], [], [], [], [], [], [], [], ["Ruta 24"], [], [], [], []],
+  [["Ruta 23", "Calle Victoria"], [], [], [], [], [], ["Ruta 4"], ["Ruta 4", "Mt. Moon"], ["Ruta 4"], ["Ruta 4"], ["Ruta 4"], ["Ruta 4"], ["Ciudad Celeste"], ["Ruta 9"], ["Ruta 9"], ["Ruta 9"], ["Ruta 10", "Túnel Roca"]],
+  [["Ruta 23"], [], ["Ciudad Plateada"], ["Ruta 3"], ["Ruta 3"], ["Ruta 3"], ["Ruta 3"], [], [], [], [], [], [], [], [], [], ["Ruta 10", "Central Energía"]],
+  [["Ruta 23"], [], ["Ruta 2", "Cueva Diglett"], [], [], [], [], [], [], [], [], [], [], [], [], [], ["Ruta 10"]],
+  [["Ruta 23"], [], ["Ruta 2", "Bosque verde"], [], [], ["Ruta 16"], ["Ruta 16"], ["Ruta 16"], ["Ruta 16"], ["Ciudad Azulona"], ["Ruta 7"], ["Ruta 7"], ["Ciudad Azafrán"], ["Ruta 8"], ["Ruta 8"], ["Ruta 8"], ["Pueblo Lavanda", "Torre Pokemon"]],
+  [["Ruta 23"], [], ["Ruta 2"], [], [], ["Ruta 17"], [], [], [], [], [], [], ["Ruta 5"], [], [], [], ["Ruta 12"]],
+  [["Ruta 22"], ["Ruta 22"], ["Ciudad verde"], [], [], ["Ruta 17"], [], [], [], [], [], [], ["Ruta 5"], [], [], [], ["Ruta 12"]],
+  [[], [], ["Ruta 1"], [], [], ["Ruta 17"], [], [], [], [], [], [], ["Ciudad Carmín"], ["Ruta 11", "Cueva Diglett"], ["Ruta 11"], ["Ruta 11"], ["Ruta 12"]],
+  [[], [], ["Ruta 1"], [], [], ["Ruta 17"], [], [], [], [], [], [], [], [], [], [], ["Ruta 12"]],
+  [[], [], ["Pueblo paleta"], [], [], ["Ruta 17"], [], [], [], [], [], [], [], ["Ruta 14"], ["Ruta 13"], ["Ruta 13"], ["Ruta 12"]],
+  [[], [], ["Ruta 21"], [], [], ["Ruta 18"], ["Ruta 18"], ["Ruta 18"], ["Ruta 18"], ["Ruta 18"], ["Ciudad Fucsia", "Zona Safari"], ["Ruta 15"], ["Ruta 15"], ["Ruta 14"], [], [], []],
+  [[], [], ["Ruta 21"], [], [], [], [], [], [], [], ["Ruta 19"], [], [], [], [], [], []],
+  [[], [], ["Isla Canela", "Mansión Pokemon"], ["Ruta 20"], ["Ruta 20"], ["Ruta 20"], ["Ruta 20", "Islas Espuma"], ["Ruta 20"], ["Ruta 20"], ["Ruta 20"], ["Ruta 19"], [], [], [], [], [], []]
+];
+
+/* El nombre de la cuadrícula no siempre coincide con el de PokeAPI */
+const ALIAS_ZONA = {
+  'Mt. Moon':'Monte Moon', 'Bosque verde':'Bosque Verde',
+  'Ciudad verde':'Ciudad Verde', 'Pueblo paleta':'Pueblo Paleta',
+  'Central Energía':'Central de Energía', 'Torre Pokemon':'Torre Pokémon',
+  'Mansión Pokemon':'Mansión Pokémon', 'Cueva Diglett':'Cueva Diglett',
+  'Calle Victoria':'Calle Victoria', 'Islas Espuma':'Islas Espuma'
+};
+
+const MAPAS = { kanto: {rejilla:MAPA_KANTO, juegos:['red','blue','yellow','firered','leafgreen']} };
+const mapaDelJuego = slug =>
+  Object.values(MAPAS).find(m=>m.juegos.includes(slug)) || null;
+
+const TIPOS_ZONA = {
+  ruta:   {es:'Ruta',            col:'#3E9B6C'},
+  ciudad: {es:'Ciudad o pueblo', col:'#6C5CE7'},
+  cueva:  {es:'Cueva o monte',   col:'#9E8A2F'},
+  agua:   {es:'Isla o mar',      col:'#4A6FA5'},
+  lugar:  {es:'Lugar especial',  col:'#D96BA0'}
+};
+function tipoZona(n){
+  if(/^ruta/i.test(n)) return 'ruta';
+  if(/^(ciudad|pueblo|aldea)/i.test(n)) return 'ciudad';
+  if(/^(cueva|mt\.|monte|túnel|calle victoria)/i.test(n)) return 'cueva';
+  if(/^(isla|islas)/i.test(n)) return 'agua';
+  return 'lugar';
+}
+
+/* Une el nombre de la cuadrícula con la zona que devolvió la API */
+const normZona = t => (t||'').toLowerCase().normalize('NFD')
+  .replace(/[\u0300-\u036f]/g,'').replace(/\s*\(.*\)/,'').replace(/[^a-z0-9]+/g,' ').trim();
+
+function zonaDeRejilla(nombre){
+  if(!enZonas) return null;
+  const buscar = normZona(ALIAS_ZONA[nombre] || nombre);
+  return enZonas.find(z=>normZona(z.nombre)===buscar) || null;
+}
+
+
 let enJuego = '';
 let enZonas = null;          // zonas del juego elegido
 let enZona = null;           // zona abierta
 let enTexto = '';
 let enGrupo = '';            // filtro por tipo de zona
+let enVista = 'mapa';        // mapa o lista, si el juego tiene cuadrícula
 
 const GRUPOS_ZONA = [
   {k:'ruta',   es:'Rutas',              prueba: n=>/^ruta\b/i.test(n)},
@@ -6162,25 +6246,34 @@ async function cargarZonas(slug){
         locationnames(where:{language_id:{_in:[${ES},9]}}) { name language_id } } }
     }
   }`);
-  const zonas = d.encounter.map(e=>{
+  /* Un mismo lugar puede tener varias áreas (plantas de una cueva,
+     zonas de una ruta). Se agrupan bajo su nombre base. */
+  const grupos = {};
+  d.encounter.forEach(e=>{
     const la = e.locationarea, loc = la.location || {};
     const nombres = loc.locationnames || [];
     const es = (nombres.find(n=>n.language_id===ES)||{}).name || '';
     const en = (nombres.find(n=>n.language_id===9)||{}).name || '';
-    const nombre = window.PopoTrad.traducirLugar(la.name, es, en, loc.name);
-    return {id:e.location_area_id, slug:la.name, nombre};
-  }).sort((a,b)=>a.nombre.localeCompare(b.nombre, 'es', {numeric:true}));
+    const completo = window.PopoTrad.traducirLugar(la.name, es, en, loc.name);
+    const base = completo.split(' · ')[0];
+    const sufijo = completo.includes(' · ') ? completo.split(' · ').slice(1).join(' · ') : '';
+    grupos[base] = grupos[base] || {nombre:base, areas:[]};
+    grupos[base].areas.push({id:e.location_area_id, sufijo});
+  });
+  const zonas = Object.values(grupos)
+    .sort((a,b)=>a.nombre.localeCompare(b.nombre, 'es', {numeric:true}));
   Cache.set(ck, zonas);
   return zonas;
 }
 
-async function cargarEncuentros(slug, areaId){
-  const ck = 'enc:'+slug+':'+areaId;
+async function cargarEncuentros(slug, areas){
+  const ids = areas.map(a=>a.id);
+  const ck = 'enc:'+slug+':'+ids.join(',');
   const g = Cache.get(ck);
   if(g) return g;
   const vid = await idDeVersion(slug);
   const d = await gql(`{
-    encounter(where:{version_id:{_eq:${vid}}, location_area_id:{_eq:${areaId}}}) {
+    encounter(where:{version_id:{_eq:${vid}}, location_area_id:{_in:[${ids.join(',')}]}}) {
       pokemon_id min_level max_level
       encounterslot { rarity encountermethod { name } }
     }
@@ -6238,12 +6331,198 @@ async function panelEncuentros(){
       <button class="btn btn-s" style="width:100%;margin-top:8px;" onclick="enJuego='';panelEncuentros()">Cambiar de juego</button>`;
     return;
   }
-  pintarZonas();
+  if(enVista==='mapa' && mapaDelJuego(enJuego)) pintarMapa();
+  else pintarZonas();
 }
 
 function enElegirJuego(slug){
   enJuego = slug; enZona = null; enTexto = ''; enGrupo = '';
+  enVista = mapaDelJuego(slug) ? 'mapa' : 'lista';
   panelEncuentros();
+}
+
+function enCambiarVista(){
+  enVista = enVista==='mapa' ? 'lista' : 'mapa';
+  panelEncuentros();
+}
+
+/* ---------- Vista de mapa ---------- */
+let enSel = null, enEscala = 1, enPanX = 0, enPanY = 0;
+
+function pintarMapa(){
+  const rej = mapaDelJuego(enJuego).rejilla;
+  const alto = rej.length, ancho = rej[0].length;
+  const principal = (x,y)=>(rej[y] && rej[y][x] && rej[y][x][0]) || null;
+
+  let celdas='', bordes='', hitos='', marco='';
+  for(let y=0;y<alto;y++){
+    for(let x=0;x<ancho;x++){
+      const lista = rej[y][x];
+      if(!lista || !lista.length) continue;
+      const n = lista[0];
+      const z = zonaDeRejilla(n);
+      const col = TIPOS_ZONA[tipoZona(n)].col;
+      celdas += `<g class="mc ${enSel===n?'sel':''}"
+        onclick="enTocar('${n.replace(/'/g,"")}')"
+        onmouseenter="enMirar(${x},${y})" onmouseleave="enNoMirar()">
+        <rect x="${x}" y="${y}" width="1" height="1" fill="${col}"
+          opacity="${z?0.95:0.4}"/></g>`;
+      [[x,y-1,`M${x} ${y}h1`],[x,y+1,`M${x} ${y+1}h1`],
+       [x-1,y,`M${x} ${y}v1`],[x+1,y,`M${x+1} ${y}v1`]].forEach(([vx,vy,d])=>{
+        if(principal(vx,vy)!==n) bordes += `<path class="mb" d="${d}"/>`;
+      });
+      if(enSel===n) marco += `<rect class="mm" x="${x+0.05}" y="${y+0.05}"
+        width="0.9" height="0.9"/>`;
+      if(lista.length>1) hitos += `<circle class="mh" cx="${x+0.5}" cy="${y+0.5}" r="0.13"/>`;
+    }
+  }
+
+  document.getElementById('info-body').innerHTML = `
+    <div class="dos-filtros" style="margin-bottom:10px;">
+      <button class="campo" onclick="enJuego='';panelEncuentros()">
+        <img class="jm" src="${spriteJuego(enJuego)}" alt="">
+        <span class="campo-main"><span class="campo-val">${nombreDeJuego(enJuego)}</span></span>
+        <span class="campo-x">⇄</span></button>
+      <button class="campo" onclick="enCambiarVista()">
+        <span class="campo-main"><span class="campo-val">Ver en lista</span></span>
+        <span class="campo-x">›</span></button>
+    </div>
+
+    <div class="mapa-caja">
+      <svg class="mapa-svg" id="mapa-svg" viewBox="-0.3 -0.3 ${ancho+0.6} ${alto+0.6}"
+           preserveAspectRatio="xMidYMid meet">
+        <g id="mapa-capa" transform="translate(${enPanX} ${enPanY}) scale(${enEscala})">
+          ${celdas}${bordes}${hitos}${marco}
+        </g>
+      </svg>
+      <div class="mapa-globo" id="mapa-globo"></div>
+      <div class="mapa-zoom">
+        <button onclick="enZoom(1.3)">+</button>
+        <button onclick="enZoom(1/1.3)">−</button>
+      </div>
+    </div>
+
+    <div class="mapa-leyenda">
+      ${Object.values(TIPOS_ZONA).map(t=>
+        `<span><i style="background:${t.col}"></i>${t.es}</span>`).join('')}
+    </div>
+    <p class="mi-cuenta" style="line-height:1.6;">
+      Toca una casilla para ver sus encuentros. Las atenuadas no tienen
+      pokémon salvajes en ${nombreDeJuego(enJuego)}.</p>
+    <div id="mapa-detalle"></div>`;
+
+  conectarArrastreMapa();
+}
+
+function enZoom(f){
+  enEscala = Math.max(0.8, Math.min(3.5, enEscala*f));
+  const capa = document.getElementById('mapa-capa');
+  if(capa) capa.setAttribute('transform',
+    `translate(${enPanX} ${enPanY}) scale(${enEscala})`);
+}
+
+function enMirar(x,y){
+  const rej = mapaDelJuego(enJuego).rejilla;
+  const lista = rej[y][x];
+  const g = document.getElementById('mapa-globo');
+  if(!lista || !lista.length || !g) return enNoMirar();
+  const svg = document.getElementById('mapa-svg');
+  const caja = svg.getBoundingClientRect();
+  const padre = g.parentElement.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+  const lado = Math.min(caja.width/vb.width, caja.height/vb.height);
+  const cx = (x+0.5)*enEscala + enPanX, cy = y*enEscala + enPanY;
+  g.innerHTML = `<b>${lista[0]}</b>${
+    lista.length>1 ? `<i>+ ${lista.slice(1).join(' · ')}</i>` : ''}`;
+  g.style.left = (caja.left-padre.left + (caja.width -vb.width *lado)/2 + (cx-vb.x)*lado)+'px';
+  g.style.top  = (caja.top -padre.top  + (caja.height-vb.height*lado)/2 + (cy-vb.y)*lado)+'px';
+  g.classList.add('ver');
+}
+function enNoMirar(){
+  const g = document.getElementById('mapa-globo');
+  if(g) g.classList.remove('ver');
+}
+
+async function enTocar(nombre){
+  enSel = nombre;
+  enNoMirar();
+  const z = zonaDeRejilla(nombre);
+  const cont = document.getElementById('mapa-detalle');
+  if(!z){
+    cont.innerHTML = `<div class="cr-frame"><div class="cr-frame-hd">
+      <span class="cr-frame-t">${nombre}</span></div>
+      <div class="hint">Sin encuentros salvajes en ${nombreDeJuego(enJuego)}.</div></div>`;
+    pintarMapa(); document.getElementById('mapa-detalle').innerHTML = cont.innerHTML;
+    return;
+  }
+  pintarMapa();
+  const c2 = document.getElementById('mapa-detalle');
+  c2.innerHTML = '<div class="hint">Cargando encuentros...</div>';
+  try{ z.datos = await cargarEncuentros(enJuego, z.areas); }
+  catch(e){ c2.innerHTML = `<div class="hint">No se pudo cargar.<br>${e.message||''}</div>`; return; }
+  c2.innerHTML = bloquesEncuentro(z, nombre);
+}
+
+function bloquesEncuentro(z, titulo){
+  const total = z.datos.reduce((n,g)=>n+g.mons.length,0);
+  return `
+    <div class="cr-cab" style="margin-top:4px;">
+      <div>
+        <div class="cr-ent">${titulo || z.nombre}</div>
+        <div class="mi-cuenta" style="margin:2px 0 0;">${total} encuentro${total===1?'':'s'}${
+          z.areas.length>1 ? ' · '+z.areas.length+' áreas' : ''}</div>
+      </div>
+    </div>
+    ${!z.datos.length
+      ? '<div class="hint" style="padding:20px;text-align:center;">Sin encuentros.</div>'
+      : z.datos.map(g=>{
+        const suma = g.mons.reduce((n,m)=>n+m.rareza,0) || 1;
+        return `<div class="cr-frame">
+          <div class="cr-frame-hd">
+            <span class="cr-frame-t">${nombreMetodo(g.metodo)}</span>
+            <span class="cr-frame-n">${g.mons.length}</span>
+          </div>
+          ${g.mons.map(m=>{
+            const mon = allMons.find(x=>x.id===m.pid) || {};
+            const pc = Math.round(m.rareza/suma*100);
+            return `<div class="en-fila" onclick="openDetail(${m.pid})">
+              <img src="${SPRITE(m.pid)}" alt="" loading="lazy">
+              <div class="en-main">
+                <div class="en-nom">${mon.es || '#'+m.pid}</div>
+                <div class="en-nv">Nv. ${m.min===m.max ? m.min : m.min+'–'+m.max}</div>
+              </div>
+              <div class="en-rara"><span>${pc}%</span>
+                <i style="width:${Math.min(pc,100)}%"></i></div>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }).join('')}`;
+}
+
+function conectarArrastreMapa(){
+  const svg = document.getElementById('mapa-svg');
+  if(!svg || svg.dataset.listo) return;
+  svg.dataset.listo = '1';
+  let act=false, x0=0, y0=0, px=0, py=0;
+  const pt = e => e.touches ? {x:e.touches[0].clientX, y:e.touches[0].clientY}
+                            : {x:e.clientX, y:e.clientY};
+  const ini = e=>{ const p=pt(e); act=true; x0=p.x; y0=p.y; px=enPanX; py=enPanY; };
+  const mov = e=>{
+    if(!act) return;
+    enNoMirar();
+    const p=pt(e), c=svg.getBoundingClientRect(), vb=svg.viewBox.baseVal;
+    enPanX = px + (p.x-x0)*(vb.width/c.width);
+    enPanY = py + (p.y-y0)*(vb.height/c.height);
+    const capa = document.getElementById('mapa-capa');
+    if(capa) capa.setAttribute('transform',
+      `translate(${enPanX} ${enPanY}) scale(${enEscala})`);
+  };
+  svg.addEventListener('mousedown',ini);
+  svg.addEventListener('touchstart',ini,{passive:true});
+  svg.addEventListener('mousemove',mov);
+  svg.addEventListener('touchmove',mov,{passive:true});
+  ['mouseup','mouseleave','touchend'].forEach(ev=>
+    svg.addEventListener(ev,()=>{act=false;}));
 }
 
 function pintarZonas(){
@@ -6264,6 +6543,8 @@ function pintarZonas(){
       <span class="campo-main"><span class="campo-val">${nombreDeJuego(enJuego)}</span>
       <span class="campo-sub">${enZonas.length} zonas con encuentros</span></span>
       <span class="campo-x">⇄</span></button>
+    ${mapaDelJuego(enJuego) ? `<button class="btn btn-s" style="width:100%;margin-bottom:10px;"
+      onclick="enCambiarVista()">Ver en mapa</button>` : ''}
 
     <div class="buscador" style="margin:0 0 10px;">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
@@ -6281,8 +6562,10 @@ function pintarZonas(){
     <p class="mi-cuenta">${lista.length} zona${lista.length===1?'':'s'}</p>
     <div class="mi-lista">
       ${lista.length ? lista.map(z=>`
-        <div class="mi-fila" onclick="enAbrirZona(${z.id})">
-          <div class="mi-main"><div class="mi-nom">${z.nombre}</div></div>
+        <div class="mi-fila" onclick="enAbrirZona('${z.nombre.replace(/'/g,"")}')">
+          <div class="mi-main"><div class="mi-nom">${z.nombre}</div>
+            ${z.areas.length>1?`<div class="mi-sub"><span class="mv-h-dat">${
+              z.areas.length} áreas</span></div>`:''}</div>
           <span class="campo-x">›</span>
         </div>`).join('')
         : '<div class="hint" style="padding:20px;text-align:center;">Ninguna coincide.</div>'}
@@ -6295,11 +6578,12 @@ function pintarZonas(){
 
 function enSetGrupo(k){ enGrupo = k; pintarZonas(); }
 
-async function enAbrirZona(id){
-  enZona = enZonas.find(z=>z.id===id);
+async function enAbrirZona(nombre){
+  enZona = enZonas.find(z=>z.nombre===nombre);
+  if(!enZona) return;
   const body = document.getElementById('info-body');
   body.innerHTML = '<div class="hint">Cargando encuentros...</div>';
-  try{ enZona.datos = await cargarEncuentros(enJuego, id); }
+  try{ enZona.datos = await cargarEncuentros(enJuego, enZona.areas); }
   catch(e){
     body.innerHTML = `<div class="hint">No se pudieron cargar.<br>${e.message||''}</div>
       <button class="btn btn-s" style="width:100%;margin-top:9px;"
