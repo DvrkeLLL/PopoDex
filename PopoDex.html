@@ -506,6 +506,29 @@ select:focus,input:focus{border-color:var(--accent);}
 .qa-mets{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
 .qa-met{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.04em;
   background:var(--bg-screen);color:var(--muted);border-radius:2px;padding:3px 6px;}
+.qa-met.no{background:#FDF6E6;color:#9A6B10;border:none;cursor:pointer;
+  font-family:var(--mono);text-decoration:underline;text-underline-offset:2px;}
+.cam-caja{width:100%;}
+.camino{
+  border-left:2px solid var(--accent-dim);margin:8px 0 2px 4px;padding-left:10px;
+}
+.cam-paso{display:flex;align-items:center;gap:8px;padding:5px 0;}
+.cam-n{
+  width:17px;height:17px;border-radius:50%;background:var(--accent);color:#fff;
+  font-family:var(--mono);font-size:9px;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;font-weight:700;
+}
+.cam-paso.fin .cam-n{background:#1F6B57;}
+.cam-paso img{width:30px;height:30px;image-rendering:pixelated;flex-shrink:0;}
+.cam-txt{font-size:11px;line-height:1.4;}
+.cam-txt b{font-weight:600;}
+.cam-txt i{display:block;font-style:normal;font-family:var(--mono);
+  font-size:8.5px;color:var(--muted);margin-top:1px;}
+.cam-no{font-family:var(--mono);font-size:9px;color:var(--muted);
+  padding:7px 0 2px;line-height:1.5;}
+.qa-met.stab{background:#E4F3ED;color:#1F6B57;}
+.qa-fila{cursor:pointer;}
+.qa-fila:active{background:var(--bg-screen);}
 .qa-dan{text-align:right;flex-shrink:0;}
 .qa-dan b{font-family:var(--mono);font-size:13px;display:block;line-height:1.2;}
 .qa-dan span{font-family:var(--mono);font-size:8px;color:var(--muted);}
@@ -1624,6 +1647,58 @@ select:focus,input:focus{border-color:var(--accent);}
         <div id="imp-detalle"></div>
       </div>
       <div class="sheet-ft" id="imp-pie" style="flex-direction:column;gap:0;"></div>
+    </div>
+  </div>
+
+  <!-- ============ BUSCADOR DE MOVIMIENTOS DEL EQUIPO ============ -->
+  <div class="overlay" id="ov-eqmov">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="em-sub">—</div>
+          <h2 class="sheet-title" style="font-size:17px;">Buscar movimiento</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-eqmov')"></button>
+      </div>
+      <div class="sheet-bd">
+        <div class="buscador" style="margin:0 0 10px;">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+          <input type="text" id="em-busca" placeholder="Buscar por nombre..." autocomplete="off">
+        </div>
+        <div class="sm-dos">
+          <button class="campo" id="em-tipos" onclick="emElegirTipos()"></button>
+          <button class="campo" id="em-orden" onclick="emElegirOrden()"></button>
+        </div>
+        <div class="grid3" id="em-clases" style="margin-bottom:10px;">
+          <button class="pill" data-ec="physical">Físico</button>
+          <button class="pill" data-ec="special">Especial</button>
+          <button class="pill" data-ec="status">Estado</button>
+        </div>
+        <div class="cfg" style="margin-bottom:10px;">
+          <div class="cfg-fila" style="grid-template-columns:auto 1fr auto 1fr;">
+            <span class="cfg-lab">Pot ≥</span>
+            <input type="number" id="em-pot" min="0" max="300" placeholder="—">
+            <span class="cfg-lab">Prec ≥</span>
+            <input type="number" id="em-prec" min="0" max="100" placeholder="—">
+          </div>
+        </div>
+        <p class="mi-cuenta" id="em-cuenta"></p>
+        <div id="em-lista"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ OLVIDAR UN MOVIMIENTO ============ -->
+  <div class="overlay" id="ov-olvidar">
+    <div class="sheet" style="max-width:340px;">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="olv-sub">—</div>
+          <h2 class="sheet-title" id="olv-titulo" style="font-size:16px;">—</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-olvidar')"></button>
+      </div>
+      <div class="sheet-bd" id="olv-cuerpo"></div>
     </div>
   </div>
 
@@ -5811,118 +5886,425 @@ function pintarResultado(r, gen){
 }
 
 /* ---------- ¿Quién aprende este movimiento? ---------- */
-/* El daño se calcula contra un rival de referencia para que los
-   números sean comparables entre los miembros del equipo. */
+/* Rival de referencia: 100 en todo, para comparar entre miembros */
 const REF_DEF = {
   stats:{hp:100, defense:100, 'special-defense':100,
          attack:100, 'special-attack':100, speed:100},
   types:[], id:0, es:'referencia'
 };
 
+let emTexto = '', emTipos = [], emClases = [], emPot = null, emPrec = null;
+let emOrden = 'pot', emLista = [], emDibujados = 0;
+const LOTE_EM = 40;
+
 async function abrirQuienAprende(){
   const eq = equipos[equipoAbierto];
   if(!eq || !eq.miembros.length){ aviso('El equipo está vacío'); return; }
-  try{ await cargarCatalogoMovs(); }
-  catch(e){ aviso('No se pudo cargar el catálogo'); return; }
+  openOverlay('ov-eqmov');
+  document.getElementById('em-lista').innerHTML = '<div class="hint">Cargando catálogo...</div>';
+  try{
+    await cargarCatalogoMovs();
+    await cargarCambiosMov();
+  }catch(e){
+    document.getElementById('em-lista').innerHTML =
+      `<div class="hint">No se pudo cargar.<br>${e.message||''}</div>`;
+    return;
+  }
+  document.getElementById('em-sub').textContent = eq.nombre+' · '+nombreDeJuego(eq.juego);
+  document.getElementById('em-busca').value = emTexto;
+  document.getElementById('em-pot').value = emPot ?? '';
+  document.getElementById('em-prec').value = emPrec ?? '';
+  document.querySelectorAll('[data-ec]').forEach(b=>
+    b.classList.toggle('on', emClases.includes(b.dataset.ec)));
+  conectarBuscadorEq();
+  pintarCamposEm();
+  filtrarEm();
+}
 
+function conectarBuscadorEq(){
+  const caja = document.querySelector('#ov-eqmov .sheet-bd');
+  if(caja && !caja.dataset.listo){
+    caja.dataset.listo = '1';
+    caja.addEventListener('scroll', ()=>{
+      if(caja.scrollTop + caja.clientHeight >= caja.scrollHeight - 200) masEm();
+    }, {passive:true});
+  }
+  const b = document.getElementById('em-busca');
+  if(!b.dataset.listo){
+    b.dataset.listo = '1';
+    b.addEventListener('input', e=>{ emTexto = e.target.value; filtrarEm(); });
+    document.getElementById('em-pot').addEventListener('input', e=>{
+      emPot = e.target.value==='' ? null : Number(e.target.value); filtrarEm();
+    });
+    document.getElementById('em-prec').addEventListener('input', e=>{
+      emPrec = e.target.value==='' ? null : Number(e.target.value); filtrarEm();
+    });
+    document.querySelectorAll('[data-ec]').forEach(x=>x.addEventListener('click',()=>{
+      const c = x.dataset.ec;
+      emClases = emClases.includes(c) ? emClases.filter(y=>y!==c) : [...emClases, c];
+      x.classList.toggle('on');
+      filtrarEm();
+    }));
+  }
+}
+
+function pintarCamposEm(){
+  const eq = equipos[equipoAbierto];
   const gen = genDeJuego(eq.juego);
-  abrirPickMovs({
-    sub: eq.nombre,
-    movs: movInfo.filter(m=>m.gen<=gen).map(m=>({
-      slug:m.slug, es:m.es, tipo:m.tipo,
-      clase: gen<=3 && m.clase!=='status' ? (TCAT[m.tipo]||m.clase) : m.clase,
-      pot:m.pot, prec:m.prec, pp:m.pp, nivel:null,
-      metodos:{'level-up':true}                 // el catálogo no separa por método
-    })),
-    actual:'', permitirVacio:false,
-    alElegir: slug=>{ setTimeout(()=>quienAprendeEquipo(slug), 120); }
+  const t = document.getElementById('em-tipos');
+  t.innerHTML = !emTipos.length
+    ? `<img class="jm" src="${SPRITE(133)}" alt=""><span class="campo-main">
+       <span class="campo-val sin">Tipos</span></span>`
+    : emTipos.length<=2
+      ? `<img class="jm" src="${SPRITE(133)}" alt=""><span class="campo-main">
+         <span class="campo-chips">${emTipos.map(x=>
+           `<span class="tchip" style="background:${TCOLOR[x]}">${TES[x]}</span>`).join('')}</span></span>`
+      : `<img class="jm" src="${SPRITE(133)}" alt=""><span class="campo-main">
+         <span class="campo-val">${emTipos.length} tipos</span></span>`;
+
+  const O = {pot:'Potencia', nom:'Nombre', tipo:'Tipo'};
+  document.getElementById('em-orden').innerHTML =
+    `<span class="campo-main"><span class="campo-val">${O[emOrden]}</span></span>
+     <span class="campo-x">›</span>`;
+}
+
+function emElegirTipos(){
+  const gen = genDeJuego(equipos[equipoAbierto].juego);
+  abrirTipos({sub:'Filtrar por tipo', actual:emTipos, tipos:tiposValidos(gen),
+    alElegir: v=>{ emTipos = v; pintarCamposEm(); filtrarEm(); }});
+}
+
+function emElegirOrden(){
+  abrirSelector({
+    titulo:'Ordenar', sub:'Cómo listar los movimientos', buscar:false, actual:emOrden,
+    opciones:[
+      {valor:'pot',  nombre:'Potencia', detalle:'De mayor a menor'},
+      {valor:'nom',  nombre:'Nombre',   detalle:'Alfabético'},
+      {valor:'tipo', nombre:'Tipo',     detalle:'Agrupados por tipo'}
+    ],
+    alElegir: v=>{ emOrden = v; pintarCamposEm(); filtrarEm(); }
   });
 }
 
-async function quienAprendeEquipo(slug){
+function filtrarEm(){
+  const eq = equipos[equipoAbierto];
+  const gen = genDeJuego(eq.juego);
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const t = norm(emTexto.trim());
+
+  emLista = movInfo.filter(m=>{
+    if(m.gen > gen) return false;
+    if(t && !(norm(m.es).includes(t) || m.slug.includes(t))) return false;
+    if(emTipos.length && !emTipos.includes(m.tipo)) return false;
+    if(emClases.length){
+      const c = gen<=3 && m.clase!=='status' ? (TCAT[m.tipo]||m.clase) : m.clase;
+      if(!emClases.includes(c)) return false;
+    }
+    if(emPot!=null && (!m.pot || m.pot < emPot)) return false;
+    if(emPrec!=null && (m.prec ?? 101) < emPrec) return false;
+    return true;
+  });
+
+  if(emOrden==='pot') emLista.sort((a,b)=>(b.pot||0)-(a.pot||0) || a.es.localeCompare(b.es));
+  else if(emOrden==='nom') emLista.sort((a,b)=>a.es.localeCompare(b.es));
+  else emLista.sort((a,b)=>(TES[a.tipo]||'').localeCompare(TES[b.tipo]||'')
+    || (b.pot||0)-(a.pot||0));
+
+  document.getElementById('em-cuenta').textContent =
+    `${emLista.length} movimiento${emLista.length===1?'':'s'} en ${nombreDeJuego(eq.juego)}`;
+  emDibujados = 0;
+  document.getElementById('em-lista').innerHTML = '';
+  masEm();
+}
+
+function masEm(){
+  const cont = document.getElementById('em-lista');
+  if(!cont) return;
+  if(!emLista.length){ cont.innerHTML='<div class="hint" style="padding:18px;">Sin resultados.</div>'; return; }
+  if(emDibujados >= emLista.length) return;
+  const gen = genDeJuego(equipos[equipoAbierto].juego);
+  const hasta = Math.min(emDibujados + LOTE_EM, emLista.length);
+  let html = '';
+  for(let i=emDibujados;i<hasta;i++){
+    const m = emLista[i];
+    const v = valoresMov(m.slug, gen, {pot:m.pot,prec:m.prec,pp:m.pp,tipo:m.tipo});
+    const c = gen<=3 && m.clase!=='status' ? (TCAT[v.tipo]||m.clase) : m.clase;
+    html += `
+      <div class="mi-fila" onclick="verQuienEquipo('${m.slug}')">
+        <div class="mi-main">
+          <div class="mi-nom">${m.es}</div>
+          <div class="mi-sub">
+            <span class="tchip" style="background:${TCOLOR[v.tipo]}">${TES[v.tipo]}</span>
+            <span class="mv-cls" style="color:${CLASE_COL[c]}">${CLASE_ES[c]}</span>
+          </div>
+        </div>
+        <span class="mi-n ${v.cambiado?'hist':''}">${v.pot ?? '—'}</span>
+        <span class="mi-n ${v.cambiado?'hist':''}">${v.prec ?? '—'}</span>
+        <span class="campo-x">›</span>
+      </div>`;
+  }
+  cont.insertAdjacentHTML('beforeend', html);
+  emDibujados = hasta;
+}
+
+/* ---------- Quién puede usarlo y cuánto pega ---------- */
+let qaSlug = '';
+
+async function verQuienEquipo(slug){
+  qaSlug = slug;
   const eq = equipos[equipoAbierto];
   const gen = genDeJuego(eq.juego);
   const info = movInfo.find(m=>m.slug===slug);
   if(!info) return;
 
   document.getElementById('qa-titulo').textContent = info.es;
-  document.getElementById('qa-sub').textContent = eq.nombre+' · '+nombreDeJuego(eq.juego);
-  document.getElementById('qa-cuerpo').innerHTML = '<div class="hint">Revisando el equipo...</div>';
+  document.getElementById('qa-sub').textContent = eq.nombre;
+  document.getElementById('qa-cuerpo').innerHTML = '<div class="hint">Calculando...</div>';
   openOverlay('ov-quien');
+  pintarQuien();
+}
 
-  try{ await cargarCambiosMov(); }catch(e){}
-  const v = valoresMov(slug, gen, {pot:info.pot, prec:info.prec, pp:info.pp, tipo:info.tipo});
+async function pintarQuien(){
+  const eq = equipos[equipoAbierto];
+  const gen = genDeJuego(eq.juego);
+  const info = movInfo.find(m=>m.slug===qaSlug);
+  const v = valoresMov(qaSlug, gen, {pot:info.pot, prec:info.prec, pp:info.pp, tipo:info.tipo});
   const clase = gen<=3 && info.clase!=='status' ? (TCAT[v.tipo]||info.clase) : info.clase;
 
   const filas = [];
-  for(const m of eq.miembros){
+  for(let i=0;i<eq.miembros.length;i++){
+    const m = eq.miembros[i];
     const mon = allMons.find(x=>x.id===m.pid);
     if(!mon) continue;
-    let metodos = [];
+    let metodos = [], nivelAp = null;
     try{
       const d = await movsDe(m.pid, GRUPO_VERSION[eq.juego] || '');
-      const lista = armarMovs(d, gen);
-      const enc = lista.find(x=>x.slug===slug);
-      if(enc) metodos = Object.keys(enc.metodos);
-    }catch(e){ metodos = []; }
+      const enc = armarMovs(d, gen).find(x=>x.slug===qaSlug);
+      if(enc){ metodos = Object.keys(enc.metodos); nivelAp = enc.nivel; }
+    }catch(e){}
 
-    let daño = null;
-    if(metodos.length && v.pot && clase!=='status'){
+    let dano = null;
+    if(v.pot && clase!=='status'){
       const cl = clase==='physical' ? 'attack' : 'special-attack';
       const r = calcularDanio({
-        gen, atkMon:mon, defMon:REF_DEF,
-        mov:{...v, clase, es:info.es},
+        gen, atkMon:mon, defMon:REF_DEF, mov:{...v, clase, es:info.es},
         atk:{nivel:m.nivel, iv:m.ivs[cl], ev:m.evs[cl], nat:m.naturaleza, hab:m.habilidad, bajo:false},
         def:{nivel:m.nivel, iv:31, ev:0, nat:'hardy', hab:''}
       });
-      if(!r.nulo) daño = r;
+      if(!r.nulo) dano = r;
     }
-    filas.push({m, mon, metodos, daño, yaLoTiene: m.movimientos.includes(slug)});
+    filas.push({i, m, mon, metodos, nivel:nivelAp, dano,
+                tiene:m.movimientos.includes(qaSlug),
+                stab:tiposEnGen(mon,gen).includes(v.tipo)});
   }
-
-  const pueden = filas.filter(f=>f.metodos.length);
-  pueden.sort((a,b)=>(b.daño?b.daño.max:0)-(a.daño?a.daño.max:0));
-  const noPueden = filas.filter(f=>!f.metodos.length);
+  filas.sort((a,b)=>(b.dano?b.dano.max:0)-(a.dano?a.dano.max:0));
 
   document.getElementById('qa-cuerpo').innerHTML = `
     <div class="det-types" style="margin-bottom:12px;">
       <span class="tchip" style="background:${TCOLOR[v.tipo]};font-size:10px;padding:4px 11px;">${TES[v.tipo]}</span>
       <span class="tchip" style="background:${CLASE_COL[clase]};font-size:10px;padding:4px 11px;">${CLASE_ES[clase]}</span>
-      ${v.pot ? `<span class="tchip" style="background:var(--muted);font-size:10px;padding:4px 11px;">Pot ${v.pot}</span>` : ''}
+      ${v.pot ? `<span class="tchip" style="background:var(--muted);font-size:10px;padding:4px 11px;">Pot ${v.pot}</span>`:''}
+      ${v.prec ? `<span class="tchip" style="background:var(--dim);font-size:10px;padding:4px 11px;">Prec ${v.prec}</span>`:''}
     </div>
-
-    <p class="mi-cuenta">${pueden.length} de ${filas.length} pueden aprenderlo</p>
-
-    ${pueden.map(f=>{
-      const mismo = tiposEnGen(f.mon, gen).includes(v.tipo);
-      return `
-      <div class="qa-fila ${f.yaLoTiene?'tiene':''}">
+    <p class="mi-cuenta">Toca un pokémon para enseñárselo</p>
+    ${filas.map(f=>`
+      <div class="qa-fila ${f.tiene?'tiene':''}" onclick="enseñarMov(${f.i})">
         <img src="${SPRITE(f.m.pid)}" alt="">
         <div class="qa-main">
           <div class="qa-nom">${f.m.apodo || f.mon.es}
-            ${f.yaLoTiene?'<span class="cr-etq">ya lo lleva</span>':''}</div>
-          <div class="qa-mets">${f.metodos.map(k=>
-            `<span class="qa-met">${MET_ES[k]||k}</span>`).join('')}</div>
+            ${f.tiene?'<span class="cr-etq">ya lo lleva</span>':''}</div>
+          <div class="qa-mets">
+            ${f.metodos.length
+              ? f.metodos.map(k=>`<span class="qa-met">${MET_ES[k]||k}${
+                  k==='level-up' && f.nivel ? ' '+f.nivel : ''}</span>`).join('')
+              : `<button class="qa-met no" onclick="event.stopPropagation();verCamino(${f.i})"
+                 >no lo aprende · ver cómo</button>`}
+            ${f.stab?'<span class="qa-met stab">STAB</span>':''}
+          </div>
+          <div class="cam-caja" id="camino-${f.i}" data-abierto="0"></div>
         </div>
         <div class="qa-dan">
-          ${f.daño
-            ? `<b>${f.daño.min}–${f.daño.max}</b>
-               <span>${mismo?'con STAB':'sin STAB'}</span>`
-            : '<span>sin daño</span>'}
+          ${f.dano ? `<b>${f.dano.min}–${f.dano.max}</b><span>daño</span>`
+                   : '<span>sin daño</span>'}
         </div>
-      </div>`;
-    }).join('') || '<div class="hint" style="padding:18px;text-align:center;">Ninguno puede aprenderlo.</div>'}
-
-    ${noPueden.length ? `
-      <p class="section-label" style="margin:16px 0 8px;">No pueden aprenderlo</p>
-      <div class="qa-no">${noPueden.map(f=>
-        `<span class="qa-no-mon"><img src="${SPRITE(f.m.pid)}" alt="">${f.m.apodo||f.mon.es}</span>`
-      ).join('')}</div>` : ''}
-
+        <span class="campo-x">+</span>
+      </div>`).join('')}
     ${v.pot ? `<p class="mi-cuenta" style="margin-top:14px;line-height:1.6;">
-      El daño es contra un rival de referencia con 100 en todas las estadísticas
-      base y del mismo nivel que cada atacante, sin efectividad de tipos.
-      Sirve para comparar entre ellos, no para un combate concreto.</p>` : ''}`;
+      El daño es contra un rival de referencia con 100 en todas sus estadísticas base,
+      del mismo nivel que cada atacante y sin efectividad de tipos: sirve para
+      compararlos entre sí.</p>`:''}`;
+}
+
+/* ---------- Cómo llegar a aprenderlo ---------- */
+/* Un pokémon puede no aprender un movimiento pero sí una forma anterior:
+   se aprende antes de evolucionar y se conserva al evolucionar. */
+let cadenaPrevia = null;
+
+async function cargarCadenas(){
+  if(cadenaPrevia) return cadenaPrevia;
+  const g = Cache.get('preevo');
+  if(g){ cadenaPrevia = g; return g; }
+  const d = await gql(`{
+    pokemonspecies(where:{id:{_lte:${MAX_ID}}}, order_by:{id:asc}) {
+      id evolves_from_species_id
+    }
+  }`);
+  const mapa = {};
+  d.pokemonspecies.forEach(x=>{
+    if(x.evolves_from_species_id) mapa[x.id] = x.evolves_from_species_id;
+  });
+  cadenaPrevia = mapa;
+  Cache.set('preevo', mapa);
+  return mapa;
+}
+
+/* De la forma actual hacia atrás: [padre, abuelo...] */
+function previasDe(id){
+  const r = [];
+  let actual = id;
+  while(cadenaPrevia && cadenaPrevia[actual] && r.length < 3){
+    actual = cadenaPrevia[actual];
+    r.push(actual);
+  }
+  return r;
+}
+
+async function verCamino(i){
+  const eq = equipos[equipoAbierto];
+  const m = eq.miembros[i];
+  const gen = genDeJuego(eq.juego);
+  const cont = document.getElementById('camino-'+i);
+  if(!cont) return;
+  if(cont.dataset.abierto === '1'){
+    cont.innerHTML = ''; cont.dataset.abierto = '0'; return;
+  }
+  cont.dataset.abierto = '1';
+  cont.innerHTML = '<div class="hint" style="padding:8px 0;">Buscando...</div>';
+
+  try{ await cargarCadenas(); }
+  catch(e){ cont.innerHTML = '<div class="hint">No se pudo consultar.</div>'; return; }
+
+  const previas = previasDe(m.pid);
+  if(!previas.length){
+    cont.innerHTML = `<div class="cam-no">No tiene una forma anterior:
+      en ${nombreDeJuego(eq.juego)} no hay manera de que lo aprenda.</div>`;
+    return;
+  }
+
+  const pasos = [];
+  for(const pid of previas){
+    let enc = null;
+    try{
+      const d = await movsDe(pid, GRUPO_VERSION[eq.juego] || '');
+      enc = armarMovs(d, gen).find(x=>x.slug===qaSlug);
+    }catch(e){}
+    if(enc) pasos.push({pid, mov:enc});
+  }
+
+  if(!pasos.length){
+    cont.innerHTML = `<div class="cam-no">Ninguna de sus formas anteriores
+      lo aprende en ${nombreDeJuego(eq.juego)}.</div>`;
+    return;
+  }
+
+  /* Se toma la forma más cercana que sí lo aprende */
+  const paso = pasos[0];
+  const previo = allMons.find(x=>x.id===paso.pid) || {es:'#'+paso.pid};
+  const destino = allMons.find(x=>x.id===m.pid) || {};
+  const saltos = previas.indexOf(paso.pid) + 1;
+  const intermedios = previas.slice(0, previas.indexOf(paso.pid)).reverse();
+
+  const comoLoAprende = mv=>{
+    const ms = Object.keys(mv.metodos);
+    if(ms.includes('level-up') && mv.nivel) return `al subir al nivel ${mv.nivel}`;
+    if(ms.includes('machine')) return 'con una MT o MO';
+    if(ms.includes('egg')) return 'como movimiento huevo, criándolo';
+    if(ms.includes('tutor')) return 'con un tutor de movimientos';
+    return 'por otro método';
+  };
+
+  cont.innerHTML = `
+    <div class="camino">
+      <div class="cam-paso">
+        <span class="cam-n">1</span>
+        <img src="${SPRITE(paso.pid)}" alt="">
+        <span class="cam-txt">Consigue un <b>${previo.es}</b> y que aprenda
+          ${movInfo.find(x=>x.slug===qaSlug)?.es || 'el movimiento'}
+          <i>${comoLoAprende(paso.mov)}</i></span>
+      </div>
+      ${intermedios.map((pid,k)=>{
+        const mon = allMons.find(x=>x.id===pid) || {es:'#'+pid};
+        return `<div class="cam-paso">
+          <span class="cam-n">${k+2}</span>
+          <img src="${SPRITE(pid)}" alt="">
+          <span class="cam-txt">Haz que evolucione a <b>${mon.es}</b>
+            <i>conserva el movimiento</i></span>
+        </div>`;
+      }).join('')}
+      <div class="cam-paso fin">
+        <span class="cam-n">${saltos + 1}</span>
+        <img src="${SPRITE(m.pid)}" alt="">
+        <span class="cam-txt">Evoluciona a <b>${destino.es}</b>
+          <i>ya con el movimiento aprendido</i></span>
+      </div>
+    </div>`;
+}
+
+/* ---------- Enseñar el movimiento ---------- */
+let enseñarA = -1;
+
+function enseñarMov(i){
+  const eq = equipos[equipoAbierto];
+  const m = eq.miembros[i];
+  const info = movInfo.find(x=>x.slug===qaSlug);
+  if(m.movimientos.includes(qaSlug)){ aviso('Ya lo lleva'); return; }
+
+  const libre = m.movimientos.findIndex(x=>!x);
+  if(libre !== -1){
+    m.movimientos[libre] = qaSlug;
+    guardarEquipos();
+    aviso(`${info.es} aprendido`);
+    pintarQuien();
+    return;
+  }
+
+  /* Sin huecos: hay que olvidar uno */
+  enseñarA = i;
+  const mon = allMons.find(x=>x.id===m.pid) || {};
+  document.getElementById('olv-sub').textContent =
+    (m.apodo || mon.es) + ' · ya tiene cuatro';
+  document.getElementById('olv-titulo').textContent = '¿Cuál olvida?';
+  document.getElementById('olv-cuerpo').innerHTML = `
+    <p class="mi-cuenta">Aprenderá <b>${info.es}</b> en su lugar</p>
+    ${m.movimientos.map((slug,j)=>{
+      const mv = movInfo.find(x=>x.slug===slug) || {es:slug, tipo:'normal', clase:'status'};
+      const gen = genDeJuego(eq.juego);
+      const vv = valoresMov(slug, gen, {pot:mv.pot,prec:mv.prec,pp:mv.pp,tipo:mv.tipo});
+      const c = gen<=3 && mv.clase!=='status' ? (TCAT[vv.tipo]||mv.clase) : mv.clase;
+      return `<div class="mi-fila" onclick="olvidarY(${j})">
+        <div class="mi-main">
+          <div class="mi-nom">${mv.es}</div>
+          <div class="mi-sub">
+            <span class="tchip" style="background:${TCOLOR[vv.tipo]}">${TES[vv.tipo]}</span>
+            <span class="mv-cls" style="color:${CLASE_COL[c]}">${CLASE_ES[c]}</span>
+          </div>
+        </div>
+        <span class="mi-n">${vv.pot ?? '—'}</span>
+        <span class="campo-x">✕</span>
+      </div>`;
+    }).join('')}`;
+  openOverlay('ov-olvidar');
+}
+
+function olvidarY(j){
+  const eq = equipos[equipoAbierto];
+  const m = eq.miembros[enseñarA];
+  const info = movInfo.find(x=>x.slug===qaSlug);
+  m.movimientos[j] = qaSlug;
+  guardarEquipos();
+  closeOverlay('ov-olvidar');
+  aviso(`${info.es} aprendido`);
+  pintarQuien();
 }
 
 /* ---------- Tarjeta de equipo 3:2 ---------- */
