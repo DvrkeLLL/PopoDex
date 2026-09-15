@@ -496,6 +496,23 @@ select:focus,input:focus{border-color:var(--accent);}
 .en-rara span{font-family:var(--mono);font-size:11px;font-weight:700;display:block;}
 .en-rara i{display:block;height:3px;background:var(--accent);border-radius:2px;
   margin-top:3px;margin-left:auto;}
+.qa-fila{display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--border);}
+.qa-fila:last-of-type{border-bottom:none;}
+.qa-fila.tiene{background:#F0F8F5;border-radius:var(--r);padding-left:7px;padding-right:7px;}
+.qa-fila img{width:44px;height:44px;image-rendering:pixelated;flex-shrink:0;}
+.qa-main{flex:1;min-width:0;}
+.qa-nom{font-size:12.5px;font-weight:600;}
+.qa-mets{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
+.qa-met{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.04em;
+  background:var(--bg-screen);color:var(--muted);border-radius:2px;padding:3px 6px;}
+.qa-dan{text-align:right;flex-shrink:0;}
+.qa-dan b{font-family:var(--mono);font-size:13px;display:block;line-height:1.2;}
+.qa-dan span{font-family:var(--mono);font-size:8px;color:var(--muted);}
+.qa-no{display:flex;flex-wrap:wrap;gap:7px;}
+.qa-no-mon{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);
+  background:var(--bg-screen);border-radius:var(--r);padding:4px 8px 4px 4px;}
+.qa-no-mon img{width:26px;height:26px;image-rendering:pixelated;opacity:.6;}
 .cr-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;
   margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
 .cr-ent{font-size:14px;font-weight:700;}
@@ -1323,8 +1340,7 @@ select:focus,input:focus{border-color:var(--accent);}
             onclick="pedirActualizar()" title="Actualizar desde la partida">
             <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 11-2.3-5.7"/><path d="M20 4v5h-5"/></svg>
           </button>
-          <button class="mini-btn" onclick="verListaEquipos()" title="Volver a la lista">
-            <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button class="mini-btn close" onclick="verListaEquipos()"></button>
         </div>
       </div>
       <div class="sheet-bd" id="eqd-body"></div>
@@ -1608,6 +1624,20 @@ select:focus,input:focus{border-color:var(--accent);}
         <div id="imp-detalle"></div>
       </div>
       <div class="sheet-ft" id="imp-pie" style="flex-direction:column;gap:0;"></div>
+    </div>
+  </div>
+
+  <!-- ============ QUIÉN APRENDE UN MOVIMIENTO ============ -->
+  <div class="overlay" id="ov-quien">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="qa-sub">—</div>
+          <h2 class="sheet-title" id="qa-titulo" style="font-size:17px;">—</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-quien')"></button>
+      </div>
+      <div class="sheet-bd" id="qa-cuerpo"></div>
     </div>
   </div>
 
@@ -2357,20 +2387,28 @@ function vigilarPanel(ov){
 const ICONO_CERRAR = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 const ICONO_VOLVER = '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
 
+/* ¿Hay algún panel abierto aparte de este? Si lo hay, este vuelve
+   al anterior; si es el único, cierra del todo. */
+function hayPanelDebajo(id){
+  return [...document.querySelectorAll('.overlay.open')].some(o=>o.id!==id);
+}
+
+function ajustarIconoCerrar(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const btn = el.querySelector('.mini-btn.close');
+  if(!btn) return;
+  const volver = hayPanelDebajo(id);
+  btn.innerHTML = volver ? ICONO_VOLVER : ICONO_CERRAR;
+  btn.title = volver ? 'Volver' : 'Cerrar';
+}
+
 function openOverlay(id){
   const el = document.getElementById(id);
-
-  /* Si ya había un panel abierto, este vuelve al anterior en vez de cerrar */
-  const encima = !!document.querySelector('.overlay.open');
-  const btn = el.querySelector('.mini-btn.close');
-  if(btn){
-    btn.innerHTML = encima ? ICONO_VOLVER : ICONO_CERRAR;
-    btn.title = encima ? 'Volver' : 'Cerrar';
-  }
-
   capaOverlay += 2;                      // cada panel nuevo va por encima del anterior
   el.style.zIndex = capaOverlay;
   el.classList.add('open');
+  ajustarIconoCerrar(id);
   vigilarPanel(el);
   requestAnimationFrame(()=>ajustarAlturaPanel(id));
 }
@@ -3869,6 +3907,14 @@ function renderEquipo(){
         </div>`;
       }).join('')}
     </div>
+
+    <button class="util" style="margin-bottom:12px;" onclick="abrirQuienAprende()">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <span class="util-main"><span class="util-t">¿Quién aprende...?</span>
+      <span class="util-s">Busca un movimiento y mira quién puede usarlo</span></span>
+      <span class="campo-x">›</span>
+    </button>
+
     <div class="cob-bloque">
       <div class="cob-hd">
         <h3 class="cob-tit">Cobertura de ataque</h3>
@@ -4004,9 +4050,7 @@ async function pantallaEditor(){
           title="Actualizar desde la partida">
           <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 11-2.3-5.7"/><path d="M20 4v5h-5"/></svg>
         </button>` : ''}
-        <button class="mini-btn" onclick="closeOverlay('ov-miembro');renderEquipo();"
-          title="Volver al equipo">
-          <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="mini-btn close" onclick="closeOverlay('ov-miembro');renderEquipo();"></button>
       </div>
     </div>
     <div class="sheet-bd">
@@ -4072,6 +4116,7 @@ async function pantallaEditor(){
       <button class="btn-borrar" onclick="quitarMiembro()">Quitar del equipo</button>
     </div>`;
 
+  ajustarIconoCerrar('ov-miembro');   // el botón se dibuja aquí, no al abrir
   pintarCampos();
   cargarOpcionesEditor(m, mon, gen);
 }
@@ -5763,6 +5808,121 @@ function pintarResultado(r, gen){
           :`Derriba en ${r.golpes}–${r.golpesMax} golpes`}
       </div>
     </div>`;
+}
+
+/* ---------- ¿Quién aprende este movimiento? ---------- */
+/* El daño se calcula contra un rival de referencia para que los
+   números sean comparables entre los miembros del equipo. */
+const REF_DEF = {
+  stats:{hp:100, defense:100, 'special-defense':100,
+         attack:100, 'special-attack':100, speed:100},
+  types:[], id:0, es:'referencia'
+};
+
+async function abrirQuienAprende(){
+  const eq = equipos[equipoAbierto];
+  if(!eq || !eq.miembros.length){ aviso('El equipo está vacío'); return; }
+  try{ await cargarCatalogoMovs(); }
+  catch(e){ aviso('No se pudo cargar el catálogo'); return; }
+
+  const gen = genDeJuego(eq.juego);
+  abrirPickMovs({
+    sub: eq.nombre,
+    movs: movInfo.filter(m=>m.gen<=gen).map(m=>({
+      slug:m.slug, es:m.es, tipo:m.tipo,
+      clase: gen<=3 && m.clase!=='status' ? (TCAT[m.tipo]||m.clase) : m.clase,
+      pot:m.pot, prec:m.prec, pp:m.pp, nivel:null,
+      metodos:{'level-up':true}                 // el catálogo no separa por método
+    })),
+    actual:'', permitirVacio:false,
+    alElegir: slug=>{ setTimeout(()=>quienAprendeEquipo(slug), 120); }
+  });
+}
+
+async function quienAprendeEquipo(slug){
+  const eq = equipos[equipoAbierto];
+  const gen = genDeJuego(eq.juego);
+  const info = movInfo.find(m=>m.slug===slug);
+  if(!info) return;
+
+  document.getElementById('qa-titulo').textContent = info.es;
+  document.getElementById('qa-sub').textContent = eq.nombre+' · '+nombreDeJuego(eq.juego);
+  document.getElementById('qa-cuerpo').innerHTML = '<div class="hint">Revisando el equipo...</div>';
+  openOverlay('ov-quien');
+
+  try{ await cargarCambiosMov(); }catch(e){}
+  const v = valoresMov(slug, gen, {pot:info.pot, prec:info.prec, pp:info.pp, tipo:info.tipo});
+  const clase = gen<=3 && info.clase!=='status' ? (TCAT[v.tipo]||info.clase) : info.clase;
+
+  const filas = [];
+  for(const m of eq.miembros){
+    const mon = allMons.find(x=>x.id===m.pid);
+    if(!mon) continue;
+    let metodos = [];
+    try{
+      const d = await movsDe(m.pid, GRUPO_VERSION[eq.juego] || '');
+      const lista = armarMovs(d, gen);
+      const enc = lista.find(x=>x.slug===slug);
+      if(enc) metodos = Object.keys(enc.metodos);
+    }catch(e){ metodos = []; }
+
+    let daño = null;
+    if(metodos.length && v.pot && clase!=='status'){
+      const cl = clase==='physical' ? 'attack' : 'special-attack';
+      const r = calcularDanio({
+        gen, atkMon:mon, defMon:REF_DEF,
+        mov:{...v, clase, es:info.es},
+        atk:{nivel:m.nivel, iv:m.ivs[cl], ev:m.evs[cl], nat:m.naturaleza, hab:m.habilidad, bajo:false},
+        def:{nivel:m.nivel, iv:31, ev:0, nat:'hardy', hab:''}
+      });
+      if(!r.nulo) daño = r;
+    }
+    filas.push({m, mon, metodos, daño, yaLoTiene: m.movimientos.includes(slug)});
+  }
+
+  const pueden = filas.filter(f=>f.metodos.length);
+  pueden.sort((a,b)=>(b.daño?b.daño.max:0)-(a.daño?a.daño.max:0));
+  const noPueden = filas.filter(f=>!f.metodos.length);
+
+  document.getElementById('qa-cuerpo').innerHTML = `
+    <div class="det-types" style="margin-bottom:12px;">
+      <span class="tchip" style="background:${TCOLOR[v.tipo]};font-size:10px;padding:4px 11px;">${TES[v.tipo]}</span>
+      <span class="tchip" style="background:${CLASE_COL[clase]};font-size:10px;padding:4px 11px;">${CLASE_ES[clase]}</span>
+      ${v.pot ? `<span class="tchip" style="background:var(--muted);font-size:10px;padding:4px 11px;">Pot ${v.pot}</span>` : ''}
+    </div>
+
+    <p class="mi-cuenta">${pueden.length} de ${filas.length} pueden aprenderlo</p>
+
+    ${pueden.map(f=>{
+      const mismo = tiposEnGen(f.mon, gen).includes(v.tipo);
+      return `
+      <div class="qa-fila ${f.yaLoTiene?'tiene':''}">
+        <img src="${SPRITE(f.m.pid)}" alt="">
+        <div class="qa-main">
+          <div class="qa-nom">${f.m.apodo || f.mon.es}
+            ${f.yaLoTiene?'<span class="cr-etq">ya lo lleva</span>':''}</div>
+          <div class="qa-mets">${f.metodos.map(k=>
+            `<span class="qa-met">${MET_ES[k]||k}</span>`).join('')}</div>
+        </div>
+        <div class="qa-dan">
+          ${f.daño
+            ? `<b>${f.daño.min}–${f.daño.max}</b>
+               <span>${mismo?'con STAB':'sin STAB'}</span>`
+            : '<span>sin daño</span>'}
+        </div>
+      </div>`;
+    }).join('') || '<div class="hint" style="padding:18px;text-align:center;">Ninguno puede aprenderlo.</div>'}
+
+    ${noPueden.length ? `
+      <p class="section-label" style="margin:16px 0 8px;">No pueden aprenderlo</p>
+      <div class="qa-no">${noPueden.map(f=>
+        `<span class="qa-no-mon"><img src="${SPRITE(f.m.pid)}" alt="">${f.m.apodo||f.mon.es}</span>`
+      ).join('')}</div>` : ''}
+
+    ${v.pot ? `<p class="mi-cuenta" style="margin-top:14px;line-height:1.6;">
+      El daño es contra un rival de referencia con 100 en todas las estadísticas
+      base y del mismo nivel que cada atacante, sin efectividad de tipos.
+      Sirve para comparar entre ellos, no para un combate concreto.</p>` : ''}`;
 }
 
 /* ---------- Tarjeta de equipo 3:2 ---------- */
