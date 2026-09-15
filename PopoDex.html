@@ -1318,8 +1318,14 @@ select:focus,input:focus{border-color:var(--accent);}
           <div class="sheet-num" id="eqd-sub">—</div>
           <h2 class="sheet-title" id="eqd-nom" style="font-size:17px;">—</h2>
         </div>
-        <button class="mini-btn close" onclick="verListaEquipos()">
-          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        <div class="hd-actions">
+          <button class="mini-btn" id="eqd-recargar" style="display:none;"
+            onclick="pedirActualizar()" title="Actualizar desde la partida">
+            <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 11-2.3-5.7"/><path d="M20 4v5h-5"/></svg>
+          </button>
+          <button class="mini-btn" onclick="verListaEquipos()" title="Volver a la lista">
+            <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        </div>
       </div>
       <div class="sheet-bd" id="eqd-body"></div>
     </div>
@@ -2348,8 +2354,20 @@ function vigilarPanel(ov){
   }).observe(ov, {childList:true, subtree:true, characterData:true});
 }
 
+const ICONO_CERRAR = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const ICONO_VOLVER = '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
+
 function openOverlay(id){
   const el = document.getElementById(id);
+
+  /* Si ya había un panel abierto, este vuelve al anterior en vez de cerrar */
+  const encima = !!document.querySelector('.overlay.open');
+  const btn = el.querySelector('.mini-btn.close');
+  if(btn){
+    btn.innerHTML = encima ? ICONO_VOLVER : ICONO_CERRAR;
+    btn.title = encima ? 'Volver' : 'Cerrar';
+  }
+
   capaOverlay += 2;                      // cada panel nuevo va por encima del anterior
   el.style.zIndex = capaOverlay;
   el.classList.add('open');
@@ -3815,6 +3833,7 @@ function abrirEquipo(i){
   if(!eq) return verListaEquipos();
   document.getElementById('eqd-sub').textContent = nombreDeJuego(eq.juego);
   document.getElementById('eqd-nom').textContent = eq.nombre;
+  document.getElementById('eqd-recargar').style.display = eq.idPartida ? 'flex' : 'none';
   openOverlay('ov-equipo');
   renderEquipo();
 }
@@ -3981,8 +4000,13 @@ async function pantallaEditor(){
         <h2 class="sheet-title" style="font-size:17px;">${mon.es||mon.name}</h2>
       </div>
       <div class="hd-actions">
-        <button class="mini-btn close" onclick="closeOverlay('ov-miembro');renderEquipo();">
-          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        ${eq.idPartida ? `<button class="mini-btn" onclick="pedirActualizar()"
+          title="Actualizar desde la partida">
+          <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 11-2.3-5.7"/><path d="M20 4v5h-5"/></svg>
+        </button>` : ''}
+        <button class="mini-btn" onclick="closeOverlay('ov-miembro');renderEquipo();"
+          title="Volver al equipo">
+          <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
       </div>
     </div>
     <div class="sheet-bd">
@@ -4005,24 +4029,6 @@ async function pantallaEditor(){
         </div>
       </div>
 
-      ${gen>=3 ? `
-      <div class="ed-sec">Naturaleza y habilidad</div>
-      <div class="ed-fila">
-        <label>Natur.</label>
-        <button class="campo" id="campo-naturaleza" onclick="abrirNaturaleza()"></button>
-      </div>
-      <div class="ed-fila">
-        <label>Habil.</label>
-        <button class="campo" id="campo-habilidad" onclick="abrirHabilidad()"></button>
-      </div>` : ''}
-
-      ${gen>=2 ? `
-      <div class="ed-sec">Objeto equipado</div>
-      <div class="ed-fila">
-        <label>Objeto</label>
-        <button class="campo" id="campo-objeto" onclick="abrirObjeto()"></button>
-      </div>` : ''}
-
       <div class="ed-sec">Estadísticas</div>
       <div class="iv-cab">
         <span>Stat</span><span>${t.ivLabel}</span><span>${t.evLabel}</span>
@@ -4042,6 +4048,23 @@ async function pantallaEditor(){
           <b>${sumaEV}</b> / ${t.evTotal} EVs</div>` : ''}
       </div>
 
+      ${gen>=3 ? `
+      <div class="ed-sec">Naturaleza y habilidad</div>
+      <div class="ed-fila">
+        <label>Natur.</label>
+        <button class="campo" id="campo-naturaleza" onclick="abrirNaturaleza()"></button>
+      </div>
+      <div class="ed-fila">
+        <label>Habil.</label>
+        <button class="campo" id="campo-habilidad" onclick="abrirHabilidad()"></button>
+      </div>` : ''}
+
+      ${gen>=2 ? `
+      <div class="ed-sec">Objeto equipado</div>
+      <div class="ed-fila">
+        <label>Objeto</label>
+        <button class="campo" id="campo-objeto" onclick="abrirObjeto()"></button>
+      </div>` : ''}
 
       <div class="ed-sec">Movimientos</div>
       <div id="ed-movs"><div class="hint">Cargando movimientos...</div></div>
@@ -8159,6 +8182,77 @@ async function nombresDeMovs(ids) {
   d.move.forEach(m=>{ mapa[m.id] = m.name; });
   Cache.set(ck, mapa);
   return mapa;
+}
+
+/* ---------- Actualizar un equipo desde su propia partida ---------- */
+function pedirActualizar(){
+  let inp = document.getElementById('archivo-refresco');
+  if(!inp){
+    inp = document.createElement('input');
+    inp.type = 'file';
+    inp.id = 'archivo-refresco';
+    inp.accept = '.sav,.sa1,.srm,application/octet-stream';
+    inp.style.display = 'none';
+    inp.addEventListener('change', e=>{
+      const f = e.target.files[0];
+      e.target.value = '';
+      if(f) actualizarDesdeSav(f);
+    });
+    document.body.appendChild(inp);
+  }
+  inp.click();
+}
+
+async function actualizarDesdeSav(archivo){
+  const eq = equipos[equipoAbierto];
+  if(!eq) return;
+  aviso('Leyendo la partida...');
+
+  let d;
+  try{ d = leerSav(await archivo.arrayBuffer()); }
+  catch(e){ aviso('No se pudo leer: '+(e.message||'archivo no válido')); return; }
+
+  /* Debe ser la misma aventura */
+  if(eq.idPartida && d.idPartida && d.idPartida !== eq.idPartida){
+    aviso('Esa partida es distinta a la de este equipo');
+    return;
+  }
+
+  try{
+    const mapa = await nombresDeMovs(d.miembros.flatMap(m=>m.movimientos));
+    d.miembros.forEach(m=>{
+      m.movimientos = m.movimientos.map(id=>mapa[id] || '').slice(0,4);
+      while(m.movimientos.length < 4) m.movimientos.push('');
+    });
+  }catch(e){ d.miembros.forEach(m=>{ m.movimientos = ['','','','']; }); }
+
+  try{
+    await cargarGeneros();
+    d.miembros.forEach(m=>{ m.genero = generoDe(m.pid, m.pvb); });
+  }catch(e){ d.miembros.forEach(m=>{ m.genero = 'N'; }); }
+
+  for(const m of d.miembros){
+    try{
+      const habs = await habilidadesDe(m.pid);
+      m.habilidad = (habs[m.ranura] || habs[0] || {}).slug || '';
+    }catch(e){ m.habilidad = ''; }
+  }
+
+  eq.miembros = d.miembros.map(m=>({
+    pid:m.pid, apodo:m.apodo, nivel:m.nivel, naturaleza:m.naturaleza,
+    habilidad:m.habilidad, objeto:'', genero:m.genero||'N',
+    ivs:{...m.ivs}, evs:{...m.evs}, movimientos:[...m.movimientos]
+  }));
+  if(!eq.idPartida && d.idPartida) eq.idPartida = d.idPartida;
+  guardarEquipos();
+
+  /* Si había un pokémon abierto, se refresca en el sitio */
+  const abierto = document.getElementById('ov-miembro').classList.contains('open');
+  renderEquipo();
+  if(abierto && eq.miembros[slotAbierto]) pantallaEditor();
+  else if(abierto) closeOverlay('ov-miembro');
+
+  aviso(`${eq.miembros.length} pokémon actualizados`);
 }
 
 /* ---------- Importar: interfaz ---------- */
