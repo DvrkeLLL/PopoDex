@@ -927,9 +927,22 @@ select:focus,input:focus{border-color:var(--accent);}
 .iv-fila{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
 .iv-lab{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:46px;flex-shrink:0;text-transform:uppercase;}
 .iv-in{
-  width:56px !important;flex:0 0 56px;padding:7px 4px !important;font-size:11.5px !important;
+  width:52px !important;flex:0 0 52px;padding:7px 3px !important;font-size:11.5px !important;
   text-align:center;-moz-appearance:textfield;
 }
+/* Valor por encima del límite del juego: se conserva pero se avisa */
+.iv-in.fuera{border-color:var(--alert);color:var(--alert);font-weight:700;}
+.iv-lab.sube{color:#2E7D6B;}
+.iv-lab.sube::after{content:' ▲';font-size:7px;}
+.iv-lab.baja{color:var(--alert);}
+.iv-lab.baja::after{content:' ▼';font-size:7px;}
+.iv-base{
+  font-family:var(--mono);font-size:11px;color:var(--muted);
+  width:38px;text-align:center;flex-shrink:0;margin-left:auto;
+}
+.iv-base b{color:var(--text);font-weight:700;}
+.base-total{border-top:1px solid var(--border);padding-top:7px;margin-top:2px;}
+.base-total .iv-lab{color:var(--dim);}
 .iv-in::-webkit-outer-spin-button,.iv-in::-webkit-inner-spin-button{
   -webkit-appearance:none;margin:0;
 }
@@ -938,16 +951,17 @@ select:focus,input:focus{border-color:var(--accent);}
 }
 .ed-num{-moz-appearance:textfield;}
 .iv-res{
-  margin-left:auto;font-family:var(--mono);font-size:12px;font-weight:700;
-  width:44px;text-align:right;flex-shrink:0;
+  font-family:var(--mono);font-size:12px;font-weight:700;
+  width:42px;text-align:right;flex-shrink:0;
 }
 .iv-cab{
   display:flex;gap:7px;font-family:var(--mono);font-size:8.5px;color:var(--dim);
   text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;
 }
 .iv-cab span:nth-child(1){width:46px;}
-.iv-cab span:nth-child(2),.iv-cab span:nth-child(3){width:56px;text-align:center;flex:0 0 56px;}
-.iv-cab span:nth-child(4){margin-left:auto;width:44px;text-align:right;}
+.iv-cab span:nth-child(2),.iv-cab span:nth-child(3){width:52px;text-align:center;flex:0 0 52px;}
+.iv-cab span:nth-child(4){margin-left:auto;width:38px;text-align:center;}
+.iv-cab span:nth-child(5){width:42px;text-align:right;}
 .totales{
   display:flex;justify-content:flex-end;gap:14px;margin-top:8px;
   font-family:var(--mono);font-size:9.5px;color:var(--muted);
@@ -3861,7 +3875,7 @@ function cambiarJuego(slug){
     eq.miembros.forEach(m=>{
       STATS6.forEach(s=>{
         m.ivs[s] = Math.min(m.ivs[s], t.iv);
-        m.evs[s] = Math.min(m.evs[s], t.ev);
+        m.evs[s] = Math.max(0, m.evs[s]);
       });
     });
   }
@@ -3928,12 +3942,15 @@ async function pantallaEditor(){
   const filaStat = clave=>{
     const base = mon.stats[clave]||0;
     const val = calcularStat(clave, base, m.ivs[clave], m.evs[clave], m.nivel, gen, m.naturaleza);
+    const nat = NATURALEZAS.find(n=>n.slug===m.naturaleza) || {};
+    const marca = clave===nat.sube ? 'sube' : clave===nat.baja ? 'baja' : '';
     return `<div class="iv-fila">
-      <span class="iv-lab">${STAT_ES[clave]}</span>
-      <input class="iv-in" type="number" min="0" max="${t.iv}" value="${m.ivs[clave]}"
-             onchange="setIV('${clave}',this.value)">
-      <input class="iv-in" type="number" min="0" max="${t.ev}" value="${m.evs[clave]}"
-             onchange="setEV('${clave}',this.value)">
+      <span class="iv-lab ${marca}">${STAT_ES[clave]}</span>
+      <input class="iv-in ${m.ivs[clave]>t.iv?'fuera':''}" type="number" min="0"
+             value="${m.ivs[clave]}" onchange="setIV('${clave}',this.value)">
+      <input class="iv-in ${m.evs[clave]>t.ev?'fuera':''}" type="number" min="0"
+             value="${m.evs[clave]}" onchange="setEV('${clave}',this.value)">
+      <span class="iv-base">${base}</span>
       <span class="iv-res" id="res-${clave}">${val}</span>
     </div>`;
   };
@@ -3993,15 +4010,26 @@ async function pantallaEditor(){
 
       <div class="ed-sec">Estadísticas</div>
       <div class="iv-cab">
-        <span>Stat</span><span>${t.ivLabel}</span><span>${t.evLabel}</span><span>Total</span>
+        <span>Stat</span><span>${t.ivLabel}</span><span>${t.evLabel}</span>
+        <span>Base</span><span>Total</span>
       </div>
       ${STATS6.map(filaStat).join('')}
+      <div class="iv-fila base-total">
+        <span class="iv-lab">Total base</span>
+        <span></span><span></span>
+        <span class="iv-base"><b>${STATS6.reduce((a,k)=>a+(mon.stats[k]||0),0)}</b></span>
+        <span class="iv-res"></span>
+      </div>
       <div class="totales">
         <div class="tot-caja ${sumaIV===maxIV?'pleno':''}" id="iv-total">
           <b>${sumaIV}</b> / ${maxIV} ${t.ivLabel}s</div>
         ${t.evTotal ? `<div class="tot-caja ${sumaEV>t.evTotal?'exceso':''}" id="ev-total">
           <b>${sumaEV}</b> / ${t.evTotal} EVs</div>` : ''}
       </div>
+      ${STATS6.some(k=>m.evs[k]>t.ev || m.ivs[k]>t.iv) ? `
+        <div class="warn" style="margin-top:9px;">Hay valores por encima del límite
+        de ${nombreDeJuego(eq.juego)}. Se conservan tal como venían en la partida
+        y se usan en el cálculo.</div>` : ''}
 
       <div class="ed-sec">Movimientos</div>
       <div id="ed-movs"><div class="hint">Cargando movimientos...</div></div>
@@ -4478,15 +4506,17 @@ function setCampo(campo, valor){
 }
 
 function setIV(clave, v){
-  const eq = equipos[equipoAbierto], t = topesDe(genDeJuego(eq.juego));
-  _m().ivs[clave] = Math.max(0, Math.min(t.iv, Number(v)||0));
+  _m().ivs[clave] = Math.max(0, Number(v)||0);
   guardarEquipos(); refrescarStats();
+  pantallaEditor();
 }
 
 function setEV(clave, v){
-  const eq = equipos[equipoAbierto], t = topesDe(genDeJuego(eq.juego));
-  _m().evs[clave] = Math.max(0, Math.min(t.ev, Number(v)||0));
+  /* No se recorta al tope del juego: una partida editada puede traer
+     valores mayores y esconderlos daría estadísticas equivocadas */
+  _m().evs[clave] = Math.max(0, Number(v)||0);
   guardarEquipos(); refrescarStats();
+  pantallaEditor();
 }
 
 function refrescarStats(){
@@ -8292,8 +8322,10 @@ function confirmarImportar(actualizar){
   const miembros = impDatos.miembros.map(m=>{
     const ivs = {}, evs = {};
     STATS6.forEach(k=>{
-      ivs[k] = Math.min(m.ivs[k] ?? t.iv, t.iv);
-      evs[k] = Math.min(m.evs[k] ?? 0, t.ev);
+      ivs[k] = m.ivs[k] ?? t.iv;
+      /* Los valores de la partida se guardan tal cual: si superan el tope
+         del juego, se marcan pero no se recortan */
+      evs[k] = m.evs[k] ?? 0;
     });
     return {pid:m.pid, apodo:m.apodo, nivel:m.nivel, naturaleza:m.naturaleza,
             habilidad:m.habilidad, objeto:'', genero:m.genero||'N', ivs, evs,
