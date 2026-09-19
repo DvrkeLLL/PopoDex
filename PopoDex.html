@@ -267,9 +267,18 @@ body{background:var(--bg-void);color:var(--text);font-family:var(--body);overflo
 .evo-node div{font-size:10px;text-transform:capitalize;font-weight:500;}
 .evo-arrow{font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;min-width:46px;line-height:1.2;}
 
-.loc-item{font-size:11.5px;padding:6px 0;border-bottom:1px solid var(--border);text-transform:capitalize;}
+.loc-item{font-size:12px;font-weight:600;padding:9px 0;
+  border-bottom:1px solid var(--border);}
 .loc-item:last-child{border-bottom:none;}
-.loc-games{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:none;}
+.loc-games{
+  font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:none;
+  font-weight:400;display:flex;align-items:center;gap:5px;margin-top:3px;
+}
+.loc-pc{
+  font-family:var(--mono);font-size:9.5px;font-weight:700;color:#fff;
+  background:var(--accent);border-radius:2px;padding:1px 6px;margin-left:auto;
+  flex-shrink:0;
+}
 .hint{font-family:var(--mono);font-size:10px;color:var(--muted);padding:10px 0;}
 
 /* ---------- FILTROS ---------- */
@@ -3398,15 +3407,34 @@ async function loadLocations(id){
     }
     bd.innerHTML = entradas.map(e=>{
       const lugar = nombreLugar(e.location_area.name);
-      const juegos = [...new Set(e.version_details.map(v=>nombreJuego(v.version.name)))].join(', ');
-      const niveles = e.version_details
-        .flatMap(v=>v.encounter_details.map(d=>[d.min_level,d.max_level]))
-        .reduce((a,[mn,mx])=>[Math.min(a[0],mn),Math.max(a[1],mx)],[99,0]);
-      const rango = niveles[1]>0
-        ? (niveles[0]===niveles[1] ? `Nv. ${niveles[0]}` : `Nv. ${niveles[0]}-${niveles[1]}`)
-        : '';
-      return `<div class="loc-item">${lugar}
-        <div class="loc-games">${juegos}${rango? ' · '+rango : ''}</div></div>`;
+
+      /* Una línea por juego y método: así el porcentaje corresponde
+         a ese caso concreto y no a una mezcla de todos */
+      const lineas = {};
+      e.version_details.forEach(v=>{
+        const juego = nombreJuego(v.version.name);
+        v.encounter_details.forEach(d=>{
+          const met = d.method ? d.method.name : 'walk';
+          const k = juego+'|'+met;
+          const l = lineas[k] || {juego, met, min:99, max:0, pc:0};
+          l.min = Math.min(l.min, d.min_level);
+          l.max = Math.max(l.max, d.max_level);
+          l.pc += (d.chance || 0);        // los tramos del mismo método se suman
+          lineas[k] = l;
+        });
+      });
+
+      const detalle = Object.values(lineas)
+        .sort((a,b)=> a.juego.localeCompare(b.juego) || b.pc-a.pc)
+        .map(l=>{
+          const rango = l.max>0
+            ? (l.min===l.max ? `Nv. ${l.min}` : `Nv. ${l.min}-${l.max}`) : '';
+          const pc = l.pc>0 ? `<span class="loc-pc">${Math.min(l.pc,100)}%</span>` : '';
+          return `<div class="loc-games">${l.juego} · ${nombreMetodo(l.met)}${
+            rango ? ' · '+rango : ''}${pc}</div>`;
+        }).join('');
+
+      return `<div class="loc-item">${lugar}${detalle}</div>`;
     }).join('');
   }catch(e){ bd.innerHTML='<div class="hint">No se pudieron cargar las localizaciones.</div>'; }
 }
