@@ -1043,6 +1043,40 @@ select:focus,input:focus{border-color:var(--accent);}
   width:52px !important;flex:0 0 52px;padding:7px 3px !important;font-size:11.5px !important;
   text-align:center;-moz-appearance:textfield;
 }
+.cand-btn{
+  display:flex;align-items:center;gap:3px;background:var(--bg-panel);
+  border:1px solid var(--border);border-radius:var(--r);padding:0 8px;
+  height:100%;cursor:pointer;flex-shrink:0;
+}
+.cand-btn svg{width:15px;height:15px;stroke:var(--muted);fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;}
+.cand-btn.on{border-color:var(--accent);background:var(--bg-screen);}
+.cand-btn.on svg{stroke:var(--accent);}
+.cand-btn i{font-style:normal;font-family:var(--mono);font-size:9px;
+  color:var(--accent);font-weight:700;}
+.iv-lab.bloqueada{opacity:.4;text-decoration:line-through;}
+.iv-in.bloq{opacity:.4;}
+.bq-fila{
+  display:flex;align-items:center;gap:10px;padding:11px 2px;cursor:pointer;
+  border-bottom:1px solid var(--border);
+}
+.bq-fila:last-child{border-bottom:none;}
+.bq-lab{font-size:12.5px;font-weight:600;flex:1;}
+.bq-val{font-family:var(--mono);font-size:13px;font-weight:700;width:32px;text-align:right;}
+.bq-val.pleno{color:#1F6B57;}
+.bq-est{font-family:var(--mono);font-size:8.5px;color:var(--muted);
+  text-transform:uppercase;width:58px;text-align:right;}
+.bq-sw{
+  width:34px;height:19px;border-radius:999px;background:var(--border);
+  flex-shrink:0;position:relative;transition:background .15s;
+}
+.bq-sw i{
+  position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
+  background:#fff;transition:transform .15s;
+}
+.bq-sw.on{background:var(--accent);}
+.bq-sw.on i{transform:translateX(15px);}
+.bq-fila.off .bq-lab{opacity:.5;}
 .iv-in.pleno{border-color:#2E7D6B;color:#1F6B57;font-weight:700;background:#F0F8F5;}
 .iv-in.excede{border-color:#C8901A;color:#9A6B10;font-weight:700;background:#FDF6E6;}
 .iv-lab.sube{color:#2E7D6B;}
@@ -1808,6 +1842,29 @@ select:focus,input:focus{border-color:var(--accent);}
       <div class="sheet-ft">
         <button class="btn btn-s" onclick="hvQuitar()">Quitar todos</button>
         <button class="btn btn-p" onclick="hvListo()">Listo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BLOQUEAR ESTADÍSTICAS ============ -->
+  <div class="overlay" id="ov-bloqueo">
+    <div class="sheet">
+      <div class="sheet-hd">
+        <div>
+          <div class="sheet-num" id="bq-sub">—</div>
+          <h2 class="sheet-title" style="font-size:17px;">Qué cuenta en el total</h2>
+        </div>
+        <button class="mini-btn close" onclick="closeOverlay('ov-bloqueo')"></button>
+      </div>
+      <div class="sheet-bd">
+        <p class="mi-cuenta" style="line-height:1.6;">Bloquea las estadísticas que
+          no te importen: dejan de sumar en el contador, así ves de verdad cómo van
+          las que sí buscas. No se modifican sus valores.</p>
+        <div id="bq-lista"></div>
+      </div>
+      <div class="sheet-ft">
+        <button class="btn btn-s" onclick="bqNinguna()">Contar todas</button>
+        <button class="btn btn-p" onclick="closeOverlay('ov-bloqueo')">Listo</button>
       </div>
     </div>
   </div>
@@ -3961,7 +4018,7 @@ function miembroNuevo(pid, gen){
   const ivs={}, evs={};
   STATS6.forEach(s=>{ ivs[s] = t.iv; evs[s] = 0; });
   return {pid, apodo:'', nivel:50, naturaleza:'hardy', habilidad:'', objeto:'',
-          genero:'N', ivs, evs, movimientos:['','','','']};
+          genero:'N', ivs, evs, ivBloq:[], movimientos:['','','','']};
 }
 
 /* ---------- Lista de equipos ---------- */
@@ -4210,9 +4267,11 @@ async function pantallaEditor(){
     const nat = NATURALEZAS.find(n=>n.slug===m.naturaleza) || {};
     const marca = clave===nat.sube ? 'sube' : clave===nat.baja ? 'baja' : '';
     return `<div class="iv-fila">
-      <span class="iv-lab ${marca}">${STAT_ES[clave]}</span>
-      <input class="iv-in ${estadoTope(m.ivs[clave], t.iv)}" type="number" min="0"
-             value="${m.ivs[clave]}" onchange="setIV('${clave}',this.value)">
+      <span class="iv-lab ${marca} ${m.ivBloq.includes(clave)?'bloqueada':''}"
+        >${STAT_ES[clave]}</span>
+      <input class="iv-in ${m.ivBloq.includes(clave)?'bloq':estadoTope(m.ivs[clave], t.iv)}"
+             type="number" min="0" value="${m.ivs[clave]}"
+             onchange="setIV('${clave}',this.value)">
       <input class="iv-in ${estadoTope(m.evs[clave], t.ev)}" type="number" min="0"
              value="${m.evs[clave]}" onchange="setEV('${clave}',this.value)">
       <span class="iv-base">${base}</span>
@@ -4221,8 +4280,12 @@ async function pantallaEditor(){
   };
 
   const sumaEV = STATS6.reduce((a,s)=>a+m.evs[s],0);
-  const sumaIV = STATS6.reduce((a,s)=>a+m.ivs[s],0);
-  const maxIV = t.iv*6;
+  /* Las bloqueadas no cuentan: así el contador refleja solo
+     las estadísticas que al jugador le importan */
+  if(!Array.isArray(m.ivBloq)) m.ivBloq = [];
+  const cuentan = STATS6.filter(x=>!m.ivBloq.includes(x));
+  const sumaIV = cuentan.reduce((a,s)=>a+m.ivs[s],0);
+  const maxIV = t.iv * cuentan.length;
 
   sheet.innerHTML = `
     <div class="sheet-hd">
@@ -4271,8 +4334,14 @@ async function pantallaEditor(){
         <span class="iv-res"></span>
       </div>
       <div class="totales">
-        <div class="tot-caja ${sumaIV===maxIV?'pleno':''}" id="iv-total">
+        <div class="tot-caja ${maxIV>0 && sumaIV===maxIV?'pleno':''}" id="iv-total">
           <b>${sumaIV}</b> / ${maxIV} ${t.ivLabel}s</div>
+        <button class="cand-btn ${m.ivBloq.length?'on':''}" onclick="abrirBloqueo()"
+          title="Elegir qué estadísticas cuentan">
+          <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/>
+            <path d="M8 11V8a4 4 0 018 0v3"/></svg>
+          ${m.ivBloq.length ? `<i>${m.ivBloq.length}</i>` : ''}
+        </button>
         ${t.evTotal ? `<div class="tot-caja ${sumaEV>t.evTotal?'exceso':''}" id="ev-total">
           <b>${sumaEV}</b> / ${t.evTotal} EVs</div>` : ''}
       </div>
@@ -4754,6 +4823,50 @@ async function fijarJuego(slug){
 /* ---------- Cambios en el editor ---------- */
 function _m(){ return equipos[equipoAbierto].miembros[slotAbierto]; }
 
+/* ---------- Bloqueo de estadísticas en el contador ---------- */
+function abrirBloqueo(){
+  const m = _m();
+  const mon = allMons.find(x=>x.id===m.pid) || {};
+  document.getElementById('bq-sub').textContent = m.apodo || mon.es || '';
+  pintarBloqueo();
+  openOverlay('ov-bloqueo');
+}
+
+function pintarBloqueo(){
+  const m = _m();
+  const eq = equipos[equipoAbierto];
+  const t = topesDe(genDeJuego(eq.juego));
+  if(!Array.isArray(m.ivBloq)) m.ivBloq = [];
+
+  document.getElementById('bq-lista').innerHTML = STATS6.map(k=>{
+    const bloq = m.ivBloq.includes(k);
+    const v = m.ivs[k];
+    return `
+      <div class="bq-fila ${bloq?'off':''}" onclick="bqAlternar('${k}')">
+        <span class="bq-lab">${STAT_ES[k]}</span>
+        <span class="bq-val ${v>=t.iv?'pleno':''}">${v}</span>
+        <span class="bq-est">${bloq?'no cuenta':'cuenta'}</span>
+        <span class="bq-sw ${bloq?'':'on'}"><i></i></span>
+      </div>`;
+  }).join('');
+}
+
+function bqAlternar(k){
+  const m = _m();
+  m.ivBloq = m.ivBloq.includes(k) ? m.ivBloq.filter(x=>x!==k) : [...m.ivBloq, k];
+  guardarEquipos();
+  pintarBloqueo();
+  pantallaEditor();
+}
+
+function bqNinguna(){
+  const m = _m();
+  m.ivBloq = [];
+  guardarEquipos();
+  pintarBloqueo();
+  pantallaEditor();
+}
+
 function alternarGenero(){
   const m = _m();
   const ciclo = {M:'F', F:'N', N:'M'};
@@ -4795,9 +4908,10 @@ function refrescarStats(){
   });
   const cajaIV = document.getElementById('iv-total');
   if(cajaIV){
-    const suma = STATS6.reduce((a,s)=>a+m.ivs[s],0), max = t.iv*6;
+    const cuentan = STATS6.filter(x=>!(m.ivBloq||[]).includes(x));
+    const suma = cuentan.reduce((a,s)=>a+m.ivs[s],0), max = t.iv*cuentan.length;
     cajaIV.innerHTML = `<b>${suma}</b> / ${max} ${t.ivLabel}s`;
-    cajaIV.classList.toggle('pleno', suma===max);
+    cajaIV.classList.toggle('pleno', max>0 && suma===max);
   }
   const cajaEV = document.getElementById('ev-total');
   if(cajaEV && t.evTotal){
@@ -9092,7 +9206,7 @@ function confirmarImportar(actualizar){
     });
     return {pid:m.pid, apodo:m.apodo, nivel:m.nivel, naturaleza:m.naturaleza,
             habilidad:m.habilidad, objeto:'', genero:m.genero||'N', ivs, evs,
-            movimientos:[...m.movimientos]};
+            ivBloq:[], movimientos:[...m.movimientos]};
   });
 
   let indice;
