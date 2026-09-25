@@ -1043,6 +1043,16 @@ select:focus,input:focus{border-color:var(--accent);}
   width:52px !important;flex:0 0 52px;padding:7px 3px !important;font-size:11.5px !important;
   text-align:center;-moz-appearance:textfield;
 }
+.mini{position:relative;}
+.qa-medalla{
+  position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;
+  background:var(--accent);color:#fff;font-family:var(--mono);font-size:9px;
+  font-weight:700;display:flex;align-items:center;justify-content:center;z-index:2;
+}
+.qa-stat{
+  font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--accent);
+  margin-top:1px;
+}
 .cand-btn{
   display:flex;align-items:center;gap:3px;background:var(--bg-panel);
   border:1px solid var(--border);border-radius:var(--r);padding:0 8px;
@@ -1395,7 +1405,7 @@ select:focus,input:focus{border-color:var(--accent);}
         </div>
         <div class="sc" data-go="info">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none"/></svg>
-          <div class="sc-t">Info útil</div><div class="sc-s">Mecánicas por juego</div>
+          <div class="sc-t">Utilidades</div><div class="sc-s">Mecánicas, mapas y más</div>
         </div>
       </div>
 
@@ -2123,7 +2133,7 @@ select:focus,input:focus{border-color:var(--accent);}
     </button>
     <button class="nav-i" data-go="info">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none"/></svg>
-      <span>INFO</span><div class="nav-dot"></div>
+      <span>UTILIDADES</span><div class="nav-dot"></div>
     </button>
   </nav>
 </div>
@@ -2525,7 +2535,7 @@ function nombreLugar(slugArea){
 /* ================= NAVEGACIÓN ================= */
 /* ---------- Nombre del apartado, deslizándose ---------- */
 const NOMBRE_APARTADO = {
-  inicio:'Inicio', pokedex:'Pokédex', equipo:'Equipo', dano:'Daño', info:'Info'
+  inicio:'Inicio', pokedex:'Pokédex', equipo:'Equipo', dano:'Daño', info:'Utilidades'
 };
 const lienzoMedida = document.createElement('canvas').getContext('2d');
 let relevoTitulo = null;
@@ -6686,7 +6696,7 @@ function infoMenu(){
   infoVista = 'menu';
   document.getElementById('info-volver').style.display = 'none';
   document.getElementById('info-ayuda').style.display = 'none';
-  setApartado('Info');
+  setApartado('Utilidades');
   document.getElementById('info-body').innerHTML = `
     <button class="util" onclick="infoIr('movs')">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
@@ -6981,25 +6991,139 @@ async function verMovimiento(slug){
     </div>`;
 }
 
+/* ---------- Quién aprende un movimiento ---------- */
+let qaIds = [], qaLista = [], qaDibujados = 0, qaNombre = '';
+let qaOrden = 'dex', qaGens = [], qaTipos = [];
+const LOTE_QA = 48;
+
 async function quienAprende(slug, nombre){
   const cont = document.getElementById('movdet-quien');
   cont.innerHTML = '<div class="hint">Buscando...</div>';
+  qaNombre = nombre;
   try{
     const mapa = await whoLearns(slug);
-    const ids = [...mapa.keys()].sort((a,b)=>a-b);
-    if(!ids.length){ cont.innerHTML = '<div class="hint">Ningún pokémon lo aprende.</div>'; return; }
-    cont.innerHTML = `
-      <p class="mi-cuenta">${ids.length} pokémon aprenden ${nombre}</p>
-      <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:6px;padding:0;">
-        ${ids.slice(0,80).map(id=>{
-          const mon = allMons.find(x=>x.id===id);
-          if(!mon) return '';
-          return `<div class="mini" onclick="closeOverlay('ov-movdet');goTo('pokedex');setTimeout(()=>openDetail(${id}),200)">
-            <img src="${SPRITE(id)}" alt="" loading="lazy"><div>${mon.es||mon.name}</div></div>`;
-        }).join('')}
-      </div>
-      ${ids.length>80 ? `<p class="hint" style="text-align:center;padding-top:8px;">y ${ids.length-80} más</p>`:''}`;
-  }catch(e){ cont.innerHTML = '<div class="hint">No se pudo consultar.</div>'; }
+    qaIds = [...mapa.keys()];
+  }catch(e){
+    cont.innerHTML = '<div class="hint">No se pudo consultar.</div>';
+    return;
+  }
+  if(!qaIds.length){
+    cont.innerHTML = '<div class="hint">Ningún pokémon lo aprende.</div>';
+    return;
+  }
+  qaOrden = 'dex'; qaGens = []; qaTipos = [];
+
+  cont.innerHTML = `
+    <div class="dos-filtros" style="margin:10px 0 8px;">
+      <button class="campo" onclick="qaElegirOrden()">
+        <span class="campo-main"><span class="campo-val" id="qa-orden-txt">N.º Pokédex</span></span>
+        <span class="campo-x">›</span></button>
+      <button class="campo" onclick="qaElegirTipos()">
+        <img class="jm" src="${SPRITE(133)}" alt="">
+        <span class="campo-main"><span class="campo-val sin" id="qa-tipos-txt">Tipos</span></span>
+      </button>
+    </div>
+    <button class="campo" style="width:100%;margin-bottom:9px;" onclick="qaElegirGens()">
+      <span class="campo-main"><span class="campo-val sin" id="qa-gens-txt">Todas las generaciones</span></span>
+      <span class="campo-x">›</span></button>
+    <p class="mi-cuenta" id="qa-cuenta"></p>
+    <div class="grid" id="qa-grid" style="grid-template-columns:repeat(3,1fr);gap:6px;padding:0;"></div>
+    <div id="qa-mas"></div>`;
+
+  qaFiltrar();
+}
+
+const ORDEN_QA = {
+  dex:'N.º Pokédex', total:'Mejor total', hp:'PS', attack:'Ataque',
+  defense:'Defensa', 'special-attack':'At. Especial',
+  'special-defense':'Df. Especial', speed:'Velocidad'
+};
+
+function qaElegirOrden(){
+  abrirSelector({
+    titulo:'Ordenar por', sub:'Para ver cuál es el mejor', buscar:false, actual:qaOrden,
+    opciones: Object.entries(ORDEN_QA).map(([k,v])=>({
+      valor:k, nombre:v,
+      detalle: k==='dex' ? 'Orden numérico' :
+               k==='total' ? 'Suma de las seis' : 'De mayor a menor'
+    })),
+    alElegir: v=>{ qaOrden = v; qaFiltrar(); }
+  });
+}
+
+function qaElegirTipos(){
+  abrirTipos({sub:'Filtrar la lista', actual:qaTipos, tipos:TYPES,
+    alElegir: v=>{ qaTipos = v; qaFiltrar(); }});
+}
+
+function qaElegirGens(){
+  abrirGens({sub:'De qué generación son', actual:qaGens,
+    alElegir: v=>{ qaGens = v; qaFiltrar(); }});
+}
+
+function qaFiltrar(){
+  qaLista = qaIds.map(id=>allMons.find(x=>x.id===id)).filter(Boolean)
+    .filter(m=>{
+      if(qaGens.length && !qaGens.includes(genDe(m.id))) return false;
+      if(qaTipos.length && !tiposDe(m).some(t=>qaTipos.includes(t))) return false;
+      return true;
+    });
+
+  if(qaOrden==='dex') qaLista.sort((a,b)=>a.id-b.id);
+  else if(qaOrden==='total') qaLista.sort((a,b)=>b.total-a.total || a.id-b.id);
+  else qaLista.sort((a,b)=>(b.stats[qaOrden]||0)-(a.stats[qaOrden]||0) || a.id-b.id);
+
+  const t = document.getElementById('qa-orden-txt');
+  if(t) t.textContent = ORDEN_QA[qaOrden];
+  const tt = document.getElementById('qa-tipos-txt');
+  if(tt){
+    tt.textContent = qaTipos.length ? qaTipos.length+' tipos' : 'Tipos';
+    tt.classList.toggle('sin', !qaTipos.length);
+  }
+  const tg = document.getElementById('qa-gens-txt');
+  if(tg){
+    tg.textContent = qaGens.length ? 'Gen '+qaGens.join(', ') : 'Todas las generaciones';
+    tg.classList.toggle('sin', !qaGens.length);
+  }
+
+  document.getElementById('qa-cuenta').textContent =
+    `${qaLista.length} de ${qaIds.length} aprenden ${qaNombre}`;
+  qaDibujados = 0;
+  document.getElementById('qa-grid').innerHTML = '';
+  qaMas();
+}
+
+function qaMas(){
+  const grid = document.getElementById('qa-grid');
+  const pie = document.getElementById('qa-mas');
+  if(!grid) return;
+  if(!qaLista.length){
+    grid.innerHTML = '';
+    pie.innerHTML = '<div class="hint" style="padding:16px;text-align:center;">Ninguno coincide.</div>';
+    return;
+  }
+  const hasta = Math.min(qaDibujados + LOTE_QA, qaLista.length);
+  const destaca = qaOrden !== 'dex';
+
+  grid.insertAdjacentHTML('beforeend', qaLista.slice(qaDibujados, hasta).map((m,i)=>{
+    const pos = qaDibujados + i;
+    const valor = qaOrden==='total' ? m.total : (m.stats[qaOrden]||0);
+    return `
+      <div class="mini" onclick="closeOverlay('ov-movdet');goTo('pokedex');setTimeout(()=>openDetail(${m.id}),200)">
+        ${destaca && pos<3 ? `<span class="qa-medalla">${pos+1}</span>` : ''}
+        <img src="${SPRITE(m.id)}" alt="" loading="lazy">
+        <div>${m.es||m.name}</div>
+        ${destaca ? `<div class="qa-stat">${valor}</div>` : ''}
+      </div>`;
+  }).join(''));
+
+  qaDibujados = hasta;
+  pie.innerHTML = qaDibujados < qaLista.length
+    ? `<button class="btn btn-s" style="width:100%;margin-top:9px;" onclick="qaMas()">
+         Ver ${Math.min(LOTE_QA, qaLista.length-qaDibujados)} más
+         <i style="font-style:normal;opacity:.6;">· quedan ${qaLista.length-qaDibujados}</i>
+       </button>`
+    : '';
 }
 
 /* ---------- Selector de generaciones reutilizable ---------- */
