@@ -2378,6 +2378,13 @@ function valoresMov(slug, gen, base){
 const CACHE_VER = 'v3';           // subir esto invalida todo lo guardado
 const CACHE_DIAS = 14;
 
+/* Claves del usuario: nunca se tocan al limpiar el caché */
+const CLAVES_USUARIO = [
+  'popodex:equipos', 'popodex:juego', 'popodex:resumen',
+  'popodex:simtipos', 'popodex:simjuego'
+];
+const esDelUsuario = k => CLAVES_USUARIO.includes(k);
+
 const Cache = {
   k(key){ return `popodex:${CACHE_VER}:${key}`; },
   get(key){
@@ -2394,9 +2401,11 @@ const Cache = {
       localStorage.setItem(this.k(key), JSON.stringify({t:Date.now(), d:data}));
       return true;
     }catch(e){
-      /* Sin espacio: limpiamos lo viejo de PopoDex y reintentamos una vez */
+      /* Sin espacio: se borra caché viejo, nunca los datos del usuario */
       try{
-        Object.keys(localStorage).filter(k=>k.startsWith('popodex:') && !k.startsWith(`popodex:${CACHE_VER}:`))
+        Object.keys(localStorage)
+          .filter(k=>k.startsWith('popodex:') && !esDelUsuario(k)
+                     && !k.startsWith(`popodex:${CACHE_VER}:`))
           .forEach(k=>localStorage.removeItem(k));
         localStorage.setItem(this.k(key), JSON.stringify({t:Date.now(), d:data}));
         return true;
@@ -2404,11 +2413,14 @@ const Cache = {
     }
   },
   limpiar(){
-    Object.keys(localStorage).filter(k=>k.startsWith('popodex:')).forEach(k=>localStorage.removeItem(k));
+    Object.keys(localStorage)
+      .filter(k=>k.startsWith('popodex:') && !esDelUsuario(k))
+      .forEach(k=>localStorage.removeItem(k));
   },
   tamano(){
     let b = 0;
-    Object.keys(localStorage).filter(k=>k.startsWith('popodex:'))
+    Object.keys(localStorage)
+      .filter(k=>k.startsWith('popodex:') && !esDelUsuario(k))
       .forEach(k=>{ b += k.length + (localStorage.getItem(k)||'').length; });
     return b;
   }
@@ -4004,12 +4016,59 @@ let equipoAbierto = null;   // índice del equipo que se está viendo
 let slotAbierto = null;     // índice del miembro que se está editando
 
 function guardarEquipos(){
-  try{ localStorage.setItem('popodex:equipos', JSON.stringify(equipos)); }catch(e){}
+  try{
+    localStorage.setItem('popodex:equipos', JSON.stringify(equipos));
+  }catch(e){
+    /* Suele ser falta de espacio: se libera el caché y se reintenta */
+    try{
+      Cache.limpiar();
+      localStorage.setItem('popodex:equipos', JSON.stringify(equipos));
+      aviso('Se vació el caché para poder guardar');
+    }catch(e2){
+      aviso('No se pudieron guardar los equipos: sin espacio');
+    }
+  }
 }
+/* Los datos guardados pueden venir de una versión anterior o llegar
+   incompletos: se revisan antes de usarlos para que nada reviente
+   al dibujar, que es lo que haría parecer que los equipos se borraron. */
+function sanearEquipo(eq){
+  if(!eq || typeof eq !== 'object') return null;
+  const t = topesDe(genDeJuego(eq.juego));
+  const miembros = Array.isArray(eq.miembros) ? eq.miembros : [];
+  return {
+    nombre: typeof eq.nombre === 'string' && eq.nombre.trim() ? eq.nombre : 'Equipo',
+    juego: JUEGOS.some(j=>j.slug===eq.juego) ? eq.juego : 'red',
+    idPartida: Number(eq.idPartida) || 0,
+    miembros: miembros.map(m=>{
+      if(!m || !m.pid) return null;
+      const ivs = {}, evs = {};
+      STATS6.forEach(k=>{
+        ivs[k] = Number(m.ivs?.[k]) || 0;
+        evs[k] = Number(m.evs?.[k]) || 0;
+      });
+      const movs = Array.isArray(m.movimientos) ? m.movimientos.slice(0,4) : [];
+      while(movs.length < 4) movs.push('');
+      return {
+        pid: Number(m.pid),
+        apodo: typeof m.apodo === 'string' ? m.apodo : '',
+        nivel: Math.max(1, Math.min(100, Number(m.nivel) || 50)),
+        naturaleza: NATURALEZAS.some(n=>n.slug===m.naturaleza) ? m.naturaleza : 'hardy',
+        habilidad: typeof m.habilidad === 'string' ? m.habilidad : '',
+        objeto: typeof m.objeto === 'string' ? m.objeto : '',
+        genero: ['M','F','N'].includes(m.genero) ? m.genero : 'N',
+        ivBloq: Array.isArray(m.ivBloq) ? m.ivBloq.filter(x=>STATS6.includes(x)) : [],
+        ivs, evs, movimientos: movs
+      };
+    }).filter(Boolean)
+  };
+}
+
 function cargarEquipos(){
   try{
     const raw = localStorage.getItem('popodex:equipos');
-    equipos = raw ? JSON.parse(raw) : [];
+    const lista = raw ? JSON.parse(raw) : [];
+    equipos = (Array.isArray(lista) ? lista : []).map(sanearEquipo).filter(Boolean);
   }catch(e){ equipos = []; }
 }
 
