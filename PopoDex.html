@@ -7293,21 +7293,37 @@ async function verHabilidad(slug){
   habMons = null; habMonGens = [];
   const body = document.getElementById('info-body');
   body.innerHTML = '<div class="hint">Buscando quién la tiene...</div>';
-  try{
-    const ck = 'habmons:'+slug;
-    let datos = Cache.get(ck);
-    if(!datos){
+
+  const ck = 'habmons:'+slug;
+  let datos = Cache.get(ck);
+  if(!datos){
+    /* Se filtra por el número de la habilidad, que es una columna:
+       navegar la relación por nombre lo rechaza el servidor */
+    try{
       const d = await gql(`{
-        pokemonability(where:{ability:{name:{_eq:"${slug}"}}, pokemon_id:{_lte:${MAX_ID}}},
+        pokemonability(where:{ability_id:{_eq:${habAbierta.id}}, pokemon_id:{_lte:${MAX_ID}}},
                        order_by:{pokemon_id:asc}) {
           pokemon_id is_hidden
         }
       }`);
       datos = d.pokemonability.map(x=>({id:x.pokemon_id, oculta:x.is_hidden}));
       Cache.set(ck, datos);
+    }catch(e){
+      /* Respaldo por REST, que no depende del esquema de GraphQL */
+      try{
+        const r = await fetchJSON(`${API}/ability/${slug}`);
+        datos = r.pokemon.map(x=>({
+          id: Number(x.pokemon.url.split('/').filter(Boolean).pop()),
+          oculta: x.is_hidden
+        })).filter(x=>x.id <= MAX_ID).sort((a,b)=>a.id-b.id);
+        Cache.set(ck, datos);
+      }catch(e2){
+        habAbierta.error = e.message || 'no se pudo consultar';
+        datos = [];
+      }
     }
-    habMons = datos;
-  }catch(e){ habMons = []; }
+  }
+  habMons = datos;
   pintarHabDetalle();
 }
 
@@ -7352,7 +7368,13 @@ function pintarHabDetalle(){
       Habilidad normal · ${normales.length}</p>${rejilla(normales)}` : ''}
     ${ocultas.length ? `<p class="section-label" style="margin:16px 0 8px;">
       Habilidad oculta · ${ocultas.length}</p>${rejilla(ocultas)}` : ''}
-    ${!lista.length ? '<div class="hint" style="padding:20px;text-align:center;">Ninguno coincide.</div>' : ''}`;
+    ${!lista.length ? `<div class="hint" style="padding:20px;text-align:center;">
+      ${a.error ? 'No se pudo consultar quién la tiene.<br>'+a.error
+                : (habMons||[]).length ? 'Ninguno coincide con el filtro.'
+                                       : 'Ningún pokémon la tiene.'}
+      ${a.error ? `<br><button class="btn btn-s" style="width:100%;margin-top:9px;"
+         onclick="delete habAbierta.error;verHabilidad('${a.slug}')">Reintentar</button>` : ''}
+    </div>` : ''}`;
 }
 
 function habDetGens(){
