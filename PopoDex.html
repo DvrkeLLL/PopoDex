@@ -1043,6 +1043,17 @@ select:focus,input:focus{border-color:var(--accent);}
   width:52px !important;flex:0 0 52px;padding:7px 3px !important;font-size:11.5px !important;
   text-align:center;-moz-appearance:textfield;
 }
+.hab-fila{
+  display:flex;align-items:flex-start;gap:9px;padding:11px 2px;cursor:pointer;
+  border-bottom:1px solid var(--border);
+}
+.hab-fila:last-child{border-bottom:none;}
+.hab-fila:active{background:var(--bg-screen);}
+.hab-main{flex:1;min-width:0;}
+.hab-nom{font-size:13px;font-weight:600;}
+.hab-txt{font-size:11px;color:var(--muted);line-height:1.45;margin-top:3px;}
+.hab-gen{font-family:var(--mono);font-size:8.5px;color:var(--dim);
+  border:1px solid var(--border);border-radius:2px;padding:2px 5px;flex-shrink:0;}
 .mini{position:relative;}
 .qa-medalla{
   position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;
@@ -6717,6 +6728,12 @@ function infoMenu(){
       <span class="util-s">Efectividades atacando y defendiendo, por juego</span></span>
       <span class="campo-x">›</span>
     </button>
+    <button class="util" onclick="infoIr('habilidades')">
+      <svg viewBox="0 0 24 24"><path d="M12 3l2.4 5.6 6 .5-4.6 4 1.4 5.9L12 16l-5.2 3 1.4-5.9-4.6-4 6-.5z"/></svg>
+      <span class="util-main"><span class="util-t">Habilidades</span>
+      <span class="util-s">Qué hace cada una y quién la tiene</span></span>
+      <span class="campo-x">›</span>
+    </button>
     <button class="util" onclick="infoIr('encuentros')">
       <svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/>
       <circle cx="12" cy="10" r="2.5"/></svg>
@@ -6767,6 +6784,7 @@ function infoIr(v){
              esfuerzo:['Puntos de esfuerzo','Qué otorga cada uno'],
              crianza:['Crianza','Huevos de tu partida'],
              encuentros:['Encuentros','Pokémon salvajes por zona'],
+             habilidades:['Habilidades','Qué hace cada una'],
              mecanicas:['Mecánicas','Por generación'], formulas:['Fórmulas','Cómo se calcula'],
              acerca:['Acerca de','PopoDex']};
   setApartado(T[v][0]);
@@ -6776,6 +6794,7 @@ function infoIr(v){
   else if(v==='esfuerzo') panelEsfuerzo();
   else if(v==='crianza') panelCrianza();
   else if(v==='encuentros') panelEncuentros();
+  else if(v==='habilidades') panelHabilidades();
   else if(v==='tipos') panelTipos();
   else if(v==='mecanicas') panelMecanicas();
   else if(v==='formulas') panelFormulas();
@@ -7152,6 +7171,193 @@ function sgQuitar(){ sgSel = []; pintarBotonesGens(); }
 function sgListo(){
   closeOverlay('ov-selgens');
   if(sgCb) sgCb([...sgSel].sort((a,b)=>a-b));
+}
+
+/* ---------- Habilidades ---------- */
+let habCatalogo = null;       // [{slug, es, texto, gen}]
+let habTexto = '', habGens = [], habLista = [], habDibujadas = 0;
+let habAbierta = null, habMons = null, habMonGens = [];
+const LOTE_HAB = 40;
+
+async function cargarHabilidades(){
+  if(habCatalogo) return habCatalogo;
+  const g = Cache.get('habilidades');
+  if(g){ habCatalogo = g; return g; }
+  const d = await gql(`{
+    ability(where:{is_main_series:{_eq:true}}, order_by:{id:asc}) {
+      id name generation_id
+      abilitynames(where:{language_id:{_eq:${ES}}}) { name }
+      abilityflavortexts(where:{language_id:{_eq:${ES}}}, order_by:{version_group_id:desc}, limit:1) {
+        flavor_text
+      }
+      abilityeffecttexts(where:{language_id:{_eq:${ES}}}, limit:1) { short_effect }
+    }
+  }`);
+  habCatalogo = d.ability.map(a=>({
+    id:a.id, slug:a.name, gen:a.generation_id,
+    es: a.abilitynames[0]?.name || a.name.replace(/-/g,' '),
+    texto: (a.abilityeffecttexts?.[0]?.short_effect
+            || a.abilityflavortexts?.[0]?.flavor_text || '')
+            .replace(/\s+/g,' ').trim()
+  })).sort((a,b)=>a.es.localeCompare(b.es));
+  Cache.set('habilidades', habCatalogo);
+  return habCatalogo;
+}
+
+async function panelHabilidades(){
+  const body = document.getElementById('info-body');
+  if(habAbierta) return pintarHabDetalle();
+
+  body.innerHTML = '<div class="hint">Cargando habilidades...</div>';
+  try{ await cargarHabilidades(); }
+  catch(e){
+    body.innerHTML = `<div class="hint">No se pudieron cargar.<br>${e.message||''}</div>
+      <button class="btn btn-s" style="width:100%;margin-top:9px;"
+        onclick="panelHabilidades()">Reintentar</button>`;
+    return;
+  }
+
+  body.innerHTML = `
+    <div class="buscador" style="margin:0 0 10px;">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <input type="text" id="hab-busca" placeholder="Buscar habilidad o efecto..."
+             autocomplete="off" value="${habTexto}">
+    </div>
+    <button class="campo" style="width:100%;margin-bottom:11px;" onclick="habElegirGens()">
+      <span class="campo-main"><span class="campo-val ${habGens.length?'':'sin'}" id="hab-gens-txt">${
+        habGens.length ? 'Gen '+habGens.join(', ') : 'Todas las generaciones'}</span></span>
+      <span class="campo-x">›</span></button>
+    <p class="mi-cuenta" id="hab-cuenta"></p>
+    <div id="hab-lista"></div>
+    <div id="hab-mas"></div>`;
+
+  document.getElementById('hab-busca').addEventListener('input', e=>{
+    habTexto = e.target.value; filtrarHabs();
+  });
+  filtrarHabs();
+}
+
+function habElegirGens(){
+  abrirGens({sub:'En qué generación aparecieron', actual:habGens,
+    alElegir: v=>{ habGens = v; filtrarHabs(); }});
+}
+
+function filtrarHabs(){
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const t = norm(habTexto.trim());
+  habLista = habCatalogo.filter(a=>{
+    if(habGens.length && !habGens.includes(a.gen)) return false;
+    if(t && !(norm(a.es).includes(t) || norm(a.texto).includes(t))) return false;
+    return true;
+  });
+  const g = document.getElementById('hab-gens-txt');
+  if(g){
+    g.textContent = habGens.length ? 'Gen '+habGens.join(', ') : 'Todas las generaciones';
+    g.classList.toggle('sin', !habGens.length);
+  }
+  document.getElementById('hab-cuenta').textContent =
+    `${habLista.length} habilidad${habLista.length===1?'':'es'}`;
+  habDibujadas = 0;
+  document.getElementById('hab-lista').innerHTML = '';
+  masHabs();
+}
+
+function masHabs(){
+  const cont = document.getElementById('hab-lista');
+  const pie = document.getElementById('hab-mas');
+  if(!cont) return;
+  if(!habLista.length){
+    cont.innerHTML = '<div class="hint" style="padding:20px;text-align:center;">Ninguna coincide.</div>';
+    pie.innerHTML = '';
+    return;
+  }
+  const hasta = Math.min(habDibujadas + LOTE_HAB, habLista.length);
+  cont.insertAdjacentHTML('beforeend', habLista.slice(habDibujadas, hasta).map(a=>`
+    <div class="hab-fila" onclick="abrirHabilidad('${a.slug}')">
+      <div class="hab-main">
+        <div class="hab-nom">${a.es}</div>
+        <div class="hab-txt">${a.texto || 'Sin descripción disponible.'}</div>
+      </div>
+      <span class="hab-gen">${a.gen}.ª</span>
+      <span class="campo-x">›</span>
+    </div>`).join(''));
+  habDibujadas = hasta;
+  pie.innerHTML = habDibujadas < habLista.length
+    ? `<button class="btn btn-s" style="width:100%;margin-top:9px;" onclick="masHabs()">
+         Ver más · quedan ${habLista.length-habDibujadas}</button>` : '';
+}
+
+/* ---------- Quién tiene esa habilidad ---------- */
+async function verHabilidad(slug){
+  habAbierta = habCatalogo.find(a=>a.slug===slug);
+  habMons = null; habMonGens = [];
+  const body = document.getElementById('info-body');
+  body.innerHTML = '<div class="hint">Buscando quién la tiene...</div>';
+  try{
+    const ck = 'habmons:'+slug;
+    let datos = Cache.get(ck);
+    if(!datos){
+      const d = await gql(`{
+        pokemonability(where:{ability:{name:{_eq:"${slug}"}}, pokemon_id:{_lte:${MAX_ID}}},
+                       order_by:{pokemon_id:asc}) {
+          pokemon_id is_hidden
+        }
+      }`);
+      datos = d.pokemonability.map(x=>({id:x.pokemon_id, oculta:x.is_hidden}));
+      Cache.set(ck, datos);
+    }
+    habMons = datos;
+  }catch(e){ habMons = []; }
+  pintarHabDetalle();
+}
+
+function pintarHabDetalle(){
+  const a = habAbierta;
+  const lista = (habMons||[])
+    .map(x=>({...x, mon:allMons.find(m=>m.id===x.id)}))
+    .filter(x=>x.mon)
+    .filter(x=>!habMonGens.length || habMonGens.includes(genDe(x.id)));
+
+  const normales = lista.filter(x=>!x.oculta);
+  const ocultas = lista.filter(x=>x.oculta);
+
+  const rejilla = arr => `
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:6px;padding:0;">
+      ${arr.map(x=>`
+        <div class="mini" onclick="goTo('pokedex');setTimeout(()=>openDetail(${x.id}),200)">
+          <img src="${SPRITE(x.id)}" alt="" loading="lazy">
+          <div>${x.mon.es||x.mon.name}</div>
+        </div>`).join('')}
+    </div>`;
+
+  document.getElementById('info-body').innerHTML = `
+    <button class="btn btn-s" style="width:100%;margin-bottom:12px;"
+      onclick="habAbierta=null;panelHabilidades()">‹ Volver a la lista</button>
+
+    <div class="mec">
+      <span class="mec-gen">${a.gen}.ª generación</span>
+      <h3 class="mec-t">${a.es}</h3>
+      <p class="mec-p">${a.texto || 'Sin descripción disponible.'}</p>
+    </div>
+
+    <button class="campo" style="width:100%;margin-bottom:11px;" onclick="habDetGens()">
+      <span class="campo-main"><span class="campo-val ${habMonGens.length?'':'sin'}">${
+        habMonGens.length ? 'Gen '+habMonGens.join(', ') : 'Todas las generaciones'}</span></span>
+      <span class="campo-x">›</span></button>
+
+    <p class="mi-cuenta">${lista.length} pokémon${
+      habMonGens.length ? ' de '+(habMons||[]).length : ''}</p>
+
+    ${normales.length ? `<p class="section-label" style="margin:12px 0 8px;">
+      Habilidad normal · ${normales.length}</p>${rejilla(normales)}` : ''}
+    ${ocultas.length ? `<p class="section-label" style="margin:16px 0 8px;">
+      Habilidad oculta · ${ocultas.length}</p>${rejilla(ocultas)}` : ''}
+    ${!lista.length ? '<div class="hint" style="padding:20px;text-align:center;">Ninguno coincide.</div>' : ''}`;
+}
+
+function habDetGens(){
+  abrirGens({sub:'Filtrar los pokémon', actual:habMonGens,
+    alElegir: v=>{ habMonGens = v; pintarHabDetalle(); }});
 }
 
 /* ---------- Encuentros salvajes ---------- */
