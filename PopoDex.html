@@ -1040,7 +1040,7 @@ select:focus,input:focus{border-color:var(--accent);}
 .iv-fila{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
 .iv-lab{font-family:var(--mono);font-size:9.5px;color:var(--muted);width:46px;flex-shrink:0;text-transform:uppercase;}
 .iv-in{
-  width:52px !important;flex:0 0 52px;padding:7px 3px !important;font-size:11.5px !important;
+  width:46px !important;flex:0 0 46px;padding:7px 2px !important;font-size:11.5px !important;
   text-align:center;-moz-appearance:textfield;
 }
 .hab-fila{
@@ -1104,9 +1104,17 @@ select:focus,input:focus{border-color:var(--accent);}
 .iv-lab.sube::after{content:' ▲';font-size:7px;}
 .iv-lab.baja{color:var(--alert);}
 .iv-lab.baja::after{content:' ▼';font-size:7px;}
+.ev-par{display:flex;align-items:center;gap:3px;flex-shrink:0;}
+.ev-mas{
+  width:24px;height:30px;flex:0 0 24px;border:1px solid var(--border);
+  background:var(--bg-panel);border-radius:var(--r);cursor:pointer;
+  font-size:15px;font-weight:600;color:var(--accent);line-height:1;padding:0;
+  user-select:none;-webkit-user-select:none;touch-action:none;
+}
+.ev-mas:active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .iv-base{
   font-family:var(--mono);font-size:11px;color:var(--muted);
-  width:38px;text-align:center;flex-shrink:0;margin-left:auto;
+  width:34px;text-align:center;flex-shrink:0;margin-left:auto;
 }
 .iv-base b{color:var(--text);font-weight:700;}
 .base-total{border-top:1px solid var(--border);padding-top:7px;margin-top:2px;}
@@ -1127,8 +1135,9 @@ select:focus,input:focus{border-color:var(--accent);}
   text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;
 }
 .iv-cab span:nth-child(1){width:46px;}
-.iv-cab span:nth-child(2),.iv-cab span:nth-child(3){width:52px;text-align:center;flex:0 0 52px;}
-.iv-cab span:nth-child(4){margin-left:auto;width:38px;text-align:center;}
+.iv-cab span:nth-child(2){width:46px;text-align:center;flex:0 0 46px;}
+.iv-cab span:nth-child(3){width:73px;text-align:center;flex:0 0 73px;}
+.iv-cab span:nth-child(4){margin-left:auto;width:34px;text-align:center;}
 .iv-cab span:nth-child(5){width:42px;text-align:right;}
 .totales{
   display:flex;justify-content:flex-end;gap:14px;margin-top:8px;
@@ -4352,8 +4361,11 @@ async function pantallaEditor(){
       <input class="iv-in ${m.ivBloq.includes(clave)?'bloq':estadoTope(m.ivs[clave], t.iv)}"
              type="number" min="0" value="${m.ivs[clave]}"
              onchange="setIV('${clave}',this.value)">
-      <input class="iv-in ${estadoTope(m.evs[clave], t.ev)}" type="number" min="0"
-             value="${m.evs[clave]}" onchange="setEV('${clave}',this.value)">
+      <span class="ev-par">
+        <input class="iv-in ${estadoTope(m.evs[clave], t.ev)}" type="number" min="0"
+               value="${m.evs[clave]}" onchange="setEV('${clave}',this.value)">
+        <button class="ev-mas" data-ev="${clave}" title="Sumar · mantén pulsado para ir rápido">+</button>
+      </span>
       <span class="iv-base">${base}</span>
       <span class="iv-res" id="res-${clave}">${val}</span>
     </div>`;
@@ -4450,6 +4462,7 @@ async function pantallaEditor(){
       <button class="btn-borrar" onclick="quitarMiembro()">Quitar del equipo</button>
     </div>`;
 
+  conectarMasEV();
   ajustarIconoCerrar('ov-miembro');   // el botón se dibuja aquí, no al abrir
   pintarCampos();
   cargarOpcionesEditor(m, mon, gen);
@@ -4967,6 +4980,51 @@ function setIV(clave, v){
   _m().ivs[clave] = Math.max(0, Number(v)||0);
   guardarEquipos(); refrescarStats();
   pantallaEditor();
+}
+
+/* Un toque suma 1. Manteniendo pulsado acelera, porque llegar
+   a 252 de uno en uno no sería práctico. */
+function sumarEV(clave, cuanto){
+  const m = _m();
+  const eq = equipos[equipoAbierto];
+  const t = topesDe(genDeJuego(eq.juego));
+  m.evs[clave] = Math.max(0, Math.min(t.ev, (m.evs[clave]||0) + cuanto));
+  guardarEquipos();
+
+  const campo = document.querySelector(`.ev-par [data-ev="${clave}"]`)
+    ?.previousElementSibling;
+  if(campo){
+    campo.value = m.evs[clave];
+    campo.classList.toggle('pleno', m.evs[clave]===t.ev);
+    campo.classList.toggle('excede', m.evs[clave]>t.ev);
+  }
+  refrescarStats();
+}
+
+function conectarMasEV(){
+  document.querySelectorAll('[data-ev]').forEach(b=>{
+    if(b.dataset.listo) return;
+    b.dataset.listo = '1';
+    const clave = b.dataset.ev;
+    let reloj = null, veces = 0;
+
+    const empezar = e=>{
+      e.preventDefault();
+      sumarEV(clave, 1);
+      veces = 0;
+      reloj = setInterval(()=>{
+        veces++;
+        /* tras un rato, de cuatro en cuatro: 4 EVs son un punto de estadística */
+        sumarEV(clave, veces > 12 ? 4 : 1);
+      }, veces > 12 ? 60 : 110);
+    };
+    const parar = ()=>{ clearInterval(reloj); reloj = null; };
+
+    b.addEventListener('mousedown', empezar);
+    b.addEventListener('touchstart', empezar, {passive:false});
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>
+      b.addEventListener(ev, parar));
+  });
 }
 
 function setEV(clave, v){
