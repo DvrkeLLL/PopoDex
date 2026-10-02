@@ -1052,6 +1052,19 @@ select:focus,input:focus{border-color:var(--accent);}
 .hab-main{flex:1;min-width:0;}
 .hab-nom{font-size:13px;font-weight:600;}
 .hab-txt{font-size:11px;color:var(--muted);line-height:1.45;margin-top:3px;}
+.hab-cifra{
+  font-family:var(--mono);font-size:9.5px;color:var(--accent);
+  line-height:1.5;margin-top:4px;
+}
+.hab-detalle{
+  background:var(--bg-screen);border-radius:var(--r);padding:9px 11px;
+  margin-top:10px;font-family:var(--mono);font-size:11px;
+  color:var(--text);line-height:1.6;
+}
+.hab-detalle-t{
+  display:block;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:4px;font-weight:700;
+}
 .hab-gen{font-family:var(--mono);font-size:8.5px;color:var(--dim);
   border:1px solid var(--border);border-radius:2px;padding:2px 5px;flex-shrink:0;}
 .mini{position:relative;}
@@ -7232,6 +7245,118 @@ function sgListo(){
 }
 
 /* ---------- Habilidades ---------- */
+/* PokeAPI solo trae la descripción vaga del juego en español; el detalle
+   con cifras existe únicamente en inglés. Esta tabla lo traduce para las
+   habilidades cuyo efecto depende de un número. */
+const DETALLE_HAB = {
+  'adaptability':'El bonus por tipo propio pasa de ×1.5 a ×2.',
+  'aerilate':'Sus movimientos Normal pasan a Volador y ganan ×1.3 de potencia.',
+  'aftermath':'Al caer por un movimiento de contacto, daña al atacante con 1/4 de sus PS máximos.',
+  'analytic':'Si ataca el último, sus movimientos hacen ×1.3.',
+  'bad-dreams':'Daña 1/8 de los PS máximos por turno a los rivales dormidos.',
+  'battery':'Los movimientos especiales de sus aliados ×1.3 de potencia.',
+  'blaze':'Movimientos de Fuego ×1.5 con 1/3 de los PS máximos o menos.',
+  'chlorophyll':'Velocidad ×2 con sol intenso.',
+  'compound-eyes':'Precisión de sus movimientos ×1.3.',
+  'cursed-body':'30 % de anular el movimiento que le acierte.',
+  'cute-charm':'30 % de enamorar al que ataque por contacto.',
+  'dark-aura':'Todos los movimientos Siniestro del combate ×1.33 de potencia.',
+  'defeatist':'Ataque y At. Especial a la mitad con 50 % de PS o menos.',
+  'dragonize':'Sus movimientos Normal pasan a Dragón y ganan ×1.2 de potencia.',
+  'dry-skin':'Pierde 1/8 de PS por turno con sol y cura 1/8 con lluvia. Recibe ×1.25 de Fuego y absorbe los de Agua.',
+  'effect-spore':'30 % de causar parálisis, envenenamiento o sueño al que ataque por contacto.',
+  'electromorphosis':'Tras recibir un ataque, su siguiente movimiento Eléctrico hace ×2.',
+  'fairy-aura':'Todos los movimientos Hada del combate ×1.33 de potencia.',
+  'filter':'Reduce a ×0.75 el daño de los movimientos superefectivos.',
+  'fire-mane':'Sus movimientos de Fuego ganan un 50 % de potencia.',
+  'flame-body':'30 % de quemar al que ataque por contacto.',
+  'flare-boost':'At. Especial ×1.5 mientras esté quemado.',
+  'flash-fire':'Bloquea los movimientos de Fuego. Tras bloquear uno, los suyos de Fuego hacen ×1.5 mientras siga en combate.',
+  'flower-gift':'Con sol intenso, Ataque y Df. Especial de los aliados ×1.5.',
+  'fluffy':'Mitad de daño por contacto, pero doble de los movimientos de Fuego.',
+  'friend-guard':'El daño directo que reciben los aliados pasa a ×0.75.',
+  'fur-coat':'Reduce a la mitad el daño de los ataques físicos.',
+  'galvanize':'Sus movimientos Normal pasan a Eléctrico y ganan ×1.2 de potencia.',
+  'gluttony':'Usa las bayas que se activan con pocos PS ya por debajo de 1/2 de los PS máximos.',
+  'guts':'Ataque ×1.5 con un problema de estado.',
+  'harvest':'50 % por turno de recuperar la baya consumida.',
+  'healer':'30 % por turno de curar el estado de cada aliado adyacente.',
+  'heatproof':'Reduce a la mitad el daño de Fuego y el de la quemadura.',
+  'heavy-metal':'Duplica su peso.',
+  'hospitality':'Al entrar en combate, cura al aliado un 25 % de sus PS.',
+  'huge-power':'Ataque ×2 en combate.',
+  'hustle':'Movimientos físicos ×1.5 de daño, pero su precisión baja a ×0.8.',
+  'ice-body':'Cura 1/16 de los PS máximos por turno con granizo. Inmune a su daño.',
+  'ice-scales':'Reduce a la mitad el daño de los ataques especiales.',
+  'illuminate':'Duplica la frecuencia de encuentros con pokémon salvajes.',
+  'iron-barbs':'Al recibir contacto, daña al atacante con 1/8 de sus PS máximos.',
+  'iron-fist':'Movimientos de puño ×1.2 de potencia.',
+  'light-metal':'Reduce su peso a la mitad.',
+  'marvel-scale':'Defensa ×1.5 con un problema de estado.',
+  'mega-launcher':'Movimientos de aura y pulso ×1.5 de potencia.',
+  'minus':'At. Especial ×1.5 si un aliado tiene Más o Menos.',
+  'multiscale':'Con los PS al máximo, recibe la mitad de daño.',
+  'neuroforce':'Sus movimientos superefectivos hacen ×1.25.',
+  'overgrow':'Movimientos de Planta ×1.5 con 1/3 de los PS máximos o menos.',
+  'pixilate':'Sus movimientos Normal pasan a Hada y ganan ×1.3 de potencia.',
+  'plus':'At. Especial ×1.5 si un aliado tiene Más o Menos.',
+  'poison-heal':'Envenenado, cura 1/8 de los PS máximos por turno en vez de perderlos.',
+  'poison-point':'30 % de envenenar al que ataque por contacto.',
+  'poison-touch':'30 % de envenenar al objetivo al tocarlo.',
+  'power-construct':'Zygarde pasa a Forma Completa por debajo del 50 % de PS.',
+  'prism-armor':'Reduce a ×0.75 el daño de los movimientos superefectivos.',
+  'punk-rock':'Sus movimientos de sonido ×1.3 y recibe la mitad de daño de ellos.',
+  'pure-power':'Ataque ×2 en combate.',
+  'purifying-salt':'Inmune a los problemas de estado y mitad de daño de los movimientos Fantasma.',
+  'quick-feet':'Velocidad ×1.5 con un problema de estado.',
+  'rain-dish':'Cura 1/16 de los PS máximos cada turno con lluvia.',
+  'reckless':'Movimientos con retroceso ×1.2 de potencia.',
+  'refrigerate':'Sus movimientos Normal pasan a Hielo y ganan ×1.3 de potencia.',
+  'regenerator':'Cura 1/3 de los PS máximos al retirarse del combate.',
+  'ripen':'Duplica el efecto de las bayas.',
+  'rivalry':'Daño ×1.25 contra el mismo género y ×0.75 contra el contrario.',
+  'rough-skin':'Al recibir contacto, daña al atacante con 1/8 de sus PS máximos.',
+  'sand-force':'Con tormenta de arena, los movimientos de Roca, Tierra y Acero ×1.3. Inmune a su daño.',
+  'sand-rush':'Velocidad ×2 con tormenta de arena. Inmune a su daño.',
+  'sand-veil':'Evasión ×1.25 durante tormenta de arena. Inmune a su daño.',
+  'schooling':'Wishiwashi adopta la forma Banco con 25 % de PS o más.',
+  'serene-grace':'Duplica la probabilidad de los efectos adicionales de sus movimientos.',
+  'shadow-shield':'Con los PS al máximo, recibe la mitad de daño.',
+  'shed-skin':'33 % de curarse cualquier problema de estado al final de cada turno.',
+  'sheer-force':'Movimientos con efecto adicional ×1.3 de potencia, pero pierden ese efecto.',
+  'simple':'Duplica los cambios en sus estadísticas, con el tope habitual de ±6 niveles.',
+  'slow-start':'Ataque y Velocidad a la mitad durante cinco turnos al entrar.',
+  'slush-rush':'Velocidad ×2 con granizo.',
+  'sniper':'Los golpes críticos hacen ×3 en vez de ×2.',
+  'snow-cloak':'Evasión ×1.25 con granizo. Inmune a su daño.',
+  'solar-power':'Con sol intenso, At. Especial ×1.5 pero pierde 1/8 de PS por turno.',
+  'solid-rock':'Reduce a ×0.75 el daño de los movimientos superefectivos.',
+  'stakeout':'Daño ×2 contra el que haya entrado ese mismo turno.',
+  'static':'30 % de paralizar al que ataque por contacto.',
+  'steelworker':'Movimientos de Acero ×1.5 de potencia.',
+  'stench':'10 % de hacer retroceder al objetivo con cada golpe.',
+  'strong-jaw':'Movimientos de mordisco ×1.5 de potencia.',
+  'surge-surfer':'Velocidad ×2 en campo eléctrico.',
+  'swarm':'Movimientos de Bicho ×1.5 con 1/3 de los PS máximos o menos.',
+  'swift-swim':'Velocidad ×2 con lluvia.',
+  'tangled-feet':'Evasión ×2 mientras esté confuso.',
+  'technician':'Movimientos de 60 de potencia o menos ×1.5.',
+  'thick-fat':'Reduce a la mitad el daño de Fuego y Hielo.',
+  'tinted-lens':'Duplica el daño de los movimientos poco eficaces.',
+  'torrent':'Movimientos de Agua ×1.5 con 1/3 de los PS máximos o menos.',
+  'tough-claws':'Movimientos con contacto ×1.33 de potencia.',
+  'toxic-boost':'Ataque ×1.5 mientras esté envenenado.',
+  'unburden':'Velocidad ×2 tras usar o perder el objeto equipado.',
+  'victory-star':'Precisión ×1.1 para él y sus aliados.',
+  'volt-absorb':'Absorbe los movimientos Eléctrico y cura 1/4 de los PS máximos.',
+  'water-absorb':'Absorbe los movimientos de Agua y cura 1/4 de los PS máximos.',
+  'water-bubble':'Mitad de daño de Fuego, sus movimientos de Agua ×2, e inmune a quemaduras.',
+  'wind-power':'Tras recibir un movimiento de viento, su siguiente movimiento Eléctrico hace ×2.',
+  'wonder-skin':'Los movimientos de estado que recibe bajan su precisión al 50 %.',
+  'zen-mode':'Darmanitan cambia de forma por turno: Zen por debajo del 50 % de PS.'
+};
+
+
 let habCatalogo = null;       // [{slug, es, texto, gen}]
 let habTexto = '', habGens = [], habLista = [], habDibujadas = 0;
 let habAbierta = null, habMons = null, habMonGens = [];
@@ -7305,7 +7430,8 @@ function filtrarHabs(){
   const t = norm(habTexto.trim());
   habLista = habCatalogo.filter(a=>{
     if(habGens.length && !habGens.includes(a.gen)) return false;
-    if(t && !(norm(a.es).includes(t) || norm(a.texto).includes(t))) return false;
+    if(t && !(norm(a.es).includes(t) || norm(a.texto).includes(t)
+              || norm(DETALLE_HAB[a.slug]||'').includes(t))) return false;
     return true;
   });
   const g = document.getElementById('hab-gens-txt');
@@ -7335,6 +7461,7 @@ function masHabs(){
       <div class="hab-main">
         <div class="hab-nom">${a.es}</div>
         <div class="hab-txt">${a.texto || 'Sin descripción disponible.'}</div>
+        ${DETALLE_HAB[a.slug] ? `<div class="hab-cifra">${DETALLE_HAB[a.slug]}</div>` : ''}
       </div>
       <span class="hab-gen">${a.gen}.ª</span>
       <span class="campo-x">›</span>
@@ -7412,6 +7539,9 @@ function pintarHabDetalle(){
       <span class="mec-gen">${a.gen}.ª generación</span>
       <h3 class="mec-t">${a.es}</h3>
       <p class="mec-p">${a.texto || 'Sin descripción disponible.'}</p>
+      ${DETALLE_HAB[a.slug] ? `<div class="hab-detalle">
+        <span class="hab-detalle-t">En números</span>
+        ${DETALLE_HAB[a.slug]}</div>` : ''}
     </div>
 
     <button class="campo" style="width:100%;margin-bottom:11px;" onclick="habDetGens()">
