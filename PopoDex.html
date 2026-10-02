@@ -7331,7 +7331,7 @@ function masHabs(){
   }
   const hasta = Math.min(habDibujadas + LOTE_HAB, habLista.length);
   cont.insertAdjacentHTML('beforeend', habLista.slice(habDibujadas, hasta).map(a=>`
-    <div class="hab-fila" onclick="abrirHabilidad('${a.slug}')">
+    <div class="hab-fila" onclick="verHabilidad('${a.slug}')">
       <div class="hab-main">
         <div class="hab-nom">${a.es}</div>
         <div class="hab-txt">${a.texto || 'Sin descripción disponible.'}</div>
